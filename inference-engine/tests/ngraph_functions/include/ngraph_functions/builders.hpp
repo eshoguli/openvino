@@ -184,5 +184,13 @@ std::shared_ptr<ngraph::Node> makeCumSum(const ngraph::Output<Node> &in,
                                          bool exclusive,
                                          bool reverse);
 
+std::shared_ptr<ngraph::Node> makeDepthToSpace(const ngraph::Output<Node> &in,
+                                               ngraph::opset3::DepthToSpace::DepthToSpaceMode mode,
+                                               size_t blockSize);
+
+std::shared_ptr<ngraph::Node> makeSpaceToDepth(const ngraph::Output<Node> &in,
+                                               ngraph::opset3::SpaceToDepth::SpaceToDepthMode mode,
+                                               size_t blockSize);
+
 }  // namespace builder
 }  // namespace ngraph
