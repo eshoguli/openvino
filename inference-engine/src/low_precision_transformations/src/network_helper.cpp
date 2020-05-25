@@ -1086,8 +1086,16 @@ CNNLayerPtr CNNNetworkHelper::addScaleShiftBetween(TransformationContext& contex
     CNNLayerPtr ssCnnLayer(new ScaleShiftLayer(ssCnnLayerParams));
 
     const std::vector<size_t> dims = outData->getDims();
-    if ((dims.size() > 1) && (dims[1] != dequantizationDetails.channelsCount)) {
-        THROW_IE_EXCEPTION << "unexpected parent channels count " << dims[1];
+    if ((dims.size() > 1) && (dims[1] != dequantizationDetails.channelsCount) &&
+        (std::any_of(
+            dequantizationDetails.scales.begin(),
+            dequantizationDetails.scales.end(),
+            [&](const float value) { return value != dequantizationDetails.scales[0]; }) ||
+        std::any_of(
+            dequantizationDetails.shifts.begin(),
+            dequantizationDetails.shifts.end(),
+            [&](const float value) { return value != dequantizationDetails.shifts[0]; }))) {
+        THROW_IE_EXCEPTION << "unexpected parent channels count " << dims[1] << " vs " << dequantizationDetails.channelsCount;
     }
     addLayerToCNNNetworkAfterData(outData, ssCnnLayer, child != nullptr ? child->name : "", context.network);
 

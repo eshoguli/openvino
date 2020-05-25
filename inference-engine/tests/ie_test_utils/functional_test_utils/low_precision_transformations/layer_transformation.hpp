@@ -4,12 +4,30 @@
 
 #pragma once
 
-#include "functional_test_utils/layer_test_utils.hpp"
-#include "low_precision_transformations/transformer.hpp"
+#include <memory>
+#include <string>
+#include <sstream>
+#include <tuple>
 
 #include "ie_util_internal.hpp"
+#include "generic_ie.hpp"
+#include "graph_transformer.h"
+
+#include "convert_function_to_cnn_network.hpp"
+#include <transformations/common_optimizations/common_optimizations.hpp>
+#include <transformations/convert_opset1_to_legacy/convert_opset1_to_legacy.hpp>
+#include <transformations/convert_opset2_to_opset1/convert_opset2_to_opset1.hpp>
+#include <transformations/convert_opset3_to_opset2/convert_opset3_to_opset2.hpp>
+#include <ngraph/opsets/opset1.hpp>
+#include <ngraph/opsets/opset2.hpp>
+#include <ngraph/opsets/opset3.hpp>
+#include <ngraph/op/fused/gelu.hpp>
+
 #include "low_precision_transformations/convolution.hpp"
 #include "low_precision_transformations/scaleshift_to_convolution.hpp"
+
+#include "functional_test_utils/layer_test_utils.hpp"
+#include "low_precision_transformations/transformer.hpp"
 
 namespace LayerTestsUtils {
 
