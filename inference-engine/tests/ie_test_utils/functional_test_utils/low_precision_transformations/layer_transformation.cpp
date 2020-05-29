@@ -74,13 +74,6 @@ InferenceEngine::details::LowPrecisionTransformer LayerTransformation::getLowPre
 }
 
 InferenceEngine::CNNNetwork LayerTransformation::transform(InferenceEngine::details::LayerTransformation::Params& params) {
-    // InferenceEngine::details::CNNNetworkImplPtr cnnNetworkImp = cloneNet(InferenceEngine::CNNNetwork(function));
-    //
-    // auto transformer = getLowPrecisionTransformer(params);
-    // transformer.transform(*cnnNetworkImp);
-    //
-    // return InferenceEngine::CNNNetwork(cnnNetworkImp);
-
     auto net1 = InferenceEngine::CNNNetwork(function);
     std::shared_ptr<InferenceEngine::ICNNNetwork> clonedNetwork = InferenceEngine::cloneNetwork(net1);
 
@@ -89,16 +82,14 @@ InferenceEngine::CNNNetwork LayerTransformation::transform(InferenceEngine::deta
             return std::dynamic_pointer_cast<const ::ngraph::opset2::Gelu>(node) ||
                 std::dynamic_pointer_cast<const ::ngraph::opset2::BatchToSpace>(node) ||
                 std::dynamic_pointer_cast<const ::ngraph::opset2::SpaceToBatch>(node) ||
-                std::dynamic_pointer_cast<const ::ngraph::opset3::ShuffleChannels>(node) ||
-                std::dynamic_pointer_cast<const ::ngraph::opset3::DepthToSpace>(node) ||
-                std::dynamic_pointer_cast<const ::ngraph::opset3::SpaceToDepth>(node);
+                std::dynamic_pointer_cast<const ::ngraph::opset3::ShuffleChannels>(node);
         };
         auto nGraphFunc = clonedNetwork->getFunction();
         // Disable shape inference (WA for generic operations)
         ::ngraph::op::GenericIE::DisableReshape noReshape(nGraphFunc);
 
         // Note: instead of running all Conversion Transformations you can make up your own transformation pipeline
-        ngraph::pass::CommonOptimizations().run_on_function(nGraphFunc);
+        ngraph::pass::CommonOptimizations(transformations_callback).run_on_function(nGraphFunc);
         ngraph::pass::ConvertOpSet3ToOpSet2(transformations_callback).run_on_function(nGraphFunc);
         ngraph::pass::ConvertOpSet2ToOpSet1(transformations_callback).run_on_function(nGraphFunc);
         ngraph::pass::ConvertOpSet1ToLegacy(transformations_callback).run_on_function(nGraphFunc);

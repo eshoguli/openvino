@@ -12,20 +12,17 @@ using namespace InferenceEngine::details;
 
 namespace {
 const std::vector<InferenceEngine::Precision> netPrecisions = {
-        InferenceEngine::Precision::FP32,
-        InferenceEngine::Precision::FP16
+        InferenceEngine::Precision::FP32
 };
 
 const std::vector<LayerTransformation::Params> trasformationParamValues = {
-    LayerTestsUtils::LayerTransformationParamsFactory::createParamCpu(),
-    LayerTestsUtils::LayerTransformationParamsFactory::createParamI8I8(),
-    LayerTestsUtils::LayerTransformationParamsFactory::createParamU8I8()
+    LayerTestsUtils::LayerTransformationParamsFactory::createParamGpu()
 };
 
 INSTANTIATE_TEST_CASE_P(LPT, DepthToSpaceTransformation,
     ::testing::Combine(
         ::testing::ValuesIn(netPrecisions),
-        ::testing::Values(InferenceEngine::SizeVector({ 1, 128, 720, 480 })),
+        ::testing::Values(InferenceEngine::SizeVector({ 1, 32, 72, 48 })),
         ::testing::Values(CommonTestUtils::DEVICE_GPU),
         ::testing::ValuesIn(trasformationParamValues)),
     DepthToSpaceTransformation::getTestCaseName);

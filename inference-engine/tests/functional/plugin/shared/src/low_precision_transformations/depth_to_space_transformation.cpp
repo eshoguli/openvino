@@ -97,6 +97,18 @@ void DepthToSpaceTransformation::validate() {
     EXPECT_TRUE(outputLayer != nullptr);
     EXPECT_EQ("ScaleShift", outputLayer->type);
 
+    EXPECT_EQ(1ul, outputLayer->insData.size());
+    const InferenceEngine::DataPtr insData = outputLayer->insData[0].lock();
+    EXPECT_TRUE(insData != nullptr);
+    const InferenceEngine::CNNLayerPtr depthToSpace = insData->getCreatorLayer().lock();
+    EXPECT_TRUE(depthToSpace != nullptr);
+    EXPECT_EQ("DepthToSpace", depthToSpace->type);
+
+    if (params.updatePrecisions) {
+        const InferenceEngine::Precision precision = depthToSpace->outData[0]->getTensorDesc().getPrecision();
+        EXPECT_TRUE((precision == InferenceEngine::Precision::U8) || (precision == InferenceEngine::Precision::I8));
+    }
+
     IE_SUPPRESS_DEPRECATED_END
 }
 

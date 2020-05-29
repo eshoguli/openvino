@@ -11,14 +11,9 @@
 
 namespace LayerTestsDefinitions {
 
-typedef std::tuple<
-    InferenceEngine::Precision,
-    InferenceEngine::SizeVector,
-    std::string,
-    InferenceEngine::details::LayerTransformation::Params,
-    bool> LayerTransformationParams;
-
-class DepthToSpaceTransformation : public LayerTestsUtils::LayerTransformation<LayerTestsUtils::LayerTransformationParams> {
+class DepthToSpaceTransformation :
+    public testing::WithParamInterface<LayerTestsUtils::LayerTransformationParams>,
+    public LayerTestsUtils::LayerTransformation {
 public:
     static std::string getTestCaseName(testing::TestParamInfo<LayerTestsUtils::LayerTransformationParams> obj);
 
