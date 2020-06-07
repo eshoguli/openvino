@@ -94,7 +94,7 @@ void FullyConnectedTransformation::transform(TransformationContext& context, CNN
         return;
     }
 
-    if (!CaselessEq<std::string>()(fullyConnected.type, "FullyConnected")) {
+    if ((!CaselessEq<std::string>()(fullyConnected.type, "FullyConnected")) && (!CaselessEq<std::string>()(fullyConnected.type, "Gemm"))) {
         THROW_IE_EXCEPTION << "layer '" << fullyConnected.name << "' is not correct";
     }
 
@@ -244,6 +244,7 @@ void FullyConnectedTransformation::transform(TransformationContext& context, CNN
                 updatePrecisions
                     ? CNNNetworkHelper::quantizeWeights(*parentOnWeights, roundQuantizedValues, dataPrecision.precision)
                     : CNNNetworkHelper::quantizeWeights(*parentOnWeights, roundQuantizedValues);
+
             const std::vector<CNNLayerPtr> constLayers = CNNNetworkHelper::transformFakeQuantizeToConst(
                 context, parentOnWeights, weights, CNNNetworkHelper::getParent(*parentOnWeights, 0)->name);
 

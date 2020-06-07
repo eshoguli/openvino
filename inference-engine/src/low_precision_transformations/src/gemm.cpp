@@ -40,9 +40,9 @@ bool GemmTransformation::canBeTransformed(const TransformationContext& context, 
     }
 
     const size_t inputChannelsCount = CNNNetworkHelper::getInputChannelsCount(gemm);
+    std::vector<CNNLayerPtr> parents = CNNNetworkHelper::getParents(gemm);
 
     const auto checkDequantizationLayer = [&](const CNNLayer& gemm, const size_t index) -> bool {
-        std::vector<CNNLayerPtr> parents = CNNNetworkHelper::getParents(gemm);
         if (parents.size() <= index) {
             return false;
         }
@@ -53,7 +53,7 @@ bool GemmTransformation::canBeTransformed(const TransformationContext& context, 
 
         std::vector<float> scales;
         std::vector<float> shifts;
-        LayerTransformation::fillFromDequantizationLayer(*scaleShift, scales, shifts);
+        fillFromDequantizationLayer(*scaleShift, scales, shifts);
 
         if (scales.size() != inputChannelsCount) {
             return false;
@@ -73,8 +73,24 @@ bool GemmTransformation::canBeTransformed(const TransformationContext& context, 
     };
 
     if ((CNNNetworkHelper::getParents(gemm).size() != 2ul) ||
-        (!checkDequantizationLayer(gemm, 0ul)) ||
-        (!checkDequantizationLayer(gemm, 1ul))) {
+        (!checkDequantizationLayer(gemm, 0ul))) {
+        return false;
+    }
+
+    if (parents[1]->type == "FakeQuantize") {
+        if (!QuantizationDetails::isSupportedLevel(parents[1]->GetParamAsUInt("levels"))) {
+            return false;
+        }
+
+        const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(*parents[1]);
+        const DataPrecision dataPrecision = getDataPrecision(*parents[1], quantizationDetails, false, false);
+        if (dataPrecision.precision == Precision::UNSPECIFIED) {
+            return false;
+        }
+    }
+
+    if (((parents[1]->type != "FakeQuantize") && (!checkDequantizationLayer(gemm, 1ul))) ||
+        ((parents[1]->type == "FakeQuantize") && (!CNNNetworkHelper::onConstWeightsPath(*parents[1]) || !CNNNetworkHelper::onWeights(*parents[1])))) {
         return false;
     }
 
@@ -91,27 +107,29 @@ void GemmTransformation::transform(TransformationContext& context, CNNLayer& gem
     }
 
     std::vector<CNNLayerPtr> parents = CNNNetworkHelper::getParents(gemm);
+    if (parents[1]->type == "FakeQuantize") {
+        FullyConnectedTransformation::transform(context, gemm);
+        return;
+    }
 
     std::vector<float> originalDataDequantizationScales1;
     std::vector<float> originalDataDequantizationShifts1;
     fillFromDequantizationLayer(*parents[0], originalDataDequantizationScales1, originalDataDequantizationShifts1);
-
     std::vector<float> originalDataDequantizationScales2;
     std::vector<float> originalDataDequantizationShifts2;
     fillFromDequantizationLayer(*parents[1], originalDataDequantizationScales2, originalDataDequantizationShifts2);
 
     const size_t outputChannelsCount = CNNNetworkHelper::getOutputChannelsCount(gemm);
-    std::vector<float> dequantizationScales(outputChannelsCount);
+    std::vector<float> dequantizationScales(outputChannelsCount, originalDataDequantizationScales1[0] * originalDataDequantizationScales2[0]);
     std::vector<float> dequantizationShifts(outputChannelsCount, 0.f);
-    for (size_t outputChannel = 0ul; outputChannel < outputChannelsCount; ++outputChannel) {
-        dequantizationScales[outputChannel] = originalDataDequantizationScales1[0] * originalDataDequantizationScales2[0];
-    }
 
     CNNNetworkHelper::removeLayer(context.network, parents[0]);
     context.removeLayer(*parents[0]);
 
-    CNNNetworkHelper::removeLayer(context.network, parents[1]);
-    context.removeLayer(*parents[1]);
+    if (parents[1]->type != "FakeQuantize") {
+        CNNNetworkHelper::removeLayer(context.network, parents[1]);
+        context.removeLayer(*parents[1]);
+    }
 
     addDequantizationLayer(context, gemm, dequantizationScales, dequantizationShifts);
 }

@@ -7,16 +7,17 @@
 #include <vector>
 #include <ie_common.h>
 #include <algorithm>
-#include "low_precision_transformations/weightable_layer_transformation.hpp"
+#include "low_precision_transformations/layer_transformation.hpp"
+#include "low_precision_transformations/fully_connected.hpp"
 
 namespace InferenceEngine {
 namespace details {
 
 IE_SUPPRESS_DEPRECATED_START
 
-class INFERENCE_ENGINE_API_CLASS(GemmTransformation) : public LayerTransformation {
+class INFERENCE_ENGINE_API_CLASS(GemmTransformation) : public FullyConnectedTransformation {
 public:
-    GemmTransformation(const Params& params) : LayerTransformation(params) {}
+    GemmTransformation(const LayerTransformation::Params& params) : FullyConnectedTransformation(params) {}
     ~GemmTransformation() override {};
     bool canBeTransformed(const TransformationContext& context, const CNNLayer& layer) const override;
     void transform(TransformationContext& context, CNNLayer& layer) const override;
