@@ -83,6 +83,14 @@ void reshapeDequantizationConstant(const std::shared_ptr<opset1::Reshape>& resha
 
 bool ReshapeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
     std::shared_ptr<opset1::Reshape> reshape = as_type_ptr<opset1::Reshape>(m.get_match_root());
+
+    //std::cout << "ReshapeTransformation::transform: " << reshape->get_friendly_name() << std::endl;
+
+    //if (reshape->get_friendly_name() == "1316") {
+    //    std::cout << "ReshapeTransformation::transform: DEBUG" << reshape->get_friendly_name() << std::endl;
+    //    // ngraph::pass::VisualizeTree("C:\\Projects\\temp\\test.reshape_1316").run_on_function(context.function);
+    //}
+
     if ((reshape == nullptr) || (!canBeTransformed(context, reshape))) {
         return false;
     }
@@ -90,6 +98,11 @@ bool ReshapeTransformation::transform(TransformationContext& context, ngraph::pa
     reshape = as_type_ptr<opset1::Reshape>(separateInStandaloneBranch(reshape));
     reshapeDequantizationConstant(reshape);
     moveDequantizationAfter(context, reshape, NetworkHelper::getDequantization(reshape, 0), false);
+
+    //if (reshape->get_friendly_name() == "1316") {
+    //    ngraph::pass::VisualizeTree("C:\\Projects\\temp\\test.reshape_1316").run_on_function(context.function);
+    //}
+
     return true;
 }
 

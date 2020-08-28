@@ -600,10 +600,9 @@ FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_pt
 
     const std::shared_ptr<ngraph::opset1::Multiply> multiply =
         (dataNode.get_node_shared_ptr()->get_input_size() > 1ul) &&
-        (is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(1)) ||
-            is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(0))) ?
-        as_type_ptr<ngraph::opset1::Multiply>(dataNode.get_node_shared_ptr()) :
-        nullptr;
+        (is_type<opset1::Constant>(dataNode.get_node()->get_input_node_ptr(1)) || is_type<opset1::Constant>(dataNode.get_node()->get_input_node_ptr(0))) ?
+            as_type_ptr<ngraph::opset1::Multiply>(dataNode.get_node_shared_ptr()) :
+            nullptr;
 
     if (multiply != nullptr) {
         dataNode = multiply->get_input_source_output(getDataIndex(multiply));
@@ -611,10 +610,9 @@ FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_pt
 
     const std::shared_ptr<opset1::Subtract> subtract =
         (dataNode.get_node_shared_ptr()->get_input_size() > 1ul) &&
-        (is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(1)) ||
-            is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(0))) ?
-        as_type_ptr<ngraph::opset1::Subtract>(dataNode.get_node_shared_ptr()) :
-        nullptr;
+        (is_type<opset1::Constant>(dataNode.get_node()->get_input_node_ptr(1)) || is_type<opset1::Constant>(dataNode.get_node()->get_input_node_ptr(0))) ?
+            as_type_ptr<ngraph::opset1::Subtract>(dataNode.get_node_shared_ptr()) :
+            nullptr;
 
     if (subtract != nullptr) {
         dataNode = subtract->get_input_source_output(getDataIndex(subtract));

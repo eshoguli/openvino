@@ -41,6 +41,10 @@ bool MVNTransformation::canBeTransformed(const TransformationContext& context, s
         return false;
     }
 
+    if (!supportAsymmetricQuantization && isAsymmetricQuantization(operation)) {
+        return false;
+    }
+
     auto mvn = as_type_ptr<op::MVN>(operation);
 
     const std::shared_ptr<Node> multiply = mvn->get_input_node_shared_ptr(0);
@@ -70,6 +74,11 @@ void MVNTransformation::registerMatcherIn(GraphRewrite& pass, TransformationCont
 
 bool MVNTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
     std::shared_ptr<Node> operation = m.get_match_root();
+
+    //if (operation->get_friendly_name() == "1338") {
+    //    std::cout << "MVNTransformation::canBeTransformed" << std::endl;
+    //}
+
     if (!canBeTransformed(context, operation)) {
         return false;
     }

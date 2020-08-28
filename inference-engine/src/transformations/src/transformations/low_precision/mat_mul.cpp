@@ -21,15 +21,32 @@ bool MatMulTransformation::transform(TransformationContext &context, ngraph::pat
         return false;
     }
 
-    matMul = as_type_ptr<ngraph::opset1::MatMul>(separateInStandaloneBranch(matMul));
+    //std::cout << "MatMulTransformation::transform: " << matMul->get_friendly_name() << std::endl;
+
+    //if ((matMul->get_friendly_name() == "1321") || (matMul->get_friendly_name() == "1322")) {
+    //    ngraph::pass::VisualizeTree("C:\\Projects\\temp\\test.matmul_1322").run_on_function(context.function);
+    //}
+
+    FakeQuantizeDequantization dequantization1 = ngraph::pass::low_precision::NetworkHelper::getDequantization(matMul, 0);
+    //if (!supportAsymmetricQuantization && isAsymmetricQuantization(matMul, dequantization1)) {
+    //    return false;
+    //}
 
     FakeQuantizeDequantization dequantization2 = ngraph::pass::low_precision::NetworkHelper::getDequantization(matMul, 1);
+    //if (!supportAsymmetricQuantization && isAsymmetricQuantization(matMul, dequantization2)) {
+    //    return false;
+    //}
+
+    matMul = as_type_ptr<ngraph::opset1::MatMul>(separateInStandaloneBranch(matMul));
+    dequantization1 = ngraph::pass::low_precision::NetworkHelper::getDequantization(matMul, 0);
+    dequantization2 = ngraph::pass::low_precision::NetworkHelper::getDequantization(matMul, 1);
+
     if (dequantization2.empty()) {
         const std::shared_ptr<opset1::FakeQuantize> fakeQuantize =
             as_type_ptr<opset1::FakeQuantize>(dequantization2.data.get_node_shared_ptr());
         if (fakeQuantize != nullptr) {
             const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(fakeQuantize);
-            const DataPrecision dataPrecision = getDataPrecision(fakeQuantize, quantizationDetails, true, supportAsymmetricQuantization);
+            const DataPrecision dataPrecision = getDataPrecision(fakeQuantize, quantizationDetails, true);
 
             auto tuple = NetworkHelper::decomposeFakeQuantize(
                 fakeQuantize,
@@ -43,7 +60,6 @@ bool MatMulTransformation::transform(TransformationContext &context, ngraph::pat
         }
     }
 
-    const FakeQuantizeDequantization dequantization1 = ngraph::pass::low_precision::NetworkHelper::getDequantization(matMul, 0);
     const std::shared_ptr<opset1::MatMul> newMatMul = std::make_shared<ngraph::op::TypeRelaxed<opset1::MatMul>>(
         std::vector<element::Type>({ element::f32, element::f32 }), std::vector<element::Type>({}),
         ngraph::op::TemporaryReplaceOutputType(dequantization1.data, element::f32).get(),
@@ -51,6 +67,10 @@ bool MatMulTransformation::transform(TransformationContext &context, ngraph::pat
         matMul->get_transpose_a(),
         matMul->get_transpose_b());
     NetworkHelper::setOutDataPrecisionForTypeRelaxed(newMatMul, matMul->get_output_element_type(0));
+
+    //if (matMul->get_friendly_name() == "1322") {
+    //    ngraph::pass::VisualizeTree("C:\\Projects\\temp\\test.matmul_1322").run_on_function(context.function);
+    //}
 
 
     auto transpose = [](const std::shared_ptr<Node>& node) -> std::shared_ptr<Node> {
@@ -70,16 +90,36 @@ bool MatMulTransformation::transform(TransformationContext &context, ngraph::pat
         transpose(dequantization1.multiply->get_input_node_shared_ptr(1)) :
         dequantization1.multiply->get_input_node_shared_ptr(1);
 
-    const std::shared_ptr<Node> const2 = matMul->get_transpose_b() ?
+    std::shared_ptr<Node> const2 = matMul->get_transpose_b() ?
         transpose(dequantization2.multiply->get_input_node_shared_ptr(1)) :
         dequantization2.multiply->get_input_node_shared_ptr(1);
 
     const std::shared_ptr<opset1::Multiply> newMultiply = std::make_shared<opset1::Multiply>(
         newMatMul,
         NetworkHelper::toScalarIfPossible(fold<ngraph::opset1::Multiply>(const1, const2)));
+
+    //Shape const2Shape = const2->output(0).get_shape();
+    //if ((newMatMul->output(0).get_shape().size() - const2Shape.size()) == 1ul) {
+    //    const2Shape.insert(const2Shape.begin(), 1ul);
+    //    const2 = std::make_shared<opset1::Constant>(const2->output(0).get_element_type(), const2Shape, as_type_ptr<opset1::Constant>(const2)->get_data_ptr());
+    //}
+
+    //if (matMul->get_friendly_name() == "1345") {
+    //    ngraph::pass::VisualizeTree("C:\\Projects\\temp\\test.tmp").run_on_function(context.function);
+    //}
+
+    //const std::shared_ptr<Node> multiplyConstant = NetworkHelper::toScalarIfPossible(fold<ngraph::opset1::Multiply>(const1, const2));
+    //const auto shape1 = newMatMul->output(0).get_shape();
+    //const auto shape2 = multiplyConstant->output(0).get_shape();
+    //const std::shared_ptr<opset1::Multiply> newMultiply = std::make_shared<opset1::Multiply>(newMatMul, multiplyConstant);
     replace_node(matMul, newMultiply);
 
     updateOutput(context, newMultiply, matMul);
+
+    //if (matMul->get_friendly_name() == "1322") {
+    //    ngraph::pass::VisualizeTree("C:\\Projects\\temp\\test.matmul_1322").run_on_function(context.function);
+    //}
+
     return true;
 }
 
