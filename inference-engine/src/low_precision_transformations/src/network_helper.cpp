@@ -1033,7 +1033,7 @@ void CNNNetworkHelper::replaceLayer(TransformationContext& context, const CNNLay
     networkImpl->addLayer(target);
 }
 
-CNNLayerPtr CNNNetworkHelper::addScaleShiftBetween(TransformationContext& context, const CNNLayerPtr parent,
+std::vector<CNNLayerPtr> CNNNetworkHelper::addScaleShiftBetween(TransformationContext& context, const CNNLayerPtr parent,
                                                    const CNNLayerPtr child,
                                                    const DequantizationDetails& dequantizationDetails,
                                                    const std::string& name) {
@@ -1062,66 +1062,93 @@ CNNLayerPtr CNNNetworkHelper::addScaleShiftBetween(TransformationContext& contex
             CNNNetworkHelper::updateBlobs(*child, "biases", updatedShifts);
         }
 
-        return child;
+        return { child };
     }
 
     // Searching the connection between the layers
-    int l1_out_i = 0;
+
+    if ((parent->name == "Reshape/fq_input_0") && (child->name == "l2_normalize/Square")) {
+        std::cout << "CNNNetworkHelper::addScaleShiftBetween: " << parent->name << std::endl;
+    }
+
+    // specify parent/child edges here and manipulate with them below
+    std::vector<int> parentOutDataIndexes;
+    std::vector<int> childInsDataIndexes;
     if (child != nullptr) {
-        for (; l1_out_i < parent->outData.size(); l1_out_i++) {
+        for (int l1_out_i = 0; l1_out_i < parent->outData.size(); l1_out_i++) {
+            //const std::map<std::string, CNNLayerPtr>& inputTo = getInputTo(parent->outData[l1_out_i]);
+            //inputTo.find(child->name)
+
             if (getInputTo(parent->outData[l1_out_i]).find(child->name) !=
                 getInputTo(parent->outData[l1_out_i]).end()) {
-                break;
+                parentOutDataIndexes.push_back(l1_out_i);
+            }
+        }
+
+        for (size_t i = 0; i < child->insData.size(); ++i) {
+            const auto& insData = child->insData[i];
+            const CNNLayerPtr& creatorLayer = getCreatorLayer(insData.lock()).lock();
+            if (creatorLayer->name == parent->name) {
+                childInsDataIndexes.push_back(i);
             }
         }
     }
-    if (l1_out_i == parent->outData.size()) {
+
+    if (childInsDataIndexes.empty()) {
         if (child != nullptr)
             THROW_IE_EXCEPTION << "Can't find layer " << child->name << " among layer " << parent->name << " outputs";
         else
             THROW_IE_EXCEPTION << "Layer '" << parent->name << "' has invalid output";
     }
 
-    DataPtr outData = parent->outData[l1_out_i];
+    std::vector<CNNLayerPtr> ssCnnLayers;
+    ssCnnLayers.reserve(childInsDataIndexes.size());
+    for (int l1_out_i : parentOutDataIndexes) {
+        DataPtr outData = parent->outData[l1_out_i];
 
-    std::string layerName = name.empty() ? (child != nullptr ? (parent->name + "_ScaleShift_" + child->name)
-                                                             : (parent->name + "_ScaleShift"))
-                                         : name;
+        for (const int childInsDataIndex : childInsDataIndexes) {
+            std::string layerName = name.empty() ? (child != nullptr ? (parent->name + "_ScaleShift_" + child->name)
+                : (parent->name + "_ScaleShift"))
+                : name;
 
-    Precision ssPrecision = context.getOriginalLayerPrecision(parent->name, outData->getName());
-    if (ssPrecision == Precision::UNSPECIFIED) {
-        if (child != nullptr)
-            ssPrecision = child->precision;
-        else
-            ssPrecision = Precision::FP32;
-    }
+            Precision ssPrecision = context.getOriginalLayerPrecision(parent->name, outData->getName());
+            if (ssPrecision == Precision::UNSPECIFIED) {
+                if (child != nullptr)
+                    ssPrecision = child->precision;
+                else
+                    ssPrecision = Precision::FP32;
+            }
 
-    LayerParams ssCnnLayerParams {layerName, "ScaleShift", ssPrecision};
-    CNNLayerPtr ssCnnLayer(new ScaleShiftLayer(ssCnnLayerParams));
+            LayerParams ssCnnLayerParams{ layerName, "ScaleShift", ssPrecision };
+            CNNLayerPtr ssCnnLayer(new ScaleShiftLayer(ssCnnLayerParams));
 
-    const std::vector<size_t> dims = outData->getDims();
+            const std::vector<size_t> dims = outData->getDims();
 
-    if ((dims.size() != 2ul) || ((dims.size() == 2ul) && (dims[0] != dequantizationDetails.channelsCount))) {
-        if ((dims.size() > 1) && (dims[1] != dequantizationDetails.channelsCount)) {
-            THROW_IE_EXCEPTION << "unexpected parent channels count " << dims[1];
+            if ((dims.size() != 2ul) || ((dims.size() == 2ul) && (dims[0] != dequantizationDetails.channelsCount))) {
+                if ((dims.size() > 1) && (dims[1] != dequantizationDetails.channelsCount)) {
+                    THROW_IE_EXCEPTION << "unexpected parent channels count " << dims[1];
+                }
+            }
+            addLayerToCNNNetworkAfterData(outData, ssCnnLayer, child != nullptr ? child->name : "", context.network, childInsDataIndex);
+
+            {
+                ScaleShiftLayer* scshLayer = dynamic_cast<ScaleShiftLayer*>(ssCnnLayer.get());
+                if (scshLayer == nullptr) {
+                    THROW_IE_EXCEPTION << "Layer " << ssCnnLayer->name << " is not instance of ScaleShiftLayer class";
+                }
+                fillInScaleShift(
+                    scshLayer,
+                    dequantizationDetails.channelsCount,
+                    dequantizationDetails.scales.data(),
+                    dequantizationDetails.shifts.data());
+            }
+
+            CNNNetworkHelper::setOutDataPrecision(*ssCnnLayer, ssPrecision);
+            ssCnnLayers.push_back(ssCnnLayer);
         }
     }
-    addLayerToCNNNetworkAfterData(outData, ssCnnLayer, child != nullptr ? child->name : "", context.network);
 
-    {
-        ScaleShiftLayer* scshLayer = dynamic_cast<ScaleShiftLayer*>(ssCnnLayer.get());
-        if (scshLayer == nullptr) {
-            THROW_IE_EXCEPTION << "Layer " << ssCnnLayer->name << " is not instance of ScaleShiftLayer class";
-        }
-        fillInScaleShift(
-            scshLayer,
-            dequantizationDetails.channelsCount,
-            dequantizationDetails.scales.data(),
-            dequantizationDetails.shifts.data());
-    }
-
-    CNNNetworkHelper::setOutDataPrecision(*ssCnnLayer, ssPrecision);
-    return ssCnnLayer;
+    return ssCnnLayers;
 }
 
 CNNLayerPtr CNNNetworkHelper::addConstBetween(ICNNNetwork& net, const CNNLayerPtr layer1, const CNNLayerPtr layer2,
@@ -1161,7 +1188,8 @@ void CNNNetworkHelper::addLayerToCNNNetworkAfterData(
     DataPtr parentOutData,
     CNNLayer::Ptr layer,
     const std::string& nextLayerName,
-    ICNNNetwork& net) {
+    ICNNNetwork& net,
+    const int childInsDataIndex) {
     CNNNetworkImpl* netImpl = dynamic_cast<CNNNetworkImpl*>(&net);
     if (netImpl == nullptr) {
         THROW_IE_EXCEPTION << "unexpected network type";
@@ -1208,10 +1236,14 @@ void CNNNetworkHelper::addLayerToCNNNetworkAfterData(
             getInputTo(newEdgeAfterLayer)[nextLayerName] = nextLayer;
             if (parentOutData != nullptr) {
                 getInputTo(parentOutData).erase(nextLayerName);
-                for (size_t i = 0; i < nextLayer->insData.size(); i++) {
-                    if (nextLayer->insData[i].lock() == parentOutData) {
-                        nextLayer->insData[i] = newEdgeAfterLayer;
+                if (childInsDataIndex == -1) {
+                    for (size_t i = 0; i < nextLayer->insData.size(); i++) {
+                        if (nextLayer->insData[i].lock() == parentOutData) {
+                            nextLayer->insData[i] = newEdgeAfterLayer;
+                        }
                     }
+                } else {
+                    nextLayer->insData[childInsDataIndex] = newEdgeAfterLayer;
                 }
             } else {
                 // TODO: why new?

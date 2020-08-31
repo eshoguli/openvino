@@ -31,6 +31,10 @@ void FakeQuantizeTransformation::transform(TransformationContext& context, CNNLa
         THROW_IE_EXCEPTION << "Layer '" << layer.name << "' has invalid type. FakeQuantize is expected.";
     }
 
+    if (layer.name == "Reshape/fq_input_0") {
+        std::cout << "FakeQuantizeTransformation::transform: " << layer.name << std::endl;
+    }
+
     if (layer.insData.size() != 5lu) {
         THROW_IE_EXCEPTION << "Layer '" << layer.insData.size() << "' has invalid inputs number. 5 is expected.";
     }
