@@ -77,8 +77,8 @@ void FakeQuantizeTransformation::transform(TransformationContext& context, CNNLa
     printDequantizationValues(dequantizationScales, dequantizationShifts);
 #endif
 
-    CNNNetworkHelper::updateBlobs(layer, 3, dataPrecision.min);
-    CNNNetworkHelper::updateBlobs(layer, 4, dataPrecision.max);
+    CNNNetworkHelper::updateBlobs(context, layer, 3, dataPrecision.min);
+    CNNNetworkHelper::updateBlobs(context, layer, 4, dataPrecision.max);
 
     if (updatePrecisions) {
         CNNNetworkHelper::setOutDataPrecision(layer, dataPrecision.precision);
