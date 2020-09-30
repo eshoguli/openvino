@@ -48,47 +48,59 @@ bool FakeQuantizeDequantization::isLowPrecision() const {
     return (data.get_element_type() == element::i8) || (data.get_element_type() == element::u8);
 }
 
-bool FakeQuantizeDequantization::checkElementwise(const std::shared_ptr<ngraph::Node>& dequantizationElementwise) {
+bool FakeQuantizeDequantization::checkElementwise(const std::shared_ptr<ngraph::Node>& dequantizationElementwise, const bool onWeights) {
     const ngraph::PartialShape partialShape = dequantizationElementwise->get_input_partial_shape(0);
     if (partialShape.is_dynamic()) {
         return false;
     }
 
-    std::shared_ptr<opset1::Constant> constant = as_type_ptr<opset1::Constant>(dequantizationElementwise->get_input_node_shared_ptr(1));
+    const size_t constIndex = is_type<opset1::Constant>(dequantizationElementwise->get_input_node_ptr(0)) ? 0ul : 1ul;
+    std::shared_ptr<opset1::Constant> constant = as_type_ptr<opset1::Constant>(dequantizationElementwise->get_input_node_shared_ptr(constIndex));
     if (constant == nullptr) {
-        THROW_IE_LPT_EXCEPTION(*dequantizationElementwise) << "unexpected operation type " <<
-            dequantizationElementwise->get_type_info().name << " on the second branch";
-    }
-
-    const ngraph::Shape constShape = constant->get_output_shape(0);
-    if ((constShape.size() > 5ul)) {
         return false;
     }
 
-    if ((constShape.size() <= 1ul) || (std::all_of(constShape.begin(), constShape.end(), [](const size_t value) { return value == 1ul; }))) {
-        return true;
+    if (!onWeights) {
+        const ngraph::Shape constShape = constant->get_output_shape(0);
+        if ((constShape.size() > 5ul)) {
+            return false;
+        }
+
+        if ((constShape.size() <= 1ul) || (std::all_of(constShape.begin(), constShape.end(), [](const size_t value) { return value == 1ul; }))) {
+            return true;
+        }
+
+        const ngraph::Shape shape = partialShape.to_shape();
+        if (constShape.size() == shape.size()) {
+            if ((constShape[0] != 1ul) || (constShape[1] != shape[1])) {
+                return false;
+            }
+            for (size_t i = 2ul; i < constShape.size(); ++i) {
+                if (constShape[i] != 1ul) {
+                    return false;
+                }
+            }
+        } else if (constShape.size() == (shape.size() - 1)) {
+            if (constShape[0] != shape[1]) {
+                return false;
+            }
+            for (size_t i = 1ul; i < constShape.size(); ++i) {
+                if (constShape[i] != 1ul) {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
     }
 
-    const ngraph::Shape shape = partialShape.to_shape();
-    if (constShape.size() == shape.size()) {
-        if ((constShape[0] != 1ul) || (constShape[1] != shape[1])) {
-            return false;
-        }
-        for (size_t i = 2ul; i < constShape.size(); ++i) {
-            if (constShape[i] != 1ul) {
-                return false;
-            }
-        }
-    } else if (constShape.size() == (shape.size() - 1)) {
-        if (constShape[0] != shape[1]) {
-            return false;
-        }
-        for (size_t i = 1ul; i < constShape.size(); ++i) {
-            if (constShape[i] != 1ul) {
-                return false;
-            }
-        }
-    } else {
+    // dequantization operations should:
+    //    1. be in FP32
+    //    2. NOT propagate precisions
+    const size_t dataIndex = is_type<opset1::Constant>(dequantizationElementwise->get_input_node_ptr(1)) ? 0ul : 1ul;
+    const element::Type inputPrecision = dequantizationElementwise->input(dataIndex).get_element_type();
+    const element::Type outputPrecision = dequantizationElementwise->output(0).get_element_type();
+    if ((inputPrecision != element::f32) || (outputPrecision != element::f32)) {
         return false;
     }
 

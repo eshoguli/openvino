@@ -103,7 +103,10 @@ bool ReshapeTransformation::transform(TransformationContext& context, ngraph::pa
 
     reshape = as_type_ptr<opset1::Reshape>(separateInStandaloneBranch(reshape));
     reshapeDequantizationConstant(reshape);
-    moveDequantizationAfter(context, reshape, NetworkHelper::getDequantization(reshape, 0), false);
+
+    // ISSUE: dequantization const shape is unexpected
+    auto dequantization = NetworkHelper::getDequantization(reshape, 0);
+    moveDequantizationAfter(context, reshape, dequantization, false);
     return true;
 }
 

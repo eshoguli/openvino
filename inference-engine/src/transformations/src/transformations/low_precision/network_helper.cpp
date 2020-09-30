@@ -787,7 +787,7 @@ FakeQuantizeDequantization NetworkHelper::createDequantizationFromFakeQuantize(
     return FakeQuantizeDequantization(fq, convert, subtract, multiply);
 }
 
-FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_ptr<Node> node, const size_t parentIndex) {
+FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_ptr<Node> node, const size_t parentIndex, const bool onWeights) {
     auto getDataIndex = [](const std::shared_ptr<ngraph::Node>& node) {
         if (is_type<opset1::Constant>(node->get_input_node_ptr(1))) {
             return 0ul;
@@ -798,30 +798,28 @@ FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_pt
 
     Output<Node> dataNode = node->input_value(parentIndex);
 
-    const std::shared_ptr<ngraph::opset1::Multiply> multiply =
-        (dataNode.get_node_shared_ptr()->get_input_size() > 1ul) &&
-        (is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(1)) ||
-            is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(0))) ?
-        as_type_ptr<ngraph::opset1::Multiply>(dataNode.get_node_shared_ptr()) :
-        nullptr;
-
+    std::shared_ptr<ngraph::opset1::Multiply> multiply = as_type_ptr<ngraph::opset1::Multiply>(dataNode.get_node_shared_ptr());
     if (multiply != nullptr) {
+        if (!FakeQuantizeDequantization::checkElementwise(multiply, onWeights)) {
+            return FakeQuantizeDequantization();
+        }
         dataNode = multiply->get_input_source_output(getDataIndex(multiply));
     }
 
-    const std::shared_ptr<opset1::Subtract> subtract =
-        (dataNode.get_node_shared_ptr()->get_input_size() > 1ul) &&
-        (is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(1)) ||
-            is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(0))) ?
-        as_type_ptr<ngraph::opset1::Subtract>(dataNode.get_node_shared_ptr()) :
-        nullptr;
-
+    std::shared_ptr<opset1::Subtract> subtract = as_type_ptr<ngraph::opset1::Subtract>(dataNode.get_node_shared_ptr());
     if (subtract != nullptr) {
+        if (!FakeQuantizeDequantization::checkElementwise(subtract, onWeights)) {
+            return FakeQuantizeDequantization(dataNode, nullptr, nullptr, multiply);
+        }
         dataNode = subtract->get_input_source_output(getDataIndex(subtract));
     }
 
-    const std::shared_ptr<opset1::Convert> convert = as_type_ptr<opset1::Convert>(dataNode.get_node_shared_ptr());
+    std::shared_ptr<opset1::Convert> convert = as_type_ptr<opset1::Convert>(dataNode.get_node_shared_ptr());
     if (convert != nullptr) {
+        const element::Type convertInputPrecision = convert->input(0).get_element_type();
+        if ((convertInputPrecision != element::i8) && (convertInputPrecision != element::u8)) {
+            return FakeQuantizeDequantization(dataNode, nullptr, subtract, multiply);
+        }
         dataNode = convert->get_input_source_output(0);
     }
 

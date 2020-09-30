@@ -114,7 +114,7 @@ public:
         const bool hasZeroPoint,
         const bool updatePrecision);
 
-    static FakeQuantizeDequantization getDequantization(const std::shared_ptr<Node> node, const size_t parentIndex = 0ul);
+    static FakeQuantizeDequantization getDequantization(const std::shared_ptr<Node> node, const size_t parentIndex = 0ul, const bool onWeights = false);
 
     static std::shared_ptr<Node> optimizeSubtract(std::shared_ptr<opset1::Subtract> add);
 

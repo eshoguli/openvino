@@ -28,7 +28,7 @@ public:
     bool empty() const;
     bool isShared() const;
     bool isLowPrecision() const;
-    static bool checkElementwise(const std::shared_ptr<ngraph::Node>& elementwise);
+    static bool checkElementwise(const std::shared_ptr<ngraph::Node>& elementwise, const bool onWeights = false);
 
     Output<Node> data;
     std::shared_ptr<opset1::Convert> convert;
