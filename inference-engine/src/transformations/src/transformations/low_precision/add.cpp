@@ -189,6 +189,12 @@ bool AddTransformation::transform(TransformationContext& context, ngraph::patter
     }
 
     updateOutput(context, newMultiply, newAddOrSubtract);
+
+    if (fullPathIndex != -1) {
+        std::shared_ptr<Node> node = add;
+        NetworkHelper::foldDequantization(node, fullPathIndex);
+    }
+
     return true;
 }
 

@@ -58,7 +58,8 @@ bool EltwiseBaseTransformation::canBeTransformed(const TransformationContext& co
 
     FakeQuantizeDequantization dequantization1 = pass::low_precision::NetworkHelper::getDequantization(operation, 0ul);
     FakeQuantizeDequantization dequantization2 = pass::low_precision::NetworkHelper::getDequantization(operation, 1ul);
-    if (dequantization1.empty() && dequantization2.empty()) {
+    if ((dequantization1.empty() || ((dequantization1.multiply != nullptr) && !FakeQuantizeDequantization::checkElementwise(dequantization1.multiply))) &&
+        (dequantization2.empty() || ((dequantization2.multiply != nullptr) && !FakeQuantizeDequantization::checkElementwise(dequantization2.multiply)))) {
         return false;
     }
 
@@ -104,6 +105,14 @@ int EltwiseBaseTransformation::getNotEmpty(const std::shared_ptr<Node>& eltwise)
             return 0;
         if (childs1 > 1 && childs2 == 1)
             return 1;
+    }
+
+    if (is_type<opset1::Constant>(dequantization1.data.get_node())) {
+        return 0;
+    }
+
+    if (is_type<opset1::Constant>(dequantization2.data.get_node())) {
+        return 1;
     }
 
     const bool allBranchesAreEqual = isBranchWithTargetType(fakeQuantize1) == isBranchWithTargetType(fakeQuantize2);
