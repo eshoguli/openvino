@@ -60,7 +60,8 @@ namespace subgraph {
 
         std::shared_ptr<ngraph::Node> lastNode;
         if (isDequantization) {
-            const auto scaleshift = std::make_shared<ngraph::op::ScaleShiftIE>(input, weights, biases, precisionAfterOperation);
+            std::shared_ptr<Node> scaleshift = std::make_shared<ngraph::op::ScaleShiftIE>(input, weights, biases, precisionAfterOperation);
+            scaleshift = low_precision::NetworkHelper::mark_as_dequantization_op(scaleshift);
             scaleshift->set_friendly_name("add");
             lastNode = scaleshift;
         } else {
