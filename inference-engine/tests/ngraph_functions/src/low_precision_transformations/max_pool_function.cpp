@@ -9,6 +9,7 @@
 #include "ngraph_functions/subgraph_builders.hpp"
 #include "low_precision/network_helper.hpp"
 
+
 namespace ngraph {
 namespace builder {
 namespace subgraph {
@@ -87,20 +88,31 @@ std::shared_ptr<ngraph::Function> MaxPoolFunction::getReference(
     parent = maxPool;
 
     if (parent->get_output_element_type(0) != originalFunctionPrecision) {
-        const std::shared_ptr<ngraph::Node> convert = std::make_shared<ngraph::opset1::Convert>(parent, originalFunctionPrecision);
+        const std::shared_ptr<ngraph::Node> convert = ngraph::pass::low_precision::NetworkHelper::markAsDequantizationOp(
+            std::make_shared<ngraph::opset1::Convert>(parent, originalFunctionPrecision));
         parent = convert;
     }
 
     if (!values.subtractValues.empty()) {
-        const std::shared_ptr<ngraph::Node> subtract = std::make_shared<ngraph::opset1::Subtract>(
-            parent,
-            std::make_shared<ngraph::opset1::Constant>(originalFunctionPrecision, Shape({ values.subtractValues.size() }), values.subtractValues));
+        const std::shared_ptr<ngraph::Node> subtract = ngraph::pass::low_precision::NetworkHelper::markAsDequantizationOp(
+            std::make_shared<ngraph::opset1::Subtract>(
+                parent,
+                std::make_shared<ngraph::opset1::Constant>(
+                    originalFunctionPrecision,
+                    Shape({ values.subtractValues.size() }),
+                    values.subtractValues)));
+        ngraph::pass::low_precision::NetworkHelper::markAsDequantizationOp(subtract);
         parent = subtract;
     }
 
-    const std::shared_ptr<ngraph::Node> multiply = std::make_shared<ngraph::opset1::Multiply>(
-        parent,
-        std::make_shared<ngraph::opset1::Constant>(originalFunctionPrecision, Shape({ values.mutliplyValues.size() }), values.mutliplyValues));
+    const std::shared_ptr<ngraph::Node> multiply = ngraph::pass::low_precision::NetworkHelper::markAsDequantizationOp(
+        std::make_shared<ngraph::opset1::Multiply>(
+            parent,
+            std::make_shared<ngraph::opset1::Constant>(
+                originalFunctionPrecision,
+                Shape({ values.mutliplyValues.size() }),
+                values.mutliplyValues)));
+    ngraph::pass::low_precision::NetworkHelper::markAsDequantizationOp(multiply);
     multiply->set_friendly_name("output");
 
     ngraph::ResultVector results{ std::make_shared<ngraph::opset1::Result>(multiply) };
