@@ -286,6 +286,19 @@ bool LowPrecisionTransformer::isFunctionQuantized(const std::shared_ptr<Function
 
 LowPrecisionTransformer::LowPrecisionTransformer(): transformations(LowPrecisionTransformer::getAllTransformations()) {}
 
+static void fillPrecisions(
+    const std::shared_ptr<ngraph::Node>& node,
+    std::vector<element::Type>& inputPrecisions,
+    std::vector<element::Type>& outputPrecisions) {
+    for (auto& inputs : node->inputs()) {
+        inputPrecisions.push_back(inputs.get_element_type());
+    }
+
+    for (auto& output : node->outputs()) {
+        outputPrecisions.push_back(output.get_element_type());
+    }
+}
+
 template <typename BaseOp>
 void make_matcher_type_relaxed(ngraph::pass::GraphRewrite* transformation) {
     using namespace ngraph;
@@ -306,14 +319,8 @@ void make_matcher_type_relaxed(ngraph::pass::GraphRewrite* transformation) {
         }
 
         std::vector<element::Type> inputPrecisions;
-        for (auto& inputs : l_node->inputs()) {
-            inputPrecisions.push_back(inputs.get_element_type());
-        }
-
         std::vector<element::Type> outputPrecisions;
-        for (auto& output : l_node->outputs()) {
-            outputPrecisions.push_back(output.get_element_type());
-        }
+        fillPrecisions(l_node, inputPrecisions, outputPrecisions);
 
         auto replacement = std::make_shared<ngraph::op::TypeRelaxed<BaseOp>>(*l_node, inputPrecisions, outputPrecisions);
 

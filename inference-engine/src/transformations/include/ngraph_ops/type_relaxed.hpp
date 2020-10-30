@@ -130,6 +130,7 @@ public:
     using BaseOp::BaseOp;
 
     TypeRelaxed() = default;
+    ~TypeRelaxed() = default;
 
     TypeRelaxed(
             const BaseOp& base_op,
