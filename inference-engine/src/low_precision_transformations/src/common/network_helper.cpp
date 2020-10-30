@@ -308,9 +308,10 @@ std::shared_ptr<ngraph::opset1::Multiply> NetworkHelper::optimizeMultipliesAfter
             }
 
             auto newConst = fold<opset1::Multiply>(constant1, constant2);
+            size_t dataIdx = 1 - constant1->output(0).get_target_inputs().begin()->get_index();
             auto newMultiply =
                     std::make_shared<opset1::Multiply>(
-                            multiply->input_value(1 - constant1->output(0).get_target_inputs().begin()->get_index()),
+                            multiply->input_value(dataIdx),
                             newConst->output(0));
             copy_runtime_info(multiply, newMultiply);
             replace_node(nextMultiply, newMultiply);
@@ -932,8 +933,8 @@ NetworkHelper::InsertDequantizationResult NetworkHelper::moveDequantizationAfter
         (dequantization.subtract == nullptr ? dequantization.data : dequantization.subtract);
 
     const std::shared_ptr<ngraph::Node> newOperation = operation->clone_with_new_inputs(inputs);
-    newOperation->set_friendly_name(operation->get_friendly_name());
-    ngraph::copy_runtime_info(operation, newOperation);
+    copyInfo(operation, newOperation);
+
 
     if (updatePrecision) {
         auto op = std::dynamic_pointer_cast<ngraph::op::TypeRelaxedBase>(newOperation);
@@ -949,16 +950,19 @@ NetworkHelper::InsertDequantizationResult NetworkHelper::moveDequantizationAfter
     auto parent = newOperation;
     if (shouldConvert) {
         parent = std::make_shared<DequantizationConvert>(parent, dequantization.convert->get_output_element_type(0));
+        parent->set_friendly_name(newOperation->get_friendly_name() + "/DequantizationConvert");
         ngraph::copy_runtime_info({ newOperation, parent }, parent);
     }
     if (moveSubtract && (dequantization.subtract != nullptr)) {
         auto subtractConstant = dequantization.subtract->get_input_node_shared_ptr(1);
         parent = std::make_shared<DequantizationSubtract>(parent, subtractConstant);
+        parent->set_friendly_name(newOperation->get_friendly_name() + "/DequantizationSubtract");
         ngraph::copy_runtime_info({ newOperation, parent }, parent);
     }
     if (dequantization.multiply != nullptr) {
         auto multiplyConstant = dequantization.multiply->get_input_node_shared_ptr(1);
         parent = std::make_shared<DequantizationMultiply>(parent, multiplyConstant);
+        parent->set_friendly_name(newOperation->get_friendly_name() + "/DequantizationMultiply");
         ngraph::copy_runtime_info({ newOperation, parent }, parent);
     }
     replace_node(operation, parent);

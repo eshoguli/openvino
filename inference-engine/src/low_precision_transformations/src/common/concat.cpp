@@ -339,6 +339,8 @@ void ConcatTransformation::addDequantizationLayers(
                             std::shared_ptr<ngraph::Node> convert =
                                 convertNodes[0]->clone_with_new_inputs({ destination->get_input_source_output(sourceOutputIdx) });
                             insert_new_node_between(source, destination, convert);
+
+                            convert->set_friendly_name(layer->get_friendly_name() + "/DequantizationConvert");
                             ngraph::copy_runtime_info({ layer, convert }, convert);
                             source = convert;
                         }
@@ -352,6 +354,8 @@ void ConcatTransformation::addDequantizationLayers(
                                     subtractNodes[0] :
                                     ngraph::pass::low_precision::fold<ngraph::opset1::Concat>(subtractNodes, 1)));
                             insert_new_node_between(source, destination, subtract);
+
+                            subtract->set_friendly_name(layer->get_friendly_name() + "/DequantizationSubtract");
                             ngraph::copy_runtime_info({ layer, subtract }, subtract);
                             source = subtract;
                         }
@@ -364,6 +368,8 @@ void ConcatTransformation::addDequantizationLayers(
                                     multiplyNodes[0] :
                                     ngraph::pass::low_precision::fold<ngraph::opset1::Concat>(multiplyNodes, 1)));
                             insert_new_node_between(source, destination, multiply);
+
+                            multiply->set_friendly_name(layer->get_friendly_name() + "/DequantizationMultiply");
                             ngraph::copy_runtime_info({ layer, multiply }, multiply);
                             source = multiply;
                         }

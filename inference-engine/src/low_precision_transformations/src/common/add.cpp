@@ -183,10 +183,11 @@ bool AddTransformation::transform(TransformationContext& context, ngraph::patter
             ngraph::op::TemporaryReplaceOutputType(inputs[0], element::f32).get(),
             ngraph::op::TemporaryReplaceOutputType(inputs[1], element::f32).get());
         newMultiply = std::make_shared<DequantizationMultiply>(newAddOrSubtract, multiplyEmptyPathValues);
+        newMultiply->set_friendly_name(newAddOrSubtract->get_friendly_name() + "/DequantizationMultiply");
+        ngraph::copy_runtime_info({ add, newMultiply }, newMultiply);
 
         replace_node(add, newMultiply);
         NetworkHelper::copyInfo(add, newAddOrSubtract);
-        ngraph::copy_runtime_info({ add, newMultiply }, newMultiply);
     }
 
     updateOutput(context, newMultiply, newAddOrSubtract);
