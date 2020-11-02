@@ -97,17 +97,17 @@ bool LayerTransformation::canBeTransformed(const TransformationContext& context,
             return true;
         };
 
-        if ((dequantization.subtract != nullptr) && (!perChannelQuantization(
-            dequantization.subtract->output(0).get_shape(),
-            dequantization.subtract->input(1).get_shape()))) {
-            return false;
-        }
+        //if ((dequantization.subtract != nullptr) && (!perChannelQuantization(
+        //    dequantization.subtract->output(0).get_shape(),
+        //    dequantization.subtract->input(1).get_shape()))) {
+        //    return false;
+        //}
 
-        if ((dequantization.multiply != nullptr) && (!perChannelQuantization(
-            dequantization.multiply->output(0).get_shape(),
-            dequantization.multiply->input(1).get_shape()))) {
-            return false;
-        }
+        //if ((dequantization.multiply != nullptr) && (!perChannelQuantization(
+        //    dequantization.multiply->output(0).get_shape(),
+        //    dequantization.multiply->input(1).get_shape()))) {
+        //    return false;
+        //}
     }
 
     return true;

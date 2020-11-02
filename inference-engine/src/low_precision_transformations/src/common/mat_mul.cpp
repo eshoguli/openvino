@@ -18,6 +18,11 @@ using namespace ngraph::pass::low_precision;
 
 bool MatMulTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
     std::shared_ptr<ngraph::opset1::MatMul> matMul = as_type_ptr<ngraph::opset1::MatMul>(m.get_match_root());
+
+    if (matMul->get_friendly_name() == "MatMul_85") {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.mat_mul.before").run_on_function(context.function);
+    }
+
     if ((matMul == nullptr) || !canBeTransformed(context, matMul)) {
         return false;
     }
@@ -85,9 +90,15 @@ bool MatMulTransformation::transform(TransformationContext &context, ngraph::pat
         transpose(dequantization1.multiply->get_input_node_shared_ptr(1)) :
         dequantization1.multiply->get_input_node_shared_ptr(1);
 
-    const std::shared_ptr<Node> const2 = matMul->get_transpose_b() ?
+    std::shared_ptr<Node> const2 = matMul->get_transpose_b() ?
         transpose(dequantization2.multiply->get_input_node_shared_ptr(1)) :
         dequantization2.multiply->get_input_node_shared_ptr(1);
+
+    if ((matMul->output(0).get_shape().size() == 3ul) &&
+        (shape_size(const1->output(0).get_shape()) == 1ul) &&
+        (const2->output(0).get_shape().size() == 2ul)) {
+        const2 = fold<opset1::Unsqueeze>(const2, std::make_shared<opset1::Constant>(element::i32, Shape{ 1 }, std::vector<size_t>{0}));
+    }
 
     const std::shared_ptr<opset1::Multiply> newMultiply = std::make_shared<DequantizationMultiply>(
         newMatMul,
@@ -99,6 +110,10 @@ bool MatMulTransformation::transform(TransformationContext &context, ngraph::pat
     ngraph::copy_runtime_info({ newMultiply, matMul }, newMultiply);
 
     updateOutput(context, newMultiply, matMul);
+
+    if (matMul->get_friendly_name() == "MatMul_85") {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.mat_mul.after").run_on_function(context.function);
+    }
 
     return true;
 }
@@ -160,6 +175,11 @@ bool MatMulTransformation::canBeTransformed(const TransformationContext& context
         if ((input1[channelIndex1] != input2[channelIndex2]) &&
             ((shape_size(dequantization1.multiply->input(1).get_shape()) > 1) ||
             (shape_size(fakeQuantize->input(3).get_shape()) > 1) || (shape_size(fakeQuantize->input(4).get_shape()) > 1))) {
+
+            if (matMul->get_friendly_name() == "MatMul_85") {
+                return true;
+            }
+
             return false;
         }
     }

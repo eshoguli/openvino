@@ -90,6 +90,11 @@ void AddTransformation::registerMatcherIn(GraphRewrite &pass, TransformationCont
 
 bool AddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
     std::shared_ptr<opset1::Add> op = as_type_ptr<opset1::Add>(m.get_match_root());
+
+    if (op->get_friendly_name() == "Add_86") {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.add.before").run_on_function(context.function);
+    }
+
     if (!canBeTransformed(context, op)) {
         return false;
     }
@@ -194,6 +199,10 @@ bool AddTransformation::transform(TransformationContext& context, ngraph::patter
     if (fullPathIndex != -1) {
         std::shared_ptr<Node> node = add;
         NetworkHelper::foldDequantization(node, fullPathIndex);
+    }
+
+    if (op->get_friendly_name() == "Add_86") {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.add.after").run_on_function(context.function);
     }
 
     return true;
