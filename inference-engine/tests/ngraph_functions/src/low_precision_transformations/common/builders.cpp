@@ -20,12 +20,14 @@ std::shared_ptr<Node> makeDequantization(
     const Output<Node>& data,
     const DequantizationOperations& dequantizationOperations) {
     Output<Node> parent = data;
+    const std::string friendlyName = parent.get_node()->get_friendly_name();
 
     if (!dequantizationOperations.convert.empty()) {
         std::shared_ptr<ngraph::opset1::Convert> convert = std::make_shared<ngraph::pass::low_precision::DequantizationConvert>(
             data,
             dequantizationOperations.convert.outPrecision);
         ngraph::copy_runtime_info({ data.get_node_shared_ptr(), convert }, convert);
+        convert->set_friendly_name(friendlyName + "/DequantizationConvert");
         parent = convert;
     }
 
@@ -50,6 +52,7 @@ std::shared_ptr<Node> makeDequantization(
                 parent.get_element_type(),
             shape,
             dequantizationOperations.subtract.values);
+        subtractConst->set_friendly_name(friendlyName + "/DequantizationSubtract/Constant");
 
         if ((dequantizationOperations.subtract.outPrecision == element::undefined) ||
             (dequantizationOperations.subtract.outPrecision == parent.get_element_type())) {
@@ -66,6 +69,7 @@ std::shared_ptr<Node> makeDequantization(
             ngraph::pass::low_precision::NetworkHelper::cleanRunTimeInfo(subtract);
         }
         ngraph::copy_runtime_info({ data.get_node_shared_ptr(), subtract }, subtract);
+        subtract->set_friendly_name(friendlyName + "/DequantizationSubtract");
         parent = subtract;
     }
 
@@ -89,6 +93,7 @@ std::shared_ptr<Node> makeDequantization(
                 parent.get_element_type(),
                 shape,
                 dequantizationOperations.multiply.values);
+            constant->set_friendly_name(friendlyName + "/DequantizationMultiply/Constant");
 
             multiply = dequantizationOperations.multiply.constantIndex == 1ul ?
                 std::make_shared<ngraph::pass::low_precision::DequantizationMultiply>(parent, constant) :
@@ -100,6 +105,7 @@ std::shared_ptr<Node> makeDequantization(
                     parent.get_element_type(),
                 shape,
                 dequantizationOperations.multiply.values);
+            constant->set_friendly_name(friendlyName + "/DequantizationMultiply/Constant");
 
             multiply = dequantizationOperations.multiply.constantIndex == 1ul ?
                 std::make_shared<op::TypeRelaxed<ngraph::pass::low_precision::DequantizationMultiply>>(
@@ -114,6 +120,7 @@ std::shared_ptr<Node> makeDequantization(
                     ngraph::op::TemporaryReplaceOutputType(parent, element::f32).get());
         }
         ngraph::copy_runtime_info({ data.get_node_shared_ptr(), multiply }, multiply);
+        multiply->set_friendly_name(friendlyName + "/DequantizationMultiply");
         parent = multiply;
     }
 

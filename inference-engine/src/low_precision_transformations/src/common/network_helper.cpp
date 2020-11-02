@@ -726,20 +726,22 @@ FakeQuantizeDequantization NetworkHelper::makeDequantization(
     }
 
     std::shared_ptr<DequantizationSubtract> subtract;
+    std::shared_ptr<opset1::Constant> subtractConstant;
     if (std::abs(dequantizationSub) > 1e-6) {
-        subtract = std::make_shared<ngraph::op::TypeRelaxed<DequantizationSubtract>>(
-            parent,
-            std::make_shared<ngraph::opset1::Constant>(originalPrecision, ngraph::Shape({}), std::vector<float>({ dequantizationSub })));
+        subtractConstant = std::make_shared<ngraph::opset1::Constant>(originalPrecision, ngraph::Shape({}), std::vector<float>({ dequantizationSub }));
+        subtract = std::make_shared<ngraph::op::TypeRelaxed<DequantizationSubtract>>(parent, subtractConstant);
         subtract->set_output_type(0, originalPrecision, subtract->get_output_partial_shape(0));
         parent = subtract;
     }
 
     // mandatory
-    std::shared_ptr<ngraph::opset1::Multiply> multiply = std::make_shared<DequantizationMultiply>(
-        parent,
-        std::make_shared<ngraph::opset1::Constant>(originalPrecision, ngraph::Shape({}), std::vector<float>({ dequantizationMul })));
+    std::shared_ptr<opset1::Constant> multiplyConstant = std::make_shared<ngraph::opset1::Constant>(
+        originalPrecision,
+        ngraph::Shape({}),
+        std::vector<float>({ dequantizationMul }));
+    std::shared_ptr<ngraph::opset1::Multiply> multiply = std::make_shared<DequantizationMultiply>(parent, multiplyConstant);
 
-    return FakeQuantizeDequantization(input, convert, subtract, multiply);
+    return FakeQuantizeDequantization(input, convert, subtract, subtractConstant, multiply, multiplyConstant);
 }
 
 FakeQuantizeDequantization NetworkHelper::createDequantizationFromFakeQuantize(
@@ -796,7 +798,13 @@ FakeQuantizeDequantization NetworkHelper::createDequantizationFromFakeQuantize(
         subtract == nullptr ? static_cast<std::shared_ptr<Node>>(convert) : subtract,
         scale);
 
-    return FakeQuantizeDequantization(fq, convert, subtract, multiply);
+    return FakeQuantizeDequantization(
+        fq,
+        convert,
+        subtract,
+        shift != nullptr ? as_type_ptr<opset1::Constant>(shift) : nullptr,
+        multiply,
+        scale != nullptr ? as_type_ptr<opset1::Constant>(scale) : nullptr);
 }
 
 FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_ptr<Node> node, const size_t parentIndex, const bool inPlace) {
@@ -811,18 +819,24 @@ FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_pt
     Output<Node> dataNode = inPlace ? node : node->input_value(parentIndex);
 
     const std::shared_ptr<ngraph::opset1::Multiply> multiply = as_type_ptr<ngraph::opset1::Multiply>(dataNode.get_node_shared_ptr());
+    std::shared_ptr<ngraph::opset1::Constant> multiplyConstant;
     if (multiply != nullptr) {
         if (!is_type<opset1::Constant>(multiply->get_input_node_ptr(0)) && !is_type<opset1::Constant>(multiply->get_input_node_ptr(1))) {
             return FakeQuantizeDequantization();
         }
+        multiplyConstant = as_type_ptr<ngraph::opset1::Constant>(multiply->get_input_node_shared_ptr(
+            is_type<ngraph::opset1::Constant>(multiply->get_input_node_ptr(0)) ? 0 : 1));
         dataNode = multiply->get_input_source_output(getDataIndex(multiply));
     }
 
     const std::shared_ptr<opset1::Subtract> subtract = as_type_ptr<ngraph::opset1::Subtract>(dataNode.get_node_shared_ptr());
+    std::shared_ptr<ngraph::opset1::Constant> subtractConstant;
     if (subtract != nullptr) {
         if (!is_type<opset1::Constant>(subtract->get_input_node_ptr(0)) && !is_type<opset1::Constant>(subtract->get_input_node_ptr(1))) {
-            return FakeQuantizeDequantization(dataNode, nullptr, nullptr, multiply);
+            return FakeQuantizeDequantization(dataNode, nullptr, nullptr, nullptr, multiply, multiplyConstant);
         }
+        subtractConstant = as_type_ptr<ngraph::opset1::Constant>(subtract->get_input_node_shared_ptr(
+            is_type<ngraph::opset1::Constant>(subtract->get_input_node_ptr(0)) ? 0 : 1));
         dataNode = subtract->get_input_source_output(getDataIndex(subtract));
     }
 
@@ -830,24 +844,27 @@ FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_pt
     if (convert != nullptr) {
         if ((convert->input(0).get_element_type() != element::i8) && (convert->input(0).get_element_type() != element::u8) &&
             (convert->output(0).get_element_type() != element::f32)) {
-            return FakeQuantizeDequantization(dataNode, nullptr, subtract, multiply);
+            return FakeQuantizeDequantization(dataNode, nullptr, subtract, subtractConstant, multiply, multiplyConstant);
         }
         dataNode = convert->get_input_source_output(0);
     }
 
-    return FakeQuantizeDequantization(dataNode, convert, subtract, multiply);
+    return FakeQuantizeDequantization(dataNode, convert, subtract, subtractConstant, multiply, multiplyConstant);
 }
 
 FakeQuantizeDequantizationValues NetworkHelper::createEmptyValues(const FakeQuantizeDequantization& dequantization) {
     std::shared_ptr<Node> parent = dequantization.convert ? dequantization.convert : dequantization.data.get_node_shared_ptr();
 
     std::shared_ptr<Node> multiply1Const = dequantization.multiply ?
-        dequantization.multiply->get_input_node_shared_ptr(1)->clone_with_new_inputs({}) :
+        dequantization.multiply->get_input_node_shared_ptr(1) :
         std::make_shared<opset1::Constant>(parent->get_output_element_type(0), Shape({}), std::vector<float>({ 1.f }));
+    // TODO: port number and children count is not used here
+    multiply1Const->set_friendly_name(dequantization.data.get_node()->get_friendly_name() + "/DequantizationMultiply/Constant");
 
     std::shared_ptr<Node> subtract1Const = dequantization.subtract ?
-        dequantization.subtract->get_input_node_shared_ptr(1)->clone_with_new_inputs({}) :
+        dequantization.subtract->get_input_node_shared_ptr(1) :
         std::make_shared<opset1::Constant>(parent->get_output_element_type(0), Shape({}), std::vector<float>({ 0.f }));
+    subtract1Const->set_friendly_name(dequantization.data.get_node()->get_friendly_name() + "/DequantizationSubtract/Constant");
 
     subtract1Const->set_output_type(0, multiply1Const->get_output_element_type(0), subtract1Const->get_output_partial_shape(0));
 

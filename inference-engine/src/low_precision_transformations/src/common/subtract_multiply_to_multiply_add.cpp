@@ -23,20 +23,24 @@ void SubtractMultiplyToMultiplyAddTransformation::registerMatcherIn(GraphRewrite
 FakeQuantizeDequantization get(const std::shared_ptr<Node> node) {
     Output<Node> dataNode = node;
 
+    std::shared_ptr<opset1::Constant> multiplyConstant;
     const std::shared_ptr<ngraph::opset1::Multiply> multiply = is_type<opset1::Constant>(
         dataNode.get_node_shared_ptr()->get_input_node_shared_ptr(1)) ?
         as_type_ptr<ngraph::opset1::Multiply>(dataNode.get_node_shared_ptr()) :
         nullptr;
     if (multiply != nullptr) {
         dataNode = multiply->get_input_source_output(0);
+        multiplyConstant = as_type_ptr<opset1::Constant>(multiply->get_input_node_shared_ptr(1));
     }
 
+    std::shared_ptr<opset1::Constant> subtractConstant;
     const std::shared_ptr<opset1::Subtract> subtract = (dataNode.get_node_shared_ptr()->get_input_size() > 1ul)
         && is_type<opset1::Constant>(dataNode.get_node_shared_ptr()->get_input_node_ptr(1)) ?
             as_type_ptr<opset1::Subtract>(dataNode.get_node_shared_ptr()) :
             nullptr;
     if (subtract != nullptr) {
         dataNode = subtract->get_input_source_output(0);
+        subtractConstant = as_type_ptr<opset1::Constant>(subtract->get_input_node_shared_ptr(1));
     }
 
     const std::shared_ptr<opset1::Convert> convert = as_type_ptr<opset1::Convert>(dataNode.get_node_shared_ptr());
@@ -44,7 +48,7 @@ FakeQuantizeDequantization get(const std::shared_ptr<Node> node) {
         dataNode = convert->get_input_source_output(0);
     }
 
-    return FakeQuantizeDequantization(dataNode, convert, subtract, multiply);
+    return FakeQuantizeDequantization(dataNode, convert, subtract, subtractConstant, multiply, multiplyConstant);
 }
 
 bool SubtractMultiplyToMultiplyAddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
