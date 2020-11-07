@@ -63,6 +63,14 @@ public:
         const FakeQuantizeOnData& fqOnData1,
         const FakeQuantizeOnData& fqOnData2);
 
+    static std::shared_ptr<ngraph::Function> getOriginalWithReshapeAtTheEndTransformation(
+        const ngraph::element::Type precision,
+        const ngraph::Shape& inputShape,
+        const FakeQuantizeOnData& fqOnData1,
+        const FakeQuantizeOnData& fqOnData2,
+        const FakeQuantizeOnData& fqOnData3,
+        const FakeQuantizeOnData& fqOnData4);
+
     static std::shared_ptr<ngraph::Function> getReference(
         const ngraph::element::Type precision,
         const ngraph::Shape& inputShape,
@@ -125,6 +133,20 @@ public:
         const ngraph::element::Type precisionAfterOperation,
         const DequantizationOperations& dequantizationAfter,
         const ngraph::element::Type precisionAfterDequantization);
+
+    static std::shared_ptr<ngraph::Function> getReferenceWithReshapeAtTheEndTransformation(
+        const ngraph::element::Type precision,
+        const ngraph::Shape& inputShape,
+        const FakeQuantizeOnData& fqOnData1,
+        const FakeQuantizeOnData& fqOnData2,
+        const FakeQuantizeOnData& fqOnData3,
+        const FakeQuantizeOnData& fqOnData4,
+        const DequantizationOperations& dequantizationOperations1,
+        const DequantizationOperations& dequantizationOperations2);
+
+private:
+    static std::shared_ptr<Node> makeMaxPool(const Shape& inputShape, const Output<Node>& parent, const std::vector<size_t>& kernel = {1ul, 1ul});
+    static std::shared_ptr<Node> makeInterpolate(const Shape& inputShape, const Output<Node>& parent);
 };
 
 }  // namespace subgraph
