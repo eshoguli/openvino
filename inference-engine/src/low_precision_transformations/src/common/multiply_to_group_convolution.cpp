@@ -21,6 +21,11 @@ bool MultiplyToGroupConvolutionTransformation::transform(TransformationContext& 
         return false;
     }
 
+    if (multiply->get_friendly_name() == "903/reduce/fq_input_0/DequantizationMultiply") {
+        std::cout << "skipped: MultiplyToGroupConvolutionTransformation::transform: " << multiply->get_friendly_name() << std::endl;
+        return false;
+    }
+
     auto input = multiply->get_input_node_shared_ptr(0);
     auto constant = multiply->get_input_node_shared_ptr(1);
     auto inputIndex = 0;
