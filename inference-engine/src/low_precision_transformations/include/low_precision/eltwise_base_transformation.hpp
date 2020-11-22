@@ -21,6 +21,9 @@ public:
     static bool isBroadcasted(const Shape& shape) noexcept;
 protected:
     int getNotEmpty(const std::shared_ptr<Node>& eltwise) const;
+    // Return indexes:
+    // 1. first  - data branch index for eltwise
+    // 2. second - Constant branch index for data branch Multiply
     std::pair<int, int> getMultiplyConstBranch(const std::shared_ptr<Node>& eltwise) const;
 };
 
