@@ -12,7 +12,7 @@
 #include <gtest/gtest.h>
 
 #include <ngraph/pass/visualize_tree.hpp>
-#include <low_precision/fake_quantize.hpp>
+#include <low_precision/fake_quantize_decomposition.hpp>
 
 #include "common_test_utils/ngraph_test_utils.hpp"
 #include "lpt_ngraph_functions/fake_quantize_function.hpp"
@@ -78,7 +78,7 @@ public:
             fakeQuantizeOnData.actual);
 
         SimpleLowPrecisionTransformer transform;
-        transform.add<ngraph::pass::low_precision::FakeQuantizeTransformation, ngraph::opset1::FakeQuantize>(params);
+        transform.add<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation, ngraph::opset1::FakeQuantize>(params);
         transform.transform(actualFunction);
 
         referenceFunction = ngraph::builder::subgraph::FakeQuantizeFunction::getReference(
