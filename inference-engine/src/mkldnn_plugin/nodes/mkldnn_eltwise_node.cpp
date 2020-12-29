@@ -404,7 +404,8 @@ private:
         OV_CASE(LogicalXor, jit_logical_xor_emitter),
         OV_CASE(LogicalNot, jit_logical_not_emitter),
         OV_CASE(PowerStatic, jit_power_static_emitter),
-        OV_CASE(Prelu, jit_prelu_emitter));
+        OV_CASE(Prelu, jit_prelu_emitter),
+        OV_CASE(Erf, jit_erf_emitter));
 
         if (precisions.empty())
             THROW_IE_EXCEPTION << "Unsupported operation type for Eltwise emitter";
@@ -466,7 +467,8 @@ private:
         OV_CASE(LogicalXor, jit_logical_xor_emitter),
         OV_CASE(LogicalNot, jit_logical_not_emitter),
         OV_CASE(PowerStatic, jit_power_static_emitter),
-        OV_CASE(Prelu, jit_prelu_emitter));
+        OV_CASE(Prelu, jit_prelu_emitter),
+        OV_CASE(Erf, jit_erf_emitter));
 
         if (!ctx.emitter)
             THROW_IE_EXCEPTION << "Unsupported operation type for Eltwise emitter";
@@ -887,6 +889,11 @@ MKLDNNEltwiseNode::initializers = {
             else
                 THROW_IE_EXCEPTION << "Round layer with name " << activationLayer->name << " doesn't support mode " << mode;
         }},
+        {"ref", [](GenericLayer* activationLayer, EltwiseOpType& opType, mkldnn::algorithm& algorithm, float& alpha, float& beta) {
+            alpha = 0.0f;
+            beta = 0.0f;
+            opType = Erf;
+        }},
 };
 
 void MKLDNNEltwiseNode::init() {
@@ -959,6 +966,8 @@ void MKLDNNEltwiseNode::init() {
                comparator(layerType, "hsigmoid") ||
                comparator(layerType, "round")) {
         initializers[layerType](getCnnLayer().get(), eltwiseOp, eltwiseAlgorithm, alpha, beta);
+    } else if (comparator(layerType, "erf")) {
+        eltwiseOp = Erf;
     } else {
         THROW_IE_EXCEPTION << "Unsupported algorithm for Eltwise node with name `" << getName() << "`.";
     }
@@ -970,6 +979,7 @@ size_t MKLDNNEltwiseNode::getOpInputsNum() const {
         case Linear: case BoundedRelu: case SoftRelu: case Relu6: case Exp: case Clamp: case Swish: case Hswish:
         case Mish: case Hsigmoid: case Round:
         case LogicalNot:
+        case Erf:
             return 1;
         case Add: case Subtract: case Multiply: case Divide: case FloorMod: case Mod: case Maximum: case Minimum: case SquaredDifference:
         case PowerDynamic: case Equal: case NotEqual: case Greater: case GreaterEqual: case Less: case LessEqual: case LogicalAnd:
