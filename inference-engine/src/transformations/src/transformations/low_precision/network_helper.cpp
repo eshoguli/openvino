@@ -1037,6 +1037,12 @@ std::shared_ptr<Node> NetworkHelper::toScalarIfPossible(std::shared_ptr<Node> no
     return NetworkHelper::toScalar(constant);
 }
 
+std::shared_ptr<Node> NetworkHelper::mark_as_dequantization_op(std::shared_ptr<Node> op) {
+    auto opCopy = op->clone_with_new_inputs(op->input_values());
+    auto& rtInfo = opCopy->get_rt_info();
+    rtInfo["DEQUANTIZATION"] = std::make_shared<VariantWrapper<DequantizationAttr>>(DequantizationAttr());
+    return opCopy;
+}
 
 }  // namespace low_precision
 }  // namespace pass
