@@ -10,6 +10,8 @@
 #include <vector>
 #include <cassert>
 
+#include <ngraph/pattern/op/wrap_type.hpp>
+#include <ngraph/pattern/op/or.hpp>
 #include "low_precision/network_helper.hpp"
 #include "low_precision/common/dequantization_op.hpp"
 
@@ -18,18 +20,24 @@ namespace pass {
 namespace low_precision {
 
 ConvolutionTransformation::ConvolutionTransformation(const Params& params) : WeightableLayerTransformation(params) {
-}
+    auto matcher = ngraph::pattern::wrap_type<opset1::Convolution>({
+        ngraph::pattern::wrap_type<opset1::Multiply>(),
+        std::make_shared<pattern::op::Or>(OutputVector {
+            pattern::wrap_type<opset1::Multiply>(),
+            pattern::wrap_type<opset1::FakeQuantize>()
+        })
+    });
 
-void ConvolutionTransformation::registerMatcherIn(GraphRewrite &pass, TransformationContext &context) const {
-    addPattern(
-        pass,
-        context,
-        make_op_pattern<opset1::Convolution>({ make_op_label<opset1::Multiply>(), make_op_label<opset1::Multiply>() }));
+    ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
+        auto op = m.get_match_root();
+        if (!op || transformation_callback(op)) {
+            return false;
+        }
+        return transform(*context, m);
+    };
 
-    addPattern(
-        pass,
-        context,
-        make_op_pattern<opset1::Convolution>({ make_op_label<opset1::Multiply>(), make_op_label<opset1::FakeQuantize>() }));
+    auto m = std::make_shared<ngraph::pattern::Matcher>(matcher, "ConvolutionTransformation");
+    this->register_matcher(m, callback);
 }
 
 bool ConvolutionTransformation::isQuantized(std::shared_ptr<Node> layer) const noexcept {

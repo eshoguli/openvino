@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <ngraph/pattern/op/wrap_type.hpp>
 #include "low_precision/network_helper.hpp"
 
 namespace ngraph {
@@ -15,16 +16,18 @@ namespace pass {
 namespace low_precision {
 
 GroupConvolutionTransformation::GroupConvolutionTransformation(const Params& params) : ConvolutionTransformation(params) {
-}
+    auto matcher = pattern::wrap_type<opset1::GroupConvolution>();
 
-void GroupConvolutionTransformation::registerMatcherIn(GraphRewrite &pass, TransformationContext &context) const {
-    // question to nGraph: why it doesn't work
-    // addPattern(
-    //    pass,
-    //    context,
-    //    make_op_pattern<opset1::GroupConvolution>({ make_op_label<opset1::Multiply>(), make_op_label<opset1::FakeQuantize>()}));
+    ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
+        auto op = m.get_match_root();
+        if (!op || transformation_callback(op)) {
+            return false;
+        }
+        return transform(*context, m);
+    };
 
-    addSingleNodePattern<opset1::GroupConvolution>(pass, context);
+    auto m = std::make_shared<ngraph::pattern::Matcher>(matcher, "GroupConvolutionTransformation");
+    this->register_matcher(m, callback);
 }
 
 bool GroupConvolutionTransformation::isQuantized(std::shared_ptr<Node> layer) const noexcept {
