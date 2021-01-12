@@ -71,15 +71,15 @@
 #include <transformations/low_precision/disable_convert_constant_folding_on_const_path.hpp>
 #include <low_precision/pull_reshape_through_dequantization.hpp>
 #include <low_precision/pull_transpose_through_dequantization.hpp>
-#include <low_precision/transformer.hpp>
 #include <low_precision/convolution.hpp>
 #include <low_precision/group_convolution.hpp>
 #include <low_precision/multiply_to_group_convolution.hpp>
 #include <low_precision/network_helper.hpp>
 
 #include <ie_algorithm.hpp>
-
 #include <ngraph/pass/visualize_tree.hpp>
+#include <low_precision/layer_transformation.hpp>
+#include <low_precision/low_precision.hpp>
 
 #include "nodes/mkldnn_mvn_node.h"
 #include "nodes/mkldnn_fake_quantize_node.h"
@@ -110,13 +110,15 @@ Engine::~Engine() {
 
 static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
     auto nGraphFunc = clonedNetwork.getFunction();
+    //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.original.svg").run_on_function(nGraphFunc);
+    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_function(nGraphFunc);
 
     ngraph::pass::Manager manager;
     manager.register_pass<ngraph::pass::InitNodeInfo>();
 
     const bool useLpt =
         (conf.lpTransformsMode == Config::LPTransformsMode::On) &&
-        ngraph::pass::low_precision::LowPrecisionTransformer::isFunctionQuantized(nGraphFunc);
+        ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(nGraphFunc);
     if (useLpt) {
         manager.register_pass<ngraph::pass::DisableConvertConstantFoldingOnConstPath>(
             std::vector<ngraph::element::Type>{ ngraph::element::i8, ngraph::element::u8, ngraph::element::i4, ngraph::element::u4 });
@@ -295,32 +297,30 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
 
     manager.run_passes(nGraphFunc);
 
+    //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.common.svg").run_on_function(nGraphFunc);
+    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.common").run_on_function(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         OV_ITT_SCOPE(FIRST_INFERENCE, MKLDNNPlugin::itt::domains::MKLDNN_LT, "LowPrecisionTransformations");
 
-        ngraph::pass::Manager manager;
-        auto lptPrerequisites = manager.register_pass<ngraph::pass::GraphRewrite>();
-        const std::vector<ngraph::element::Type> supportedTypes = { ngraph::element::i8, ngraph::element::u8 };
-        lptPrerequisites->add_matcher<PullReshapeThroughDequantization>(supportedTypes);
-        lptPrerequisites->add_matcher<PullTransposeThroughDequantization>(supportedTypes);
-        lptPrerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
-        manager.run_passes(nGraphFunc);
+        auto supportedPrecisions = std::vector<OperationPrecisionRestriction>({
+            OperationPrecisionRestriction::create<ngraph::opset1::Convolution>({
+                {0, {ngraph::element::u8}},
+                {1, {ngraph::element::i8}},
+            }),
+            OperationPrecisionRestriction::create<ngraph::opset1::GroupConvolution>({
+                {0, {ngraph::element::u8}},
+                {1, {ngraph::element::i8}}
+            })
+        });
 
-        auto params = LayerTransformation::Params(
-            true,  // updatePrecisions
-            LayerTransformation::QuantizedTensorAlignment::UpdateLevel,  // quantizedTensorAlignmentOnActivations
-            LayerTransformation::QuantizedTensorAlignment::None,  // quantizedTensorAlignmentOnWeights
-            true);  // supportAsymmetricQuantization
-        LowPrecisionTransformer transformer(LowPrecisionTransformer::getAllTransformations(params)
-            .add<ConvolutionTransformation, ngraph::opset1::Convolution>(
-                LayerTransformation::Params(params).setPrecisionsOnActivations({ngraph::element::u8}).setSupportAsymmetricQuantization(true))
-            .add<GroupConvolutionTransformation, ngraph::opset1::GroupConvolution>(
-                LayerTransformation::Params(params).setPrecisionsOnActivations({ ngraph::element::u8 }).setSupportAsymmetricQuantization(true))
-            .addStandaloneCleanup<MultiplyToGroupConvolutionTransformation, ngraph::opset1::Multiply>(
-                LayerTransformation::Params(params).setPrecisionsOnActivations({ ngraph::element::u8 })));
+        ngraph::pass::Manager lptManager;
+        lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(supportedPrecisions);
+        lptManager.run_passes(nGraphFunc);
 
-        transformer.transform(nGraphFunc);
+        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transformed.svg").run_on_function(nGraphFunc);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_function(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;

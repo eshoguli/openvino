@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include <ngraph/pattern/op/wrap_type.hpp>
 #include "ngraph_ops/type_relaxed.hpp"
 
 #include "low_precision/common/ie_lpt_exception.hpp"
@@ -87,8 +88,19 @@ std::shared_ptr<opset1::Subtract> fuseWithSubtract(const std::shared_ptr<Node>& 
     return newSubtract;
 }
 
-void AddTransformation::registerMatcherIn(GraphRewrite &pass, TransformationContext &context) const {
-    addSingleNodePattern<opset1::Add>(pass, context);
+AddTransformation::AddTransformation(const Params& params) : EltwiseBaseTransformation(params) {
+    auto matcher = ngraph::pattern::wrap_type<opset1::Add>();
+
+    ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
+        auto op = m.get_match_root();
+        if (!op || transformation_callback(op)) {
+            return false;
+        }
+        return transform(*context, m);
+    };
+
+    auto m = std::make_shared<ngraph::pattern::Matcher>(matcher, "AddTransformation");
+    this->register_matcher(m, callback);
 }
 
 bool AddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {

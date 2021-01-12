@@ -13,11 +13,11 @@ namespace low_precision {
 
 ReduceMaxTransformation::ReduceMaxTransformation(const Params& params) : ReduceBaseTransformation(params) {}
 
-void ReduceMaxTransformation::registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const {
-    addPattern(pass,
-               context,
-               make_op_pattern<opset1::ReduceMax>({ make_op_label<opset1::Multiply>(), make_op_label<opset1::Constant>() }));
-}
+//void ReduceMaxTransformation::registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const {
+//    addPattern(pass,
+//               context,
+//               make_op_pattern<opset1::ReduceMax>({ make_op_label<opset1::Multiply>(), make_op_label<opset1::Constant>() }));
+//}
 
 bool ReduceMaxTransformation::canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> reduce) const {
     if (!is_type<opset1::ReduceMax>(reduce)) {

@@ -18,7 +18,6 @@ class TRANSFORMATIONS_API ReduceSumTransformation : public ReduceBaseTransformat
 public:
     ReduceSumTransformation(const Params& params);
     bool isPrecisionPreserved(std::shared_ptr<Node> reduce) const noexcept override;
-    void registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const override;
     bool canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> reduce) const override;
 
 protected:

@@ -13,11 +13,11 @@ namespace low_precision {
 
 ReduceSumTransformation::ReduceSumTransformation(const Params& params) : ReduceBaseTransformation(params) {}
 
-void ReduceSumTransformation::registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const {
-    addPattern(pass,
-               context,
-               make_op_pattern<opset1::ReduceSum>({ make_op_label<opset1::Multiply>(), make_op_label<opset1::Constant>() }));
-}
+//void ReduceSumTransformation::registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const {
+//    addPattern(pass,
+//               context,
+//               make_op_pattern<opset1::ReduceSum>({ make_op_label<opset1::Multiply>(), make_op_label<opset1::Constant>() }));
+//}
 
 bool ReduceSumTransformation::canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> reduce) const {
     return is_type<opset1::ReduceSum>(reduce) ? ReduceBaseTransformation::canBeTransformed(context, reduce) : false;

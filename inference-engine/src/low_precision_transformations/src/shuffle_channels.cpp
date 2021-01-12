@@ -15,12 +15,12 @@ namespace pass {
 namespace low_precision {
 ShuffleChannelsTransformation::ShuffleChannelsTransformation(const Params& params) : LayerTransformation(params) {}
 
-void ShuffleChannelsTransformation::registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const {
-    addPattern(
-        pass,
-        context,
-        make_op_pattern<opset1::ShuffleChannels>({ make_op_label<opset1::Multiply>() }));
-}
+//void ShuffleChannelsTransformation::registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const {
+//    addPattern(
+//        pass,
+//        context,
+//        make_op_pattern<opset1::ShuffleChannels>({ make_op_label<opset1::Multiply>() }));
+//}
 
 bool ShuffleChannelsTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) const {
     if (!canBeTransformed(context, m.get_match_root())) {
