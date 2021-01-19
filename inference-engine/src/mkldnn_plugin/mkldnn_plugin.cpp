@@ -107,6 +107,7 @@ static void Transformation(ICNNNetwork::Ptr& clonedNetwork, const Config& conf) 
     manager.register_pass<ngraph::pass::InitNodeInfo>();
 
     const bool useLpt =
+        false &&
         (conf.lpTransformsMode == Config::LPTransformsMode::On) &&
         ngraph::pass::low_precision::LowPrecisionTransformer::isFunctionQuantized(nGraphFunc);
     if (useLpt) {
@@ -249,6 +250,9 @@ static void Transformation(ICNNNetwork::Ptr& clonedNetwork, const Config& conf) 
                 LayerTransformation::Params(params).setPrecisionsOnActivations({ ngraph::element::u8 })));
 
         transformer.transform(nGraphFunc);
+        std::cout << "LPT was done" << std::endl;
+    } else {
+        std::cout << "LPT was ignored" << std::endl;
     }
 
     ngraph::pass::Manager legacyManager;
@@ -277,6 +281,12 @@ static void Transformation(ICNNNetwork::Ptr& clonedNetwork, const Config& conf) 
         return node->get_rt_info().count("UNROLL_TI") == 0;
     });
     legacyManager.run_passes(nGraphFunc);
+
+    auto last = nGraphFunc->get_results()[0]->get_input_node_shared_ptr(0);
+    if (last->get_friendly_name() == "color_ab/fq_input_0") {
+        last->set_friendly_name("color_ab");
+        std::cout << "color_ab/fq_input_0 -> color_ab" << std::endl;
+    }
 
     OV_ITT_TASK_CHAIN(taskChain, MKLDNNPlugin::itt::domains::MKLDNN_LT, "Transformation", "convertFunctionToICNNNetwork");
 
