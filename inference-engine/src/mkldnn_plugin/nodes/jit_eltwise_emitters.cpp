@@ -1507,8 +1507,7 @@ void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
         const Xbyak::Operand &compare_operand, int cmp_predicate) {
         if (host_isa_ == cpu::x64::avx512_common) {
             h->vcmpps(k_mask, vmm_src, compare_operand, cmp_predicate);
-        }
-        else {
+        } else {
             h->uni_vcmpps(vmm_mask, vmm_src, compare_operand, cmp_predicate);
         }
     };
@@ -1516,8 +1515,7 @@ void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     auto blend_with_mask = [&](const Vmm &vmm_dst, const Xbyak::Operand &src) {
         if (host_isa_ == cpu::x64::avx512_common) {
             h->vblendmps(vmm_dst | k_mask, vmm_dst, src);
-        }
-        else {
+        } else {
             h->uni_vblendvps(vmm_dst, vmm_dst, src, vmm_mask);
         }
     };
