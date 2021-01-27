@@ -6,6 +6,7 @@
 
 #include "common/emitter.h"
 #include <cpu/x64/jit_generator.hpp>
+#include <cpu/x64/jit_uni_eltwise_injector.hpp>
 //#include "jit_generator.hpp"
 //#include "jit_uni_eltwise.hpp"
 #include "mkldnn_node.h"
@@ -420,7 +421,7 @@ private:
 
 class jit_erf_emitter : public jit_emitter {
 public:
-    jit_erf_emitter(mkldnn::impl::cpu::jit_generator *host, mkldnn::impl::cpu::cpu_isa_t host_isa, const MKLDNNNode* node,
+    jit_erf_emitter(mkldnn::impl::cpu::x64::jit_generator *host, mkldnn::impl::cpu::x64::cpu_isa_t host_isa, const MKLDNNNode* node,
         InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32);
 
     size_t get_inputs_num() override;
@@ -430,15 +431,15 @@ private:
     void emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs,
         const std::vector<size_t> &pool_vec_idxs, const std::vector<size_t> &pool_gpr_idxs) override;
 
-    template <mkldnn::impl::cpu::cpu_isa_t isa>
+    template <mkldnn::impl::cpu::x64::cpu_isa_t isa>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 
     void register_table_entries() override;
     size_t aux_vecs_count() const override;
 
-    std::shared_ptr<mkldnn::impl::cpu::jit_uni_eltwise_injector_f32<mkldnn::impl::cpu::cpu_isa_t::sse42>> exp_injector_sse42;
-    std::shared_ptr<mkldnn::impl::cpu::jit_uni_eltwise_injector_f32<mkldnn::impl::cpu::cpu_isa_t::avx2>> exp_injector_avx2;
-    std::shared_ptr<mkldnn::impl::cpu::jit_uni_eltwise_injector_f32<mkldnn::impl::cpu::cpu_isa_t::avx512_common>> exp_injector_avx512;
+    std::shared_ptr<mkldnn::impl::cpu::x64::jit_uni_eltwise_injector_f32<mkldnn::impl::cpu::x64::sse41>> exp_injector_sse42;
+    std::shared_ptr<mkldnn::impl::cpu::x64::jit_uni_eltwise_injector_f32<mkldnn::impl::cpu::x64::avx2>> exp_injector_avx2;
+    std::shared_ptr<mkldnn::impl::cpu::x64::jit_uni_eltwise_injector_f32<mkldnn::impl::cpu::x64::avx512_common>> exp_injector_avx512;
 };
 
 } // namespace MKLDNNPlugin

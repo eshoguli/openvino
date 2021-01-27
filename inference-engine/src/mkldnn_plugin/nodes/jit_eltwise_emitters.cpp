@@ -1451,13 +1451,13 @@ jit_erf_emitter::jit_erf_emitter(jit_generator *host, cpu_isa_t host_isa, const 
 : jit_emitter(host, host_isa, node, exec_prc) {
     prepare_table();
 
-    if (host_isa_ == cpu::sse42) {
-        exp_injector_sse42 = std::make_shared<jit_uni_eltwise_injector_f32<cpu_isa_t::sse42>>(h, mkldnn::impl::alg_kind_t::mkldnn_eltwise_exp, 0.f, 0.f);
-    } else if (host_isa_ == cpu::avx2) {
-        exp_injector_avx2 = std::make_shared<jit_uni_eltwise_injector_f32<cpu_isa_t::avx2>>(h, mkldnn::impl::alg_kind_t::mkldnn_eltwise_exp, 0.f, 0.f);
-    } else if (host_isa_ == cpu::avx512_common) {
-        exp_injector_avx512 = std::make_shared<jit_uni_eltwise_injector_f32<cpu_isa_t::avx512_common>>(
-            h, mkldnn::impl::alg_kind_t::mkldnn_eltwise_exp, 0.f, 0.f);
+    if (host_isa_ == cpu::x64::sse41) {
+        exp_injector_sse42 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::sse41>>(host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 0.f);
+    } else if (host_isa_ == cpu::x64::avx2) {
+        exp_injector_avx2 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::avx2>>(host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 0.f);
+    } else if (host_isa_ == cpu::x64::avx512_common) {
+        exp_injector_avx512 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::avx512_common>>(
+            host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 0.f);
     } else {
         assert(!"unsupported isa");
     }
@@ -1466,11 +1466,11 @@ jit_erf_emitter::jit_erf_emitter(jit_generator *host, cpu_isa_t host_isa, const 
 void jit_erf_emitter::emit_table() {
     jit_emitter::emit_table();
 
-    if (host_isa_ == cpu::sse42) {
+    if (host_isa_ == cpu::x64::sse41) {
         exp_injector_sse42->prepare_table();
-    } else if (host_isa_ == cpu::avx2) {
+    } else if (host_isa_ == cpu::x64::avx2) {
         exp_injector_avx2->prepare_table();
-    } else if (host_isa_ == cpu::avx512_common) {
+    } else if (host_isa_ == cpu::x64::avx512_common) {
         exp_injector_avx512->prepare_table();
     }
 }
@@ -1479,20 +1479,20 @@ size_t jit_erf_emitter::get_inputs_num() { return 1; }
 
 void jit_erf_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs,
                                 const std::vector<size_t> &pool_vec_idxs, const std::vector<size_t> &pool_gpr_idxs) {
-    if (host_isa_ == cpu::sse42) {
-        emit_isa<cpu::sse42>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == cpu::avx2) {
-        emit_isa<cpu::avx2>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == cpu::avx512_common) {
-        emit_isa<cpu::avx512_common>(in_vec_idxs, out_vec_idxs);
+    if (host_isa_ == cpu::x64::sse41) {
+        emit_isa<cpu::x64::sse41>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == cpu::x64::avx2) {
+        emit_isa<cpu::x64::avx2>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == cpu::x64::avx512_common) {
+        emit_isa<cpu::x64::avx512_common>(in_vec_idxs, out_vec_idxs);
     } else {
         assert(!"unsupported isa");
     }
 }
 
-template <mkldnn::impl::cpu::cpu_isa_t isa>
+template <cpu::x64::cpu_isa_t isa>
 void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    using Vmm = typename conditional3<isa == cpu::sse42, Xmm, isa == cpu::avx2, Ymm, Zmm>::type;
+    using Vmm = typename conditional3<isa == cpu::x64::sse41, Xmm, isa == cpu::x64::avx2, Ymm, Zmm>::type;
     Vmm vmm_src = Vmm(in_vec_idxs[0]);
     Vmm vmm_dst = Vmm(out_vec_idxs[0]);
 
@@ -1503,6 +1503,74 @@ void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     Vmm vmm_aux3 = Vmm(aux_vec_idxs[3]);
     Vmm vmm_aux4 = Vmm(aux_vec_idxs[4]);
 
+    auto compute_cmp_mask = [&](const Vmm &vmm_src,
+        const Xbyak::Operand &compare_operand, int cmp_predicate) {
+        if (host_isa_ == cpu::x64::avx512_common) {
+            h->vcmpps(k_mask, vmm_src, compare_operand, cmp_predicate);
+        }
+        else {
+            h->uni_vcmpps(vmm_mask, vmm_src, compare_operand, cmp_predicate);
+        }
+    };
+
+    auto blend_with_mask = [&](const Vmm &vmm_dst, const Xbyak::Operand &src) {
+        if (host_isa_ == cpu::x64::avx512_common) {
+            h->vblendmps(vmm_dst | k_mask, vmm_dst, src);
+        }
+        else {
+            h->uni_vblendvps(vmm_dst, vmm_dst, src, vmm_mask);
+        }
+    };
+
+    auto exp_compute_vector_fwd = [&](const Vmm &vmm_src) {
+        // get mask of values lower than log(FLT_MIN) to zero them in the output
+        compute_cmp_mask(vmm_src, table_val("exp_ln_flt_min_f"), _cmp_lt_os);
+
+        h->uni_vminps(vmm_src, vmm_src, table_val("exp_ln_flt_max_f"));
+        h->uni_vmaxps(vmm_src, vmm_src, table_val("exp_ln_flt_min_f"));
+        h->uni_vmovups(vmm_aux1, vmm_src);
+        // calculate exp(x)
+        // fx = x * log2ef + 0.5
+        h->uni_vmulps(vmm_src, vmm_src, table_val("exp_log2ef"));
+        h->uni_vaddps(vmm_src, vmm_src, table_val("half"));
+
+        // tmp = floorf(fx)
+        const auto _op_floor = 1u;
+        h->uni_vroundps(vmm_aux2, vmm_src, _op_floor);
+
+        // keep vmm_src = fx for further computations
+        h->uni_vmovups(vmm_src, vmm_aux2);
+
+        // x = x - fx * ln2
+        h->uni_vfnmadd231ps(vmm_aux1, vmm_aux2, table_val("ln2f"));
+
+        // compute 2^n
+        h->uni_vcvtps2dq(vmm_aux2, vmm_src);
+        h->uni_vpaddd(vmm_aux2, vmm_aux2, table_val("exponent_bias"));
+        const int n_mantissa_bits = 23;
+        h->uni_vpslld(vmm_aux2, vmm_aux2, n_mantissa_bits); //Vmm(6) = 2^-fx
+
+                                                            // use vmm_src as tmp vmm_zero when applying mask
+        h->uni_vpxor(vmm_src, vmm_src, vmm_src);
+        // set zeroes at those points which were < log(FLT_MIN)
+        blend_with_mask(vmm_aux2, vmm_src);
+
+        // compute polynomial
+        h->uni_vmovups(vmm_src, table_val("ex_pol5"));
+        h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val("ex_pol4"));
+        h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val("ex_pol3"));
+        h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val("ex_pol2"));
+        h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val("ex_pol1"));
+        h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val("one"));
+        // y = y * 2^n
+        h->uni_vmulps(vmm_src, vmm_src, vmm_aux2);
+    };
+
+    auto abs_compute_vector_fwd = [&](const Vmm &vmm_src) {
+        // compute abs(x) = _mm_and_ps(x, 01111..111));
+        h->uni_vandps(vmm_src, vmm_src, table_val("positive_mask"));
+    };
+
     // IMPORTANT: we use vmm_aux3 to save `x` as exp_compute does not use it.
     h->uni_vmovups(vmm_aux3, vmm_src);
 
@@ -1510,13 +1578,14 @@ void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     h->uni_vmulps(vmm_src, vmm_src, vmm_src);
     h->uni_vxorps(vmm_src, vmm_src, table_val("sign_mask"));
 
-    if (host_isa_ == cpu::sse42) {
-        exp_injector_sse42->compute_vector(vmm_src.getIdx());
-    } else if (host_isa_ == cpu::avx2) {
-        exp_injector_avx2->compute_vector(vmm_src.getIdx());
-    } else if (host_isa_ == cpu::avx512_common) {
-        exp_injector_avx512->compute_vector(vmm_src.getIdx());
-    }
+    //if (host_isa_ == cpu::x64::sse41) {
+    //    exp_injector_sse42->compute_vector(vmm_src.getIdx());
+    //} else if (host_isa_ == cpu::x64::avx2) {
+    //    exp_injector_avx2->compute_vector(vmm_src.getIdx());
+    //} else if (host_isa_ == cpu::x64::avx512_common) {
+    //    exp_injector_avx512->compute_vector(vmm_src.getIdx());
+    //}
+    exp_compute_vector_fwd(vmm_src);
 
     h->uni_vxorps(vmm_src, vmm_src, table_val("sign_mask"));
 
@@ -1527,7 +1596,8 @@ void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     // abs(x)
     h->uni_vmovups(vmm_aux1, vmm_aux3);
     // compute abs(x) = _mm_and_ps(x, 01111..111));
-    h->uni_vandps(vmm_aux1, vmm_aux1, table_val("positive_mask"));
+    // h->uni_vandps(vmm_aux1, vmm_aux1, table_val("positive_mask"));
+    abs_compute_vector_fwd(vmm_aux1);
 
     // t = 1 / (p*x + 1)
     h->uni_vmovups(vmm_aux2, table_val("approx_const"));
