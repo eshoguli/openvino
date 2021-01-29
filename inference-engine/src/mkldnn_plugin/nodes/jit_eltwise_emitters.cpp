@@ -1452,12 +1452,12 @@ jit_erf_emitter::jit_erf_emitter(jit_generator *host, cpu_isa_t host_isa, const 
     prepare_table();
 
     if (host_isa_ == cpu::x64::sse41) {
-        exp_injector_sse42 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::sse41>>(host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 0.f);
+        exp_injector_sse42 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::sse41>>(host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 1.f, false);
     } else if (host_isa_ == cpu::x64::avx2) {
-        exp_injector_avx2 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::avx2>>(host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 0.f);
+        exp_injector_avx2 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::avx2>>(host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 1.f, false);
     } else if (host_isa_ == cpu::x64::avx512_common) {
         exp_injector_avx512 = std::make_shared<jit_uni_eltwise_injector_f32<cpu::x64::avx512_common>>(
-            host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 0.f);
+            host, mkldnn_alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f, 1.f, false);
     } else {
         assert(!"unsupported isa");
     }
@@ -1521,12 +1521,20 @@ void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     };
 
     auto exp_compute_vector_fwd = [&](const Vmm &vmm_src) {
+        // TODO: debug only: test the table
+        h->uni_vmovups(vmm_aux1, table_val("one"));
+        h->uni_vmovups(vmm_aux1, table_val("half"));
+        h->uni_vmovups(vmm_aux1, table_val("exp_ln_flt_min_f"));
+        h->uni_vmovups(vmm_aux1, table_val("exp_ln_flt_max_f"));
+        h->uni_vmovups(vmm_aux1, table_val("exp_log2ef"));
+
         // get mask of values lower than log(FLT_MIN) to zero them in the output
         compute_cmp_mask(vmm_src, table_val("exp_ln_flt_min_f"), _cmp_lt_os);
 
         h->uni_vminps(vmm_src, vmm_src, table_val("exp_ln_flt_max_f"));
         h->uni_vmaxps(vmm_src, vmm_src, table_val("exp_ln_flt_min_f"));
         h->uni_vmovups(vmm_aux1, vmm_src);
+
         // calculate exp(x)
         // fx = x * log2ef + 0.5
         h->uni_vmulps(vmm_src, vmm_src, table_val("exp_log2ef"));
@@ -1576,14 +1584,17 @@ void jit_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     h->uni_vmulps(vmm_src, vmm_src, vmm_src);
     h->uni_vxorps(vmm_src, vmm_src, table_val("sign_mask"));
 
-    //if (host_isa_ == cpu::x64::sse41) {
-    //    exp_injector_sse42->compute_vector(vmm_src.getIdx());
-    //} else if (host_isa_ == cpu::x64::avx2) {
-    //    exp_injector_avx2->compute_vector(vmm_src.getIdx());
-    //} else if (host_isa_ == cpu::x64::avx512_common) {
-    //    exp_injector_avx512->compute_vector(vmm_src.getIdx());
-    //}
-    exp_compute_vector_fwd(vmm_src);
+    // oneDNN injector
+    if (host_isa_ == cpu::x64::sse41) {
+        exp_injector_sse42->compute_vector(vmm_src.getIdx());
+    } else if (host_isa_ == cpu::x64::avx2) {
+        exp_injector_avx2->compute_vector(vmm_src.getIdx());
+    } else if (host_isa_ == cpu::x64::avx512_common) {
+        exp_injector_avx512->compute_vector(vmm_src.getIdx());
+    }
+
+    // internal implementation
+    // exp_compute_vector_fwd(vmm_src);
 
     h->uni_vxorps(vmm_src, vmm_src, table_val("sign_mask"));
 
