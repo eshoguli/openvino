@@ -183,8 +183,8 @@ std::shared_ptr<Node> NetworkHelper::swapMultiplyAndAdd(std::shared_ptr<opset1::
         return addAfterMultiply;
 
     const auto x = multiply->get_input_node_shared_ptr(multiplyInputBranch);
-    const auto a = multiply->get_input_node_shared_ptr(multiplyInputBranch == 0 ? 1 : 0);
-    const auto b = addAfterMultiply->get_input_node_shared_ptr(multiplyBranch == 0 ? 1 : 0);
+    auto a = multiply->get_input_node_shared_ptr(multiplyInputBranch == 0 ? 1 : 0);
+    auto b = addAfterMultiply->get_input_node_shared_ptr(multiplyBranch == 0 ? 1 : 0);
     std::shared_ptr<Node> bDivA;
 
     if (shape_size(b->get_output_shape(0)) == 1 ||
@@ -212,6 +212,8 @@ std::shared_ptr<Node> NetworkHelper::swapMultiplyAndAdd(std::shared_ptr<opset1::
                 aBroadcasted ? b->get_output_shape(0) : a->get_output_shape(0),
                 bDivAValues);
     } else {
+        b = fold<opset1::Convert>(b, element::f32);
+        a = fold<opset1::Convert>(a, element::f32);
         bDivA = fold<opset1::Divide>(b, a);
     }
 
