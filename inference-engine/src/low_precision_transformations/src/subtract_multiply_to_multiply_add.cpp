@@ -62,9 +62,7 @@ bool SubtractMultiplyToMultiplyAddTransformation::transform(TransformationContex
             dequantization.subtract->get_input_element_type(0)) :
         dequantization.convert->get_input_element_type(0);
 
-    const element::Type precisionAfterDequantization = dequantization.subtract == nullptr ?
-        dequantization.multiply->get_output_element_type(0) :
-        dequantization.subtract->get_output_element_type(0);
+    const element::Type precisionAfterDequantization = dequantization.multiply->get_output_element_type(0);
 
     if (dequantization.empty()) {
         return false;
@@ -109,16 +107,11 @@ bool SubtractMultiplyToMultiplyAddTransformation::transform(TransformationContex
             }
         }
 
-        if (lastNewPrecision != precisionAfterDequantization) {
-            lastNew = std::make_shared<op::TypeRelaxed<DequantizationAdd>>(
-                std::vector<element::Type>{element::f32, element::f32},
-                std::vector<element::Type>{precisionAfterDequantization},
-                ngraph::op::TemporaryReplaceOutputType(lastNew, element::f32).get(),
-                ngraph::op::TemporaryReplaceOutputType(subtractConstant, element::f32).get());
-
-        } else {
-            lastNew = std::make_shared<DequantizationAdd>(lastNew, subtractConstant);
-        }
+        lastNew = std::make_shared<op::TypeRelaxed<DequantizationAdd>>(
+            std::vector<element::Type>{element::f32, element::f32},
+            std::vector<element::Type>{precisionAfterDequantization},
+            ngraph::op::TemporaryReplaceOutputType(lastNew, element::f32).get(),
+            ngraph::op::TemporaryReplaceOutputType(subtractConstant, element::f32).get());
 
         auto lastNewPtr = lastNew.get_node_shared_ptr();
         NetworkHelper::copyInfo(dequantization.subtract, lastNewPtr);
