@@ -8,6 +8,7 @@
 #include <ngraph/ngraph.hpp>
 #include <low_precision/layer_transformation.hpp>
 
+#include "lpt_ngraph_functions/common/constant.hpp"
 #include "lpt_ngraph_functions/common/dequantization_operations.hpp"
 #include "lpt_ngraph_functions/common/builders.hpp"
 
@@ -65,7 +66,7 @@ public:
         const ngraph::element::Type& precision2,
         const ngraph::builder::subgraph::DequantizationOperations& dequantization2,
         const int constInput,
-        const std::vector<float>& constValues,
+        const ngraph::builder::subgraph::Constant constant,
         const std::string& additionalLayer);
 
     static std::shared_ptr<ngraph::Function> getOriginal(
@@ -86,7 +87,7 @@ public:
         const ngraph::builder::subgraph::DequantizationOperations& dequantization2,
         const ngraph::builder::subgraph::DequantizationOperations& dequantizationAfter,
         const int constInput,
-        const std::vector<float>& constValues,
+        const ngraph::builder::subgraph::Constant constant,
         const std::string& additionalLayer,
         const std::string& operationType);
 };

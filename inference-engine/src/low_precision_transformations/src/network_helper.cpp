@@ -169,7 +169,7 @@ void NetworkHelper::removeLayer(std::shared_ptr<Node> layer) {
 
 std::shared_ptr<Node> NetworkHelper::swapMultiplyAndAdd(std::shared_ptr<opset1::Add> addAfterMultiply, const int multiplyBranch) {
     // Multiply --> Add(addAfterMultiply)  ==>  Add(new) --> Multiply(new)
-    // That means x*a + b ==> (x + b/a)*a; tries to fold b/a
+    // That means x*scales + shifts ==> (x + shifts/scales)*scales; tries to fold shifts/scales
     const auto multiply = addAfterMultiply->get_input_node_shared_ptr(multiplyBranch);
 
     const auto multiplyParent1 = multiply->get_input_node_shared_ptr(0);
@@ -189,52 +189,66 @@ std::shared_ptr<Node> NetworkHelper::swapMultiplyAndAdd(std::shared_ptr<opset1::
         return addAfterMultiply;
 
     const auto x = multiply->get_input_node_shared_ptr(multiplyInputBranch);
-    const auto a = multiply->get_input_node_shared_ptr(multiplyInputBranch == 0 ? 1 : 0);
-    const auto b = addAfterMultiply->get_input_node_shared_ptr(multiplyBranch == 0 ? 1 : 0);
-    std::shared_ptr<Node> bDivA;
+    const auto scales = multiply->get_input_node_shared_ptr(multiplyInputBranch == 0 ? 1 : 0);
+    const auto shifts = addAfterMultiply->get_input_node_shared_ptr(multiplyBranch == 0 ? 1 : 0);
+    std::shared_ptr<Node> newShifts;
+    std::vector<float> newScalesValues;
 
-    if (shape_size(b->get_output_shape(0)) == 1 ||
-        shape_size(a->get_output_shape(0)) == 1 ||
-        shape_size(b->get_output_shape(0)) == shape_size(a->get_output_shape(0))) {
-        // safely division to avoid NaN
-        const std::vector<float> bValues = as_type_ptr<opset1::Constant>(b)->cast_vector<float>();
-        const std::vector<float> aValues = as_type_ptr<opset1::Constant>(a)->cast_vector<float>();
-        const bool aBroadcasted = bValues.size() > aValues.size();
-        const bool bBroadcasted = bValues.size() < aValues.size();
-        std::vector<float> bDivAValues(aBroadcasted ? bValues.size() : aValues.size());
+    // safely division to avoid NaN
+    const std::vector<float> shiftsValues = as_type_ptr<opset1::Constant>(shifts)->cast_vector<float>();
+    const std::vector<float> scalesValues = as_type_ptr<opset1::Constant>(scales)->cast_vector<float>();
+    const bool scalesAreBroadcasted = shiftsValues.size() > scalesValues.size();
+    const bool shiftsAreBroadcasted = shiftsValues.size() < scalesValues.size();
+    std::vector<float> newShiftsValues(scalesAreBroadcasted ? shiftsValues.size() : scalesValues.size());
 
-        for (size_t i = 0; i < bDivAValues.size(); ++i) {
-            const auto bi = bValues[bBroadcasted ? 0 : i];
-            const auto ai = aValues[aBroadcasted ? 0 : i];
-            if (bi != 0.f || ai != 0.f) {
-                bDivAValues[i] = bi / ai;
-            } else {
-                bDivAValues[i] = 0.f;
+    for (size_t i = 0; i < newShiftsValues.size(); ++i) {
+        const auto shiftsValue = shiftsValues[shiftsAreBroadcasted ? 0 : i];
+        const auto scalesValue = scalesValues[scalesAreBroadcasted ? 0 : i];
+
+        const auto absScalesValue = std::abs(static_cast<double>(scalesValue));
+        if ((scalesValue == 0.) || ((absScalesValue > 0.) && (absScalesValue < 1.e-32))) {
+            if (newScalesValues.empty()) {
+                newScalesValues = scalesAreBroadcasted ? std::vector<float>(shiftsValues.size(), scalesValues[0]) : scalesValues;
             }
+            newShiftsValues[i] = shiftsValues[shiftsAreBroadcasted ? 0 : i];
+            newScalesValues[i] = 1.f;
+        } else {
+            newShiftsValues[i] = shiftsValue / scalesValue;
         }
-
-        bDivA = std::make_shared<opset1::Constant>(
-                b->get_output_element_type(0),
-                aBroadcasted ? b->get_output_shape(0) : a->get_output_shape(0),
-                bDivAValues);
-    } else {
-        bDivA = fold<opset1::Divide>(b, a);
     }
 
-    std::vector<std::shared_ptr<Node>> inputs{ {}, {} };
+    newShifts = std::make_shared<opset1::Constant>(
+            shifts->get_output_element_type(0),
+            scalesAreBroadcasted ? shifts->get_output_shape(0) : scales->get_output_shape(0),
+            newShiftsValues);
 
-    inputs[0] = x;
-    inputs[1] = bDivA;
+    std::vector<std::shared_ptr<Node>> newAddInputs{ {}, {} };
+
+    newAddInputs[0] = x;
+    newAddInputs[1] = newShifts;
 
     std::shared_ptr<opset1::Add> newAdd = std::make_shared<op::TypeRelaxed<opset1::Add>>(
         std::vector<element::Type>{element::f32, element::f32}, std::vector<element::Type>{ element::f32 },
-        ngraph::op::TemporaryReplaceOutputType(inputs[0], element::f32).get(),
-        ngraph::op::TemporaryReplaceOutputType(inputs[1], element::f32).get());
+        ngraph::op::TemporaryReplaceOutputType(newAddInputs[0], element::f32).get(),
+        ngraph::op::TemporaryReplaceOutputType(newAddInputs[1], element::f32).get());
     copyInfo(addAfterMultiply, newAdd);
 
     NetworkHelper::setOutDataPrecision(newAdd, addAfterMultiply->get_output_element_type(0));
 
-    auto newMultiply = std::make_shared<DequantizationMultiply>(newAdd, a);
+    if (!newScalesValues.empty() &&
+        std::all_of(
+            newScalesValues.begin(),
+            newScalesValues.end(),
+            [&newScalesValues](const float value) { return value == newScalesValues[0]; })) {
+        newScalesValues = { newScalesValues[0] };
+    }
+
+    auto newMultiply = std::make_shared<DequantizationMultiply>(
+        newAdd,
+        newScalesValues.empty() ? scales : std::make_shared<opset1::Constant>(
+            scales->get_output_element_type(0),
+            (scales->get_output_shape(0).empty() || scales->get_output_shape(0).size() == 1ul) ? Shape{} : scales->get_output_shape(0),
+            newScalesValues));
     copyInfo(multiply, newMultiply);
 
     replace_node(addAfterMultiply, newMultiply);

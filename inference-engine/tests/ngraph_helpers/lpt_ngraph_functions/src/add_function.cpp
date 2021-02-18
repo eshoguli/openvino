@@ -27,14 +27,14 @@ std::shared_ptr<ngraph::Function> AddFunction::getOriginal(
     const ngraph::element::Type& precision2,
     const ngraph::builder::subgraph::DequantizationOperations& dequantization2,
     const int constInput,
-    const std::vector<float>& constValues,
+    const ngraph::builder::subgraph::Constant constant,
     const std::string& additionalLayer) {
     std::shared_ptr<ngraph::Node> input1;
     if (constInput == 0) {
         input1 = std::make_shared<ngraph::opset1::Constant>(
-            precision,
-            inputShape,
-            constValues);
+            constant.outPrecision == element::undefined ? precision : constant.outPrecision,
+            constant.shapeIsDefined ? constant.shape : inputShape,
+            constant.values);
     } else {
         input1 = std::make_shared<ngraph::opset1::Parameter>(
             precision1,
@@ -46,9 +46,9 @@ std::shared_ptr<ngraph::Function> AddFunction::getOriginal(
     std::shared_ptr<ngraph::Node> input2;
     if (constInput == 1) {
         input2 = std::make_shared<ngraph::opset1::Constant>(
-            precision,
-            inputShape,
-            constValues);
+            constant.outPrecision == element::undefined ? precision : constant.outPrecision,
+            constant.shapeIsDefined ? constant.shape : inputShape,
+            constant.values);
     } else {
         input2 = std::make_shared<ngraph::opset1::Parameter>(
             precision2, ngraph::Shape(inputShape));
@@ -159,15 +159,15 @@ std::shared_ptr<ngraph::Function> AddFunction::getReference(
     const ngraph::builder::subgraph::DequantizationOperations& dequantization2,
     const ngraph::builder::subgraph::DequantizationOperations& dequantizationAfter,
     const int constInputIndex,
-    const std::vector<float>& constValues,
+    const ngraph::builder::subgraph::Constant constant,
     const std::string& additionalLayer,
     const std::string& operationType) {
     std::shared_ptr<ngraph::Node> input1;
     if (constInputIndex == 0) {
         input1 = std::make_shared<ngraph::opset1::Constant>(
-            precision,
-            inputShape,
-            constValues);
+            constant.outPrecision == element::undefined ? precision : constant.outPrecision,
+            constant.shapeIsDefined ? constant.shape : inputShape,
+            constant.values);
     } else {
         input1 = std::make_shared<ngraph::opset1::Parameter>(
             precision1,
@@ -179,9 +179,9 @@ std::shared_ptr<ngraph::Function> AddFunction::getReference(
     std::shared_ptr<ngraph::Node> input2;
     if (constInputIndex == 1) {
         input2 = std::make_shared<ngraph::opset1::Constant>(
-            precision,
-            inputShape,
-            constValues);
+            constant.outPrecision == element::undefined ? precision : constant.outPrecision,
+            constant.shapeIsDefined ? constant.shape : inputShape,
+            constant.values);
     } else {
         input2 = std::make_shared<ngraph::opset1::Parameter>(
             precision2, ngraph::Shape(inputShape));
