@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <cmath>
 #include <fstream>
 
 #include "ngraph/env_util.hpp"
@@ -329,26 +330,82 @@ static std::string pretty_partial_shape(const PartialShape& shape)
 }
 
 template <typename T>
+static std::string pretty_min_max_denormal_value(const vector<T>& values)
+{
+    std::stringstream ss;
+
+    T min_value = values[0];
+    T max_value = values[0];
+    size_t denormal_counts = 0ul;
+    std::stringstream denormal_ss;
+    for (size_t i = 0; i < values.size(); ++i)
+    {
+        const auto& value = values[i];
+        if (min_value > value)
+        {
+            min_value = value;
+        }
+        if (max_value < value)
+        {
+            max_value = value;
+        }
+
+        const auto abs_value = std::abs(static_cast<double>(value));
+        if (((abs_value > 0.) && (abs_value < 1.e-32)) || (abs_value > 1.e+32))
+        {
+            if (denormal_counts < 3)
+            {
+                denormal_ss << (denormal_counts > 0 ? ", " : "") << i << ": " << value;
+            }
+            else if (denormal_counts == 3)
+            {
+                denormal_ss << "...";
+            }
+            denormal_counts++;
+        }
+    }
+
+    ss << "min: " << min_value << ", max: " << max_value;
+    if (denormal_counts != 0)
+    {
+        ss << ", denormals: " << denormal_counts << " [" << denormal_ss.str() << "]";
+    }
+
+    return ss.str();
+}
+
+template <typename T>
 static std::string pretty_value(const vector<T>& values)
 {
+    const std::string additional_ss = getenv_bool("NGRAPH_VISUALIZE_TREE_MIN_MAX_DENORMAL")
+                                          ? pretty_min_max_denormal_value(values)
+                                          : "";
+
     std::stringstream ss;
     bool first = true;
     for (size_t i = 0; i < values.size(); ++i)
     {
-        if (i > 32)
+        if (i > 31)
         {
-            ss << "...";
+            if (!additional_ss.empty())
+            {
+                ss << std::endl << "(" << additional_ss << ")";
+            }
             break;
         }
 
         const auto& value = values[i];
         if (!first)
             ss << ", ";
+
         ss << value;
 
         if (((i + 1) % 8) == 0)
         {
-            ss << std::endl;
+            if (i != 31)
+                ss << std::endl;
+            if (i >= 31)
+                ss << "...";
         }
 
         first = false;
