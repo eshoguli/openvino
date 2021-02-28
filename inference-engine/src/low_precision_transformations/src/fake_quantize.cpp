@@ -119,7 +119,7 @@ std::shared_ptr<opset1::FakeQuantize> FakeQuantizeTransformation::fuseElementwis
 
     std::shared_ptr<opset1::Constant> constant = fq::getConstant(eltwise);
     if (is_type<opset1::Multiply>(eltwise) && checkElementwise(eltwise)) {
-        const auto value = constant->get_output_element_type(0) == deqPrecision ?
+        auto value = constant->get_output_element_type(0) == deqPrecision ?
             constant :
             fold<opset1::Convert>(constant, deqPrecision);
 
@@ -127,13 +127,49 @@ std::shared_ptr<opset1::FakeQuantize> FakeQuantizeTransformation::fuseElementwis
         // TODO: temporary fix for GPU Plugin (inverted intervals)
         for (const float& val : valueVec) {
             if (val < 0) {
-                return nullptr;
+                //return nullptr;
+                std::cout << "FakeQuantizeTransformation::fuseElementwise: " << fakeQuantize->get_friendly_name() << std::endl;
+                break;
             }
         }
 
-        // avoid division by zero
-        if (std::any_of(valueVec.cbegin(), valueVec.cend(), [](const float value) { return (value == 0.f) || (std::abs(value) < 1.e-32); })) {
-            return nullptr;
+        //// avoid division by zero
+        //if (std::any_of(valueVec.cbegin(), valueVec.cend(), [](const float value) { return (value == 0.f) || (std::abs(value) < 1.e-32); })) {
+        //    return nullptr;
+        //}
+
+        {
+            auto newValueVec = std::vector<float>(valueVec.size());
+
+            bool wasChangedZero = false;
+            bool wasChangedDenormal = false;
+            for (size_t i = 0; i < valueVec.size(); i++) {
+                const auto value = valueVec[i];
+                const auto abs_value = std::abs(static_cast<double>(value));
+
+                if (abs_value == 0.f) {
+                    wasChangedZero = true;
+                    newValueVec[i] = 0.01f;
+                }
+                else if ((abs_value > 0.f) && (abs_value < 1.e-32)) {
+                    wasChangedDenormal = true;
+                    newValueVec[i] = 0.01f;
+                }
+                else if (abs_value > 1.e+32) {
+                    wasChangedDenormal = true;
+                    newValueVec[i] = 99.f;
+                }
+                else {
+                    newValueVec[i] = value;
+                }
+            }
+
+            if (wasChangedZero || wasChangedDenormal) {
+                std::cout << "FakeQuantizeTransformation::fuseElementwise: " <<
+                    (wasChangedZero ? "zero: " : "denormal: " ) <<
+                    fakeQuantize->get_friendly_name() << std::endl;
+                value = std::make_shared<opset1::Constant>(value->output(0).get_element_type(), value->output(0).get_shape(), newValueVec);
+            }
         }
 
         inputLowConst_f32 = fq::updateShape(fold<opset1::Divide>(inputLowConst_f32, value), fakeQuantize->get_output_shape(0));
@@ -147,7 +183,9 @@ std::shared_ptr<opset1::FakeQuantize> FakeQuantizeTransformation::fuseElementwis
         // TODO: temporary fix for GPU Plugin (inverted intervals)
         for (const float& val : valueVec) {
             if (val < 0) {
-                return nullptr;
+                //return nullptr;
+                std::cout << "FakeQuantizeTransformation::fuseElementwise: " << fakeQuantize->get_friendly_name() << std::endl;
+                break;
             }
         }
 
