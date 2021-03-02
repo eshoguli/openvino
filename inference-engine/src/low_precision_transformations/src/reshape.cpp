@@ -147,6 +147,11 @@ void reshapeDequantizationConstant(const std::shared_ptr<opset1::Reshape>& resha
 
 bool ReshapeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
     std::shared_ptr<opset1::Reshape> reshape = as_type_ptr<opset1::Reshape>(m.get_match_root());
+
+    if (reshape->get_friendly_name() == "Reshape_121") {
+        std::cout << "ReshapeTransformation::transform: " << reshape->get_friendly_name() << std::endl;
+    }
+
     if (NetworkHelper::isConstantPath(reshape)) {
         return false;
     }

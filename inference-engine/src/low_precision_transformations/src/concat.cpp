@@ -33,6 +33,10 @@ bool ConcatTransformation::transform(TransformationContext& context, ngraph::pat
         return false;
     }
 
+    if (concat->get_friendly_name() == "LSTM_118/FinalConcat/Data") {
+        std::cout << "ConcatTransformation::transform: " << concat->get_friendly_name() << std::endl;
+    }
+
     ngraph::pass::low_precision::Subgraph subgraph(layerTransformationsManager);
     std::unordered_set<std::string> handledLayers;
     if (!subgraph.fillSubgraphForConcat(concat, handledLayers)) {

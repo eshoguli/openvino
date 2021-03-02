@@ -244,6 +244,7 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
     }
 
     manager.run_passes(nGraphFunc);
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.common").run_on_function(nGraphFunc);
 
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
@@ -271,6 +272,11 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
                 LayerTransformation::Params(params).setPrecisionsOnActivations({ ngraph::element::u8 })));
 
         transformer.transform(nGraphFunc);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_function(nGraphFunc);
+
+        std::cout << "LPT was done: updatePrecisions=" << params.updatePrecisions << std::endl;
+    } else {
+        std::cout << "LPT was ignored" << std::endl;
     }
 
     bool has_fake_quantize = ::ngraph::op::util::has_op_with_type<ngraph::op::FakeQuantize>(nGraphFunc);
@@ -309,6 +315,7 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
     });
 
     legacyManager.run_passes(nGraphFunc);
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.legacy").run_on_function(nGraphFunc);
 
     OV_ITT_TASK_CHAIN(taskChain, MKLDNNPlugin::itt::domains::MKLDNN_LT, "Transformation", "convertFunctionToICNNNetwork");
 

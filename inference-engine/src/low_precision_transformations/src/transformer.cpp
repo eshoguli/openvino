@@ -395,6 +395,7 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
         }
     }
 
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_function(network);
     network->validate_nodes_and_infer_types();
 }
 
