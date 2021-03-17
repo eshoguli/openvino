@@ -114,27 +114,29 @@ std::shared_ptr<Function>  ConvolutionBackpropDataFunction::getReference(
     const builder::subgraph::DequantizationOperations& dequantization,
     const std::shared_ptr<Node>& weights,
     const builder::subgraph::DequantizationOperations& dequantizationAfter) {
-    const auto input = std::make_shared<opset1::Parameter>(precision, inputShape);
-    auto dequantizationStructure = dequantization;
-    dequantizationStructure.multiply.outPrecision = netPrecision;
-    const auto activations = makeDequantization(input, dequantizationStructure);
+    //const auto input = std::make_shared<opset1::Parameter>(precision, inputShape);
+    //auto dequantizationStructure = dequantization;
+    //dequantizationStructure.multiply.outPrecision = netPrecision;
+    //const auto activations = makeDequantization(input, dequantizationStructure);
 
-    auto convolutionBackpropData = std::make_shared<op::TypeRelaxed<opset1::ConvolutionBackpropData>>(
-            std::vector<element::Type>{ element::f32, element::f32 },
-            std::vector<element::Type>{ dequantizationAfter.empty() ? netPrecision : element::f32 },
-            ngraph::op::TemporaryReplaceOutputType(activations, element::f32).get(),
-            ngraph::op::TemporaryReplaceOutputType(weights, element::f32).get(),
-            Strides{ 1, 1 },
-            CoordinateDiff{ 0, 0 },
-            CoordinateDiff{ 0, 0 },
-            Strides{ 1, 1 });
+    //auto convolutionBackpropData = std::make_shared<op::TypeRelaxed<opset1::ConvolutionBackpropData>>(
+    //        std::vector<element::Type>{ element::f32, element::f32 },
+    //        std::vector<element::Type>{ dequantizationAfter.empty() ? netPrecision : element::f32 },
+    //        ngraph::op::TemporaryReplaceOutputType(activations, element::f32).get(),
+    //        ngraph::op::TemporaryReplaceOutputType(weights, element::f32).get(),
+    //        Strides{ 1, 1 },
+    //        CoordinateDiff{ 0, 0 },
+    //        CoordinateDiff{ 0, 0 },
+    //        Strides{ 1, 1 });
 
-    auto dequantizationStructureAfter = dequantizationAfter;
-    dequantizationStructureAfter.multiply.outPrecision = netPrecision;
-    const auto result = makeDequantization(convolutionBackpropData, dequantizationStructureAfter);
-    result->set_friendly_name("output");
-    ngraph::ResultVector results{ std::make_shared<opset1::Result>(result) };
-    return std::make_shared<ngraph::Function>(results, ParameterVector{ input }, "ConvolutionBackpropDataTransformation");
+    //auto dequantizationStructureAfter = dequantizationAfter;
+    //dequantizationStructureAfter.multiply.outPrecision = netPrecision;
+    //const auto result = makeDequantization(convolutionBackpropData, dequantizationStructureAfter);
+    //result->set_friendly_name("output");
+    //ngraph::ResultVector results{ std::make_shared<opset1::Result>(result) };
+    //return std::make_shared<ngraph::Function>(results, ParameterVector{ input }, "ConvolutionBackpropDataTransformation");
+
+    return nullptr;
 }
 
 }  // namespace subgraph
