@@ -21,6 +21,8 @@
 #include "ngraph/pass/constant_folding.hpp"
 #include "ngraph/opsets/opset6.hpp"
 
+#include "lpt_itt.h"
+
 // branch specific transformations
 #include "low_precision/concat.hpp"
 #include "low_precision/concat_multi_channels.hpp"
@@ -348,6 +350,8 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
         return;
     }
 
+    OV_ITT_SCOPE_CHAIN(FIRST_INFERENCE, taskChain, itt::domains::LPT_LT, "LowPrecisionTransformer", "transform");
+
     ngraph::pass::ConstantFolding constantFolding;
     constantFolding.run_on_function(network);
 
@@ -356,11 +360,15 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
 
     TransformationContext context(network);
 
+    OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "TypeRelaxedReplacer");
+
     // Extend necessary operations with polymorphic semantics
     {
         TypeRelaxedReplacer pass;
         pass.run_on_function(network);
     }
+
+    OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "BranchSpecificTransformations");
 
     {
         // Branch specific transformations
@@ -369,12 +377,16 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
         pass.run_on_function(network);
     }
 
+    OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "FakeQuantizeDecomposition");
+
     {
         // Step #1: FakeQuantize decomposition transformation execution
         GraphRewrite pass;
         registerAllMatchers(transformations.decompositionTransformations, pass, context);
         pass.run_on_function(network);
     }
+
+    OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "LayerTransformations");
 
     {
         // Step #2: layer transformations execution
@@ -383,12 +395,16 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
         pass.run_on_function(network);
     }
 
+    OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "CleanupTransformations");
+
     {
         // Step #3: cleanup transformations execution
         GraphRewrite pass;
         registerAllMatchers(transformations.cleanupTransformations, pass, context);
         pass.run_on_function(network);
     }
+
+    OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "StandaloneCleanupTransformations");
 
     {
         // Step #4: standalone cleanup transformations execution
