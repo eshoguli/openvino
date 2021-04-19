@@ -11,6 +11,8 @@ namespace ngraph
     {
         namespace reference
         {
+            //size_t evaluationCount = 0ul;
+
             namespace
             {
                 template <typename src_t, typename dst_t>
@@ -150,6 +152,7 @@ namespace ngraph
             template <>
             void convert<uint8_t, float16>(const uint8_t* arg, float16* out, size_t count)
             {
+                log(arg, out, count);
                 auto converter = jit_convert_array::get<uint8_t, float16>();
 
                 if (converter)
@@ -169,6 +172,7 @@ namespace ngraph
             template <>
             void convert<float16, float>(const float16* arg, float* out, size_t count)
             {
+                log(arg, out, count);
                 auto converter = jit_convert_array::get<float16, float>();
 
                 if (converter)

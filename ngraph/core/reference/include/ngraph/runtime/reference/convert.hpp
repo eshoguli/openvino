@@ -15,9 +15,21 @@ namespace ngraph
         namespace reference
         {
             template <typename TI, typename TO>
+            void log(const TI* arg, TO* out, size_t count)
+            {
+                static size_t evaluationCount = 0ul;
+                evaluationCount++;
+                std::cout << "ngraph::runtime::reference: " << evaluationCount << ": " << std::hex <<
+                    (size_t)arg << ": " << typeid(TI).name() << " -> " <<
+                    (size_t)out << ": " << typeid(TO).name() << std::dec <<
+                    " (" << count << ")" << std::endl;
+            }
+
+            template <typename TI, typename TO>
             typename std::enable_if<!std::is_same<TO, char>::value>::type
                 convert(const TI* arg, TO* out, size_t count)
             {
+                log(arg, out, count);
                 for (size_t i = 0; i < count; ++i)
                 {
                     out[i] = static_cast<TO>(arg[i]);
@@ -33,6 +45,7 @@ namespace ngraph
             typename std::enable_if<std::is_same<TO, char>::value>::type
                 convert(const TI* arg, TO* out, size_t count)
             {
+                log(arg, out, count);
                 for (size_t i = 0; i < count; ++i)
                 {
                     out[i] = static_cast<char>(static_cast<bool>(arg[i]));

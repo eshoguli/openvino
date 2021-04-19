@@ -113,7 +113,9 @@ Engine::~Engine() {
 }
 
 static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
+    std::cout << "Transformation: common transformation was started" << std::endl;
     auto nGraphFunc = clonedNetwork.getFunction();
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_function(nGraphFunc);
 
     ngraph::pass::Manager manager;
     manager.register_pass<ngraph::pass::InitNodeInfo>();
@@ -300,9 +302,12 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
     }
 
     manager.run_passes(nGraphFunc);
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.common").run_on_function(nGraphFunc);
 
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
+        std::cout << "Transformation: LPT was started" << std::endl;
+
         OV_ITT_SCOPED_TASK(MKLDNNPlugin::itt::domains::MKLDNN_LT, "LowPrecisionTransformations");
 
         ngraph::pass::Manager manager;
@@ -327,8 +332,10 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
                 LayerTransformation::Params(params).setPrecisionsOnActivations({ ngraph::element::u8 })));
 
         transformer.transform(nGraphFunc);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_function(nGraphFunc);
     }
 
+    std::cout << "Transformation: legacy was started" << std::endl;
     bool has_fake_quantize = ::ngraph::op::util::has_op_with_type<ngraph::op::FakeQuantize>(nGraphFunc);
 
     ngraph::pass::Manager legacyManager;
@@ -366,6 +373,9 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
     });
 
     legacyManager.run_passes(nGraphFunc);
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.legacy").run_on_function(nGraphFunc);
+
+    std::cout << "Transformation: convertFunctionToICNNNetwork was started" << std::endl;
 
     OV_ITT_TASK_CHAIN(taskChain, MKLDNNPlugin::itt::domains::MKLDNN_LT, "Transformation", "convertFunctionToICNNNetwork");
 
@@ -380,6 +390,8 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
             InferenceEngine::details::convertPrecision(precision.first),
             InferenceEngine::details::convertPrecision(precision.second));
     }
+
+    std::cout << "Transformation: done" << std::endl;
 }
 
 InferenceEngine::ExecutableNetworkInternal::Ptr
