@@ -20,7 +20,7 @@ class TRANSFORMATIONS_API SharedValue;
 template <class SharedValueType>
 class TRANSFORMATIONS_API SharedValueAttribute {
 public:
-    SharedValueAttribute() : sharedValue(std::make_shared<SharedValueType>()) {};
+    SharedValueAttribute() : sharedValue(std::make_shared<SharedValueType>()) {}
     virtual ~SharedValueAttribute() = default;
     std::shared_ptr<SharedValueType> sharedValue;
 };

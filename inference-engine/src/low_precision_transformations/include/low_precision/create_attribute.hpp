@@ -13,13 +13,14 @@
 
 #include <transformations_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
+#include "network_helper.hpp"
 
 namespace ngraph {
 namespace pass {
 namespace low_precision {
 
 template <typename AttributeType, typename OperationType>
-class TRANSFORMATIONS_API CreateAttribute;
+class CreateAttribute;
 
 }  // namespace low_precision
 }  // namespace pass
@@ -49,7 +50,7 @@ public:
                 return false;
             }
 
-            auto attribute = make_shared_attribute<AttributeType>();
+            auto attribute = ngraph::pass::low_precision::make_shared_attribute<AttributeType>();
             auto attributeWrapper = std::make_shared<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>>(attribute);
 
             auto& rt = source == AttributeSource::Node ? op->get_rt_info() : op->output(0).get_rt_info();

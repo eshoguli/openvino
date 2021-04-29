@@ -40,7 +40,8 @@ using namespace ngraph::pass::low_precision;
 //            //    auto& inputRtInfo = input.get_rt_info();
 //            //    auto inputAttributeIt = inputRtInfo.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
 //            //    if (inputAttributeIt != inputRtInfo.end()) {
-//            //        const auto attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(inputAttributeIt->second);
+//            //        const auto attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(
+//            //            inputAttributeIt->second);
 //            //        parentAttributes.push_back(attribute);
 //            //    }
 //            //}

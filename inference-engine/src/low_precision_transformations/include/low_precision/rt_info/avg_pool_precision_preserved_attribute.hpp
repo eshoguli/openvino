@@ -19,27 +19,8 @@
 #include "low_precision/rt_info/precision_preserved_attribute.hpp"
 #include "low_precision/rt_info/shared_value_attribute.hpp"
 
-// TODO: not completed
 class TRANSFORMATIONS_API AvgPoolPrecisionPreservedAttribute : public PrecisionPreservedAttribute {
 public:
-    AvgPoolPrecisionPreservedAttribute() = default;
-    //AvgPoolPrecisionPreservedAttribute(std::shared_ptr<PrecisionPreservedSharedValue> value) {
-    //    this->sharedValue = value;
-    //    this->sharedValue->attributes.push_back(this);
-    //    //ngraph::pass::low_precision::NetworkHelper::reassign<PrecisionPreservedSharedValue, PrecisionPreservedAttribute>(
-    //    //    value,
-    //    //    this->sharedValue->attributes);
-    //}
-
-    template <class Operation>
-    static std::shared_ptr<AvgPoolPrecisionPreservedAttribute> create(const bool value) {
-        // TODO: do we need operation version here?
-        auto operationName = Operation::get_type_info_static().name;
-        return std::make_shared<AvgPoolPrecisionPreservedAttribute>(value, operationName);
-    }
-
-    // TODO: not completed: should be vector to store several shared values, but it's not SharedValueAttribute
-    //std::shared_ptr<PrecisionPreservedAttribute::SharedValue> precisionPreservedValue;
 };
 
 using AvgPoolPrecisionPreservedAttributePtr = std::shared_ptr<AvgPoolPrecisionPreservedAttribute>;
@@ -60,7 +41,7 @@ public:
     std::shared_ptr<ngraph::Variant> merge(const ngraph::NodeVector& nodes) override;
 
     // TODO: new method: need this method to merge attribute instances which can be got from different sources: node/input port/output port
-    void merge(std::vector<std::shared_ptr<VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>>>& attributes) {}
+    void merge(std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<AvgPoolPrecisionPreservedAttribute>>>>& attributes);
 
     AvgPoolPrecisionPreservedAttributePtr get() { return this->m_value; }
 

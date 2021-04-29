@@ -39,6 +39,10 @@ std::shared_ptr<ngraph::Variant> VariantWrapper<AvgPoolPrecisionPreservedAttribu
     return resultAttributeWrapper;
 }
 
+void VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::merge(
+    std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<AvgPoolPrecisionPreservedAttribute>>>>& attributes) {
+}
+
 std::string VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::get_string() {
     auto value = this->m_value;
     std::stringstream ss;

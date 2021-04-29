@@ -134,7 +134,8 @@ private:
                 //    auto& inputRtInfo = input.get_rt_info();
                 //    auto inputAttributeIt = inputRtInfo.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
                 //    if (inputAttributeIt != inputRtInfo.end()) {
-                //        const auto attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(inputAttributeIt->second);
+                //        const auto attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(
+                //            inputAttributeIt->second);
                 //        parentAttributes.push_back(attribute);
                 //    }
                 //}
@@ -145,8 +146,7 @@ private:
                     const auto attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(inputAttributeIt->second);
                     parentAttributes.push_back(attribute);
                 }
-            }
-            else if (is_type<opset1::FakeQuantize>(inputNode)) {
+            } else if (is_type<opset1::FakeQuantize>(inputNode)) {
                 const auto& outputPortRtInfo = inputNode->outputs()[0].get_rt_info();
                 auto attributeIt = outputPortRtInfo.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
                 if (attributeIt != outputPortRtInfo.end()) {
@@ -158,7 +158,7 @@ private:
         return parentAttributes;
     }
 
-    void PropagateSharedValue::handle(std::shared_ptr<ngraph::Function> f, const std::shared_ptr<ngraph::Node>& node) {
+    void handle(std::shared_ptr<ngraph::Function> f, const std::shared_ptr<ngraph::Node>& node) {
         // TODO: possible need to add validation here to avoid not neccaassary actions for not preserved operations without precision limitations
         const bool precisionPreserved = NetworkHelper::isPrecisionPreserved(node);
 
