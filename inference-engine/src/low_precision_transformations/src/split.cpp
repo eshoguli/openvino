@@ -35,7 +35,7 @@ bool SplitTransformation::transform(TransformationContext& context, ngraph::patt
     const auto newSplit = split->clone_with_new_inputs(inputs);
     newSplit->set_friendly_name(split->get_friendly_name());
     ngraph::copy_runtime_info(split, newSplit);
-    replace_node(split, newSplit);
+    //replace_node(split, newSplit);
 
     const int64_t axis = as_type_ptr<opset1::Constant>(split->get_input_node_shared_ptr(1))->cast_vector<int64_t>()[0];
     const size_t normalizedAxis = normalize_axis(split->get_friendly_name(), axis, split->get_input_partial_shape(0).rank());
@@ -72,40 +72,42 @@ bool SplitTransformation::transform(TransformationContext& context, ngraph::patt
 
     NodeVector lastNodes;
     OutputVector replacement;
-    std::unordered_set<Node*> ignoreOps;
     for (size_t i = 0; i < outputSize; ++i) {
         Output<Node> parent = newSplit->output(i);
 
         if (dequantization.convert) {
             const auto convert = dequantization.convert->clone_with_new_inputs({ newSplit->output(i) });
-            ignoreOps.insert(convert.get());
             copy_runtime_info({ newSplit, convert }, convert);
             parent = convert;
         }
 
         if (dequantization.subtract) {
             const auto subtract = std::make_shared<DequantizationSubtract>(parent, splitedSub[i]);
-            ignoreOps.insert(subtract.get());
             copy_runtime_info({ newSplit, subtract }, subtract);
             parent = subtract;
         }
 
         const auto multiply = std::make_shared<DequantizationMultiply>(parent, splitedMul[i]);
-        ignoreOps.insert(multiply.get());
         copy_runtime_info({ newSplit, multiply }, multiply);
 
         lastNodes.push_back(multiply);
         replacement.push_back(multiply);
     }
 
+    //for (size_t i = 0ul; i < newSplit->get_output_size(); ++i) {
+    //    auto inputs = newSplit->output(i).get_target_inputs();
+    //    auto multiply = replacement[i];
+    //    for (auto input : inputs) {
+    //        if (ignoreOps.find(input.get_node()) != ignoreOps.end()) {
+    //            continue;
+    //        }
+    //        input.replace_source_output(multiply);
+    //    }
+    //}
+
     for (size_t i = 0ul; i < newSplit->get_output_size(); ++i) {
-        auto inputs = newSplit->output(i).get_target_inputs();
-        auto multiply = replacement[i];
-        for (auto input : inputs) {
-            if (ignoreOps.find(input.get_node()) != ignoreOps.end()) {
-                continue;
-            }
-            input.replace_source_output(multiply);
+        for (auto input : split->output(i).get_target_inputs()) {
+            input.replace_source_output(replacement[i]);
         }
     }
 

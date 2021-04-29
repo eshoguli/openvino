@@ -4,6 +4,7 @@
 
 #include "low_precision/max_pool.hpp"
 
+#include <chrono>
 #include <memory>
 
 #include <ngraph/ngraph.hpp>
@@ -48,11 +49,27 @@ bool MaxPoolTransformation::transform(TransformationContext& context, ngraph::pa
     OV_ITT_SCOPED_TASK(itt::domains::LPT, "MaxPoolTransformation");
 
     if (!canBeTransformed(context, m.get_match_root())) {
+        //auto part1 = std::chrono::steady_clock::now();
+        //std::cout <<
+        //    "MaxPoolTransformation::transform: " << m.get_match_root()->get_friendly_name() << ", " <<
+        //    "part1: " << std::chrono::duration_cast<std::chrono::microseconds>(part1 - start).count() << " microseconds" <<
+        //    std::endl;
         return false;
     }
 
+    //auto start = std::chrono::steady_clock::now();
     const std::shared_ptr<Node> pooling = NetworkHelper::separateInStandaloneBranch(m.get_match_root());
+
+    //auto part1 = std::chrono::steady_clock::now();
     moveDequantizationAfter(context, pooling, NetworkHelper::getDequantization(pooling), false);
+
+    //auto part2 = std::chrono::steady_clock::now();
+    //std::cout <<
+    //    "MaxPoolTransformation::transform: " << pooling->get_friendly_name() << ", " <<
+    //    "part1: " << std::chrono::duration_cast<std::chrono::microseconds>(part1 - start).count() << " microseconds, " <<
+    //    "part2: " << std::chrono::duration_cast<std::chrono::microseconds>(part2 - part1).count() << " microseconds" <<
+    //    std::endl;
+
     return true;
 }
 

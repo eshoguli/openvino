@@ -14,6 +14,8 @@
 #include "low_precision/network_helper.hpp"
 #include "low_precision/common/dequantization_op.hpp"
 
+NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::ConvolutionTransformation, "ConvolutionTransformation", 0);
+
 namespace ngraph {
 namespace pass {
 namespace low_precision {
@@ -63,6 +65,8 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
     dequantization = NetworkHelper::getDequantization(convolution);
 
     {
+        OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Activations");
+
         std::shared_ptr<opset1::Subtract> subtract;
         if (dequantization.subtract != nullptr) {
             std::shared_ptr<ngraph::Node> layer = dequantization.subtract;
@@ -77,6 +81,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
 
         // workaround normalizes shape of Subtract to match CPU plugin expectations
         if (subtract && subtract->get_output_partial_shape(0) != subtract->get_input_partial_shape(1)) {
+            OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Activations::NormalizeShapes");
             size_t length = subtract->get_output_partial_shape(0).rank().get_length();
 
             // Insert explicit broadcast for channel dimension [1] and immediately fold it
@@ -103,6 +108,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
         const size_t groupsCount = NetworkHelper::getGroupsCount(convolution);
         std::shared_ptr<Node> newMultiplyAfterConst;
         if (groupsCount > 1ul) {
+            OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Activations::HandleGroups");
             std::shared_ptr<opset1::Constant> multiplyConst = as_type_ptr<opset1::Constant>(dequantization.multiply->get_input_node_shared_ptr(1));
 
             const std::vector<float> scales = multiplyConst->cast_vector<float>();
@@ -177,7 +183,11 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
     }
 
     {
-        decomposeFakeQuantizeForWeightsPath(convolution);
+        OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights");
+        {
+            OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights::decompose");
+            decomposeFakeQuantizeForWeightsPath(convolution);
+        }
 
         std::shared_ptr<opset1::Reshape> reshapeFromWeights = as_type_ptr<opset1::Reshape>(convolution->input_value(1).get_node_shared_ptr());
 
@@ -199,6 +209,8 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
         std::shared_ptr<opset1::Subtract> subtractFromWeights = as_type_ptr<opset1::Subtract>(multiplyFromWeights->get_input_node_shared_ptr(0));
 
         {
+            OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights::NormalizeShapes");
+
             Shape newScaleShape = multiplyFromWeights->get_input_shape(1);
             if (!newScaleShape.empty()) {
                 // that's all we need: [C, 1, 1, 1] => [C, 1, 1]
@@ -229,6 +241,8 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
         }
 
         if (subtractFromWeights != nullptr) {
+            OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights::OptimizeSubtract");
+
             // optimize zero point on weights
             auto optimizedSubtract = NetworkHelper::optimizeSubtract(subtractFromWeights);
 
@@ -254,6 +268,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
             multiplyFromWeights->get_input_node_shared_ptr(0) :
             subtractFromWeights->get_input_node_shared_ptr(0));
         if (convertFromWeights != nullptr) {
+            OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights::Convert");
             // remove Convert on weights
             std::shared_ptr<Node> childNode = reshapeFromWeights == nullptr ? convolution : reshapeFromWeights;
 
@@ -268,13 +283,22 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
 
         reshapeFromWeights = as_type_ptr<opset1::Reshape>(convolution->get_input_node_shared_ptr(1));
         if (reshapeFromWeights != nullptr) {
-            // remove Reshape on weights
-            const std::shared_ptr<Node> newWeights = fold_reshape<opset1::Reshape>(
-                reshapeFromWeights->input_value(0),
-                reshapeFromWeights->input_value(1),
-                false);
+            OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights::Reshape");
 
-            replace_node(reshapeFromWeights, newWeights);
+            // remove Reshape on weights
+            std::shared_ptr<Node> newWeights;
+            {
+                OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights::Reshape::Folding");
+                newWeights = fold<opset1::Reshape>(
+                    reshapeFromWeights->input_value(0),
+                    reshapeFromWeights->input_value(1),
+                    false);
+            }
+
+            {
+                OV_ITT_SCOPED_TASK(itt::domains::LPT, "ConvolutionTransformation::Weights::Reshape::Replace");
+                replace_node(reshapeFromWeights, newWeights);
+            }
         }
     }
 

@@ -17,9 +17,18 @@
 #include <vector>
 #include <queue>
 
+#include "low_precision/lpt_itt.hpp"
+
 namespace ngraph {
 namespace pass {
 namespace low_precision {
+
+//namespace {
+//inline PerfCounters& perf_counters() {
+//    static PerfCounters counters;
+//    return counters;
+//}
+//} // namespace
 
 const char LayerTransformation::originalLayerPostfix[] = "_original";
 
@@ -449,6 +458,8 @@ void LayerTransformation::updateOutput(
 
 void LayerTransformation::addPattern(ngraph::pass::GraphRewrite& pass, TransformationContext& context, std::shared_ptr<Node> patternRoot) const {
     ngraph::graph_rewrite_callback internal_callback = [this, &context](ngraph::pattern::Matcher &m) {
+        OV_ITT_SCOPE(LPT, itt::domains::LPT, ngraph::pass::low_precision::perf_counters()[pass->get_type_info()]);
+
         const bool result = transform(context, m);
         (void)result;
 #ifdef LPT_DISPLAY_PRECISION

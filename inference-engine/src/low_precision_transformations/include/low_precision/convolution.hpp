@@ -13,6 +13,7 @@ namespace low_precision {
 
 class TRANSFORMATIONS_API ConvolutionTransformation : public WeightableLayerTransformation {
 public:
+    NGRAPH_RTTI_DECLARATION;
     ConvolutionTransformation(const Params& params);
     void registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const override;
     bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
