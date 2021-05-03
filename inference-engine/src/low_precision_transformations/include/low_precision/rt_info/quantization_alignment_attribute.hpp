@@ -14,11 +14,20 @@
 
 #include <transformations_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
+#include "shared_value_attribute.hpp"
+#include "attribute_parameters.hpp"
 
-class QuantizationAlignmentAttribute {
+class QuantizationAlignmentAttribute;
+
+class TRANSFORMATIONS_API QuantizationAlignmentSharedValue : public SharedValue<QuantizationAlignmentAttribute> {
 public:
-    QuantizationAlignmentAttribute(const bool hasToBeAligned = false) : hasToBeAligned(hasToBeAligned) {}
-    bool hasToBeAligned;
+    QuantizationAlignmentSharedValue(const bool value = false) : value(value) {}
+    bool value;
+};
+
+class TRANSFORMATIONS_API QuantizationAlignmentAttribute : public SharedValueAttribute<QuantizationAlignmentSharedValue>{
+public:
+    QuantizationAlignmentAttribute(const bool value = false);
 };
 
 using QuantizationAlignmentAttributePtr = std::shared_ptr<QuantizationAlignmentAttribute>;
@@ -43,5 +52,9 @@ public:
 
     std::shared_ptr<QuantizationAlignmentAttribute> get() { return this->m_value; }
 
+    static std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>> create(
+        const std::shared_ptr<ngraph::Node>& node,
+        const AttributeParameters& params);
+    void merge(std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>>& attributes);
     std::string get_string() override;
 };

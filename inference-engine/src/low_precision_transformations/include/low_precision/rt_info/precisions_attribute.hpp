@@ -15,6 +15,8 @@
 #include <transformations_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include "low_precision/rt_info/shared_value_attribute.hpp"
+#include "low_precision/layer_transformation.hpp"
+#include "attribute_parameters.hpp"
 
 class PrecisionsAttribute;
 
@@ -25,7 +27,8 @@ public:
 
 class TRANSFORMATIONS_API PrecisionsAttribute : public SharedValueAttribute<PrecisionsSharedValue> {
 public:
-    PrecisionsAttribute(const std::set<ngraph::element::Type>& precisions = std::set<ngraph::element::Type>{ ngraph::element::u8, ngraph::element::i8 });
+    PrecisionsAttribute(
+            const std::set<ngraph::element::Type>& precisions = std::set<ngraph::element::Type>{ ngraph::element::u8, ngraph::element::i8 });
 };
 
 extern template class TRANSFORMATIONS_API ngraph::VariantImpl<std::shared_ptr<PrecisionsAttribute>>;
@@ -43,12 +46,17 @@ public:
 
     std::shared_ptr<ngraph::Variant> merge(const ngraph::NodeVector& nodes) override;
 
-    // TODO: new method: need this method to merge attribute instances which can be got from different sources: node/input port/output port
-    void merge(std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>>& attributes);
-
     std::shared_ptr<ngraph::Variant> init(const std::shared_ptr<ngraph::Node>& node) override;
 
     std::shared_ptr<PrecisionsAttribute> get() { return this->m_value; }
 
+    // TODO: new method:
+    // create attribute instance for node
+    static std::shared_ptr<VariantWrapper<std::shared_ptr<PrecisionsAttribute>>> create(
+        const std::shared_ptr<ngraph::Node>& node,
+        const AttributeParameters& params);
+    // merge attribute instances which can be got from different sources: node, input port or output port
+    void merge(std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>>& attributes);
+    // vizualize shared attributes details in VizualizeTree pass
     std::string get_string() override;
 };

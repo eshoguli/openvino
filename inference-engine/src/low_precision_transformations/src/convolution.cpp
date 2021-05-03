@@ -28,6 +28,7 @@ ConvolutionTransformation::ConvolutionTransformation(const Params& params) : Wei
         })
     });
 
+
     ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
         auto op = m.get_match_root();
         if (!op || transformation_callback(op)) {

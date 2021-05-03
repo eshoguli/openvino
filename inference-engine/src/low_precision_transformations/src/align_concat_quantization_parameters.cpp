@@ -39,7 +39,7 @@ bool ngraph::pass::low_precision::AlignConcatQuantizationParamters::run_on_funct
                 // should be handled: branch is not quantized: need tests
                 auto& rtInfo = node->get_rt_info();
                 const auto attribute = std::make_shared<::ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>>(
-                    std::make_shared<IntervalsAlignmentAttribute>(0.f, 0.f, false));
+                        ngraph::pass::low_precision::make_shared_attribute<IntervalsAlignmentAttribute>(0.f, 0.f, false));
                 rtInfo[ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>::type_info.name] = attribute;
                 continue;
             }
@@ -96,7 +96,7 @@ bool ngraph::pass::low_precision::AlignConcatQuantizationParamters::run_on_funct
             //const LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(quantizationDetails);
 
             const auto attribute = std::make_shared<::ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>>(
-                std::make_shared<IntervalsAlignmentAttribute>(lowInterval, highInterval));
+                    ngraph::pass::low_precision::make_shared_attribute<IntervalsAlignmentAttribute>(lowInterval, highInterval));
             rtInfo[ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>::type_info.name] = attribute;
             continue;
         }
@@ -107,7 +107,7 @@ bool ngraph::pass::low_precision::AlignConcatQuantizationParamters::run_on_funct
             if (it != rtInfo.end()) {
                 auto attributeWrapper = std::dynamic_pointer_cast<ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>>(it->second);
                 assert(attributeWrapper != nullptr);
-                attributeWrapper->get()->hasToBeAligned = true;
+                attributeWrapper->get()->sharedValue->value = true;
                 continue;
             }
         }

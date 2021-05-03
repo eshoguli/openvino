@@ -280,12 +280,12 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>> alignmentValue;
     for (const auto& input : layer->output(0).get_target_inputs()) {
         alignmentValue = low_precision::getAttribute<std::shared_ptr<QuantizationAlignmentAttribute>>(input.get_node()->shared_from_this());
-        if ((alignmentValue != nullptr) && (alignmentValue->get()->hasToBeAligned)) {
+        if ((alignmentValue != nullptr) && (alignmentValue->get()->sharedValue->value)) {
             break;
         }
     }
 
-    if ((alignmentValue != nullptr) && alignmentValue->get()->hasToBeAligned) {
+    if ((alignmentValue != nullptr) && alignmentValue->get()->sharedValue->value) {
         //auto& rt = layer->get_rt_info();
         //auto it = rt.find(ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>::type_info.name);
         //if (it != rt.end()) {
@@ -301,17 +301,17 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     }
 
     if (intervalsAlignment != nullptr) {
-        if (!intervalsAlignment->isValid) {
+        if (!intervalsAlignment->sharedValue->isValid) {
             // TODO: LPT: not implemented: move to top
             return false;
         }
-        const float maxOutputInterval = intervalsAlignment->intervalHigh - intervalsAlignment->intervalLow;
+        const float maxOutputInterval = intervalsAlignment->sharedValue->intervalHigh - intervalsAlignment->sharedValue->intervalLow;
         // FQ -> SUB_quantization -> MUL_quantization -[INT8]-> SUB_dequantization -> MUL_dequantization ->
         const float quantizationMul = (dataPrecision.max - dataPrecision.min) / maxOutputInterval;
         const float dequantizationMul = maxOutputInterval / (dataPrecision.max - dataPrecision.min);
 
         // FQ outputLowValue = dataPrecision.min * dequantizationMul - quantizationSub
-        const float quantizationSub = intervalsAlignment->intervalLow - dataPrecision.min * dequantizationMul;
+        const float quantizationSub = intervalsAlignment->sharedValue->intervalLow - dataPrecision.min * dequantizationMul;
         const float dequantizationSub = std::round(-quantizationSub * quantizationMul);
 
 

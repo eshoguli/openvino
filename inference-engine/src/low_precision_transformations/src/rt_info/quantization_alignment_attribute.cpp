@@ -13,6 +13,11 @@
 #include "low_precision/network_helper.hpp"
 
 using namespace ngraph;
+using namespace ngraph::pass::low_precision;
+
+QuantizationAlignmentAttribute::QuantizationAlignmentAttribute(const bool hasToBeAligned) {
+    sharedValue = std::make_shared<QuantizationAlignmentSharedValue>(hasToBeAligned);
+}
 
 template class ngraph::VariantImpl<QuantizationAlignmentAttributePtr>;
 
@@ -39,7 +44,7 @@ std::shared_ptr<ngraph::Variant> VariantWrapper<QuantizationAlignmentAttributePt
             continue;
         }
 
-        resultAttribute->hasToBeAligned = resultAttribute->hasToBeAligned || attribute->hasToBeAligned;
+        resultAttribute->sharedValue->value = resultAttribute->sharedValue->value || attribute->sharedValue->value;
     }
 
     return resultAttributeWrapper;
@@ -49,13 +54,49 @@ std::shared_ptr<ngraph::Variant> VariantWrapper<QuantizationAlignmentAttributePt
     return nullptr;
 }
 
+std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>> VariantWrapper<QuantizationAlignmentAttributePtr>::create(
+    const std::shared_ptr<ngraph::Node>& node,
+    const AttributeParameters& params) {
+    if (getAttribute<std::shared_ptr<QuantizationAlignmentAttribute>>(node) != nullptr) {
+        return nullptr;
+    }
+
+    if (!NetworkHelper::isPrecisionPreserved(node)) {
+        return nullptr;
+    }
+
+    std::vector<std::shared_ptr<ngraph::Node>> inputNodes;
+    for (auto index = 0ul; index < node->get_input_size(); ++index) {
+        const auto& input = node->input(index);
+        auto inputNode = input.get_source_output().get_node_shared_ptr();
+
+        const auto dequantization = NetworkHelper::getDequantization(node, index);
+        if (!dequantization.empty() &&
+            (is_type<opset1::Convert>(dequantization.data.get_node())) &&
+            is_type<opset1::FakeQuantize>(dequantization.data.get_node()->get_input_node_ptr(0))) {
+            inputNode = dequantization.data.get_node()->get_input_node_shared_ptr(0);
+        }
+
+        if (is_type<opset1::FakeQuantize>(inputNode)) {
+            auto& rt = node->get_rt_info();
+            const auto attribute = std::make_shared<ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>>(
+                make_shared_attribute<QuantizationAlignmentAttribute>());
+            rt[ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>::type_info.name] = attribute;
+            return attribute;
+        }
+    }
+
+    return nullptr;
+}
+
+void VariantWrapper<QuantizationAlignmentAttributePtr>::merge(
+    std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>>& attributes) {
+    //
+}
+
 std::string VariantWrapper<QuantizationAlignmentAttributePtr>::get_string() {
     std::stringstream ss;
-
-#ifdef LPT_DEBUG
-    const size_t rawPointer = (size_t)m_value.get();
-    ss << rawPointer << ": ";
-#endif
-    ss << "value: " << (m_value->hasToBeAligned ? "true" : "false");
+    ss << m_value->get_string();
+    ss << "value: " << (m_value->sharedValue->value ? "true" : "false");
     return ss.str();
 }

@@ -12,14 +12,25 @@
 
 #include <transformations_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
+#include "low_precision/rt_info/shared_value_attribute.hpp"
+#include "attribute_parameters.hpp"
 
-class IntervalsAlignmentAttribute {
+class IntervalsAlignmentAttribute;
+
+class TRANSFORMATIONS_API IntervalsAlignmentSharedValue : public SharedValue<IntervalsAlignmentAttribute> {
 public:
-    IntervalsAlignmentAttribute(const float intervalLow, const float intervalHigh, const bool isValid = true) :
-        intervalLow(intervalLow), intervalHigh(intervalHigh), isValid(isValid) {}
+    IntervalsAlignmentSharedValue() = default;
+    IntervalsAlignmentSharedValue(const float intervalLow, const float intervalHigh, const bool isValid = true) :
+            intervalLow(intervalLow), intervalHigh(intervalHigh), isValid(isValid) {}
     float intervalLow;
     float intervalHigh;
     bool isValid;
+};
+
+class TRANSFORMATIONS_API IntervalsAlignmentAttribute : public SharedValueAttribute<IntervalsAlignmentSharedValue> {
+public:
+    IntervalsAlignmentAttribute() = default;
+    IntervalsAlignmentAttribute(const float intervalLow, const float intervalHigh, const bool isValid = true);
 };
 
 using IntervalsAlignmentAttributePtr = std::shared_ptr<IntervalsAlignmentAttribute>;
@@ -42,5 +53,9 @@ public:
 
     std::shared_ptr<IntervalsAlignmentAttribute> get() const { return this->m_value; }
 
+    static std::shared_ptr<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>> create(
+        const std::shared_ptr<ngraph::Node>& node,
+        const AttributeParameters& params);
+    void merge(std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>>>& attributes);
     std::string get_string() override;
 };

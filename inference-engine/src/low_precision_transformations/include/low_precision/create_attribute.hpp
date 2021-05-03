@@ -13,6 +13,7 @@
 
 #include <transformations_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
+#include "base_matcher_pass.hpp"
 #include "network_helper.hpp"
 
 namespace ngraph {
@@ -32,29 +33,38 @@ enum class AttributeSource {
     OutputPort
 };
 
-template <typename AttributeType, typename OperationType>
-class ngraph::pass::low_precision::CreateAttribute : public ngraph::pass::MatcherPass {
+template <typename AttributeType, typename OperationType = ngraph::pattern::op::Label>
+class ngraph::pass::low_precision::CreateAttribute : public ngraph::pass::low_precision::BaseMatcherPass {
 public:
     CreateAttribute(const AttributeSource source = AttributeSource::Node) {
         assert((source == AttributeSource::Node) || (source == AttributeSource::OutputPort));
-        auto operation = pattern::wrap_type<OperationType>();
+//        //auto operation = pattern::wrap_type<OperationType>();
+//
+////        auto is_op_type = [](std::shared_ptr<Node> n) {
+////            return true;
+////        };
+////        auto operation = pattern::wrap_type<pattern::op::Label>(element::f32, Shape{}, is_op_type);
+//        auto is_op_type = [](std::shared_ptr<Node> n) {
+//            return true;
+//        };
+        auto operation = std::is_same<OperationType, pattern::op::Label>::value ?
+            std::make_shared<pattern::op::Label>(element::f32, Shape{}, [](std::shared_ptr<Node> n) { return true; }) :
+            pattern::wrap_type<OperationType>();
+
+
+//        auto operation = ngraph::pattern::wrap_type([](const Output<Node>& value) {
+//            return true;
+//        });
 
         ngraph::graph_rewrite_callback callback = [&](pattern::Matcher& m) {
             auto op = m.get_match_root();
-            //assert((source == AttributeSource::Node) || ((source == AttributeSource::OutputPort) && (op->get_output_size() == 1ul)));
-            if ((source == AttributeSource::OutputPort) && (op->get_output_size() != 1ul)) {
-                std::cout << "CreateAttribute" << std::endl;
-            }
-
             if (!op || transformation_callback(op)) {
                 return false;
             }
-
-            auto attribute = ngraph::pass::low_precision::make_shared_attribute<AttributeType>();
-            auto attributeWrapper = std::make_shared<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>>(attribute);
-
-            auto& rt = source == AttributeSource::Node ? op->get_rt_info() : op->output(0).get_rt_info();
-            rt[ngraph::VariantWrapper<std::shared_ptr<AttributeType>>::type_info.name] = attributeWrapper;
+            auto attribute = ngraph::VariantWrapper<std::shared_ptr<AttributeType>>::create(op, params);
+            if (attribute == nullptr) {
+                return false;
+            }
 
             return true;
         };

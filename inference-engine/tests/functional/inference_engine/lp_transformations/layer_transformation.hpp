@@ -9,6 +9,7 @@
 #include "low_precision/rt_info/precisions_attribute.hpp"
 #include "low_precision/layer_transformation.hpp"
 #include "low_precision/transformation_context.hpp"
+#include "low_precision/network_helper.hpp"
 #include "lpt_ngraph_functions/common/dequantization_operations.hpp"
 
 using namespace ngraph;
@@ -54,7 +55,8 @@ public:
             for (auto& it : rt) {
                 auto reference = std::dynamic_pointer_cast<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>>(it.second);
                 assert(reference != nullptr);
-                if ((reference->get()->intervalLow != intervalLow) && (reference->get()->intervalHigh != intervalHigh)) {
+                if ((reference->get()->sharedValue->intervalLow != intervalLow) &&
+                    (reference->get()->sharedValue->intervalHigh != intervalHigh)) {
                     return false;
                 }
             }
@@ -66,7 +68,8 @@ public:
     static bool compare(
         const std::shared_ptr<IntervalsAlignmentAttribute>& value1,
         const std::shared_ptr<IntervalsAlignmentAttribute>& value2) {
-        if ((value1->intervalLow != value2->intervalLow) || (value1->intervalHigh != value2->intervalHigh)) {
+        if ((value1->sharedValue->intervalLow != value2->sharedValue->intervalLow) ||
+            (value1->sharedValue->intervalHigh != value2->sharedValue->intervalHigh)) {
             return false;
         }
         return true;
@@ -132,28 +135,33 @@ public:
         std::shared_ptr<Variant> first = nullptr;
         for (auto node : nodes) {
             for (auto output : node->outputs()) {
-                auto& rt = output.get_rt_info();
-                const std::string& name = VariantWrapper<Attribute>::type_info.name;
-                auto it = rt.find(name);
-                if (it == rt.end()) {
-                    return false;
-                }
-
-                auto value = it->second;
+                auto value = ngraph::pass::low_precision::getAttributeFromOutput<Attribute>(output);
                 if (first == nullptr) {
                     first = value;
                 } else {
-                    const auto attribute1 = std::dynamic_pointer_cast<ngraph::VariantWrapper<Attribute>>(value)->get();
-                    assert(attribute1 != nullptr);
-                    const auto sharedValue1 = attribute1->sharedValue;
-
-                    const auto attribute2 = std::dynamic_pointer_cast<ngraph::VariantWrapper<Attribute>>(first)->get();
-                    assert(attribute2 != nullptr);
-                    const auto sharedValue2 = attribute2->sharedValue;
-
+                    const auto sharedValue1 = std::dynamic_pointer_cast<ngraph::VariantWrapper<Attribute>>(value)->get()->sharedValue;
+                    const auto sharedValue2 = std::dynamic_pointer_cast<ngraph::VariantWrapper<Attribute>>(first)->get()->sharedValue;
                     if (sharedValue1 != sharedValue2) {
                         return false;
                     }
+                }
+            }
+        }
+        return true;
+    }
+
+    template <class Attribute>
+    static bool checkIfAttributesSharedValuesAreTheSame(const NodeVector& nodes) {
+        std::shared_ptr<Variant> first = nullptr;
+        for (auto node : nodes) {
+            auto value = ngraph::pass::low_precision::getAttribute<Attribute>(node);
+            if (first == nullptr) {
+                first = value;
+            } else {
+                const auto sharedValue1 = std::dynamic_pointer_cast<ngraph::VariantWrapper<Attribute>>(value)->get()->sharedValue;
+                const auto sharedValue2 = std::dynamic_pointer_cast<ngraph::VariantWrapper<Attribute>>(first)->get()->sharedValue;
+                if (sharedValue1 != sharedValue2) {
+                    return false;
                 }
             }
         }
