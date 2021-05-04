@@ -135,16 +135,45 @@ public:
             })
         });
 
-#define VISUALIZE_TREE
+//#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
+
+//        ngraph::pass::Manager manager;
+//        manager.register_pass<low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
+//        manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+//        manager.register_pass<low_precision::PropagatePrecisions>();
+//        manager.register_pass<low_precision::AlignConcatQuantizationParamters>();
+//
+//        std::shared_ptr<GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
+//        common->add_matcher<low_precision::ConcatTransformation>();
+//        common->add_matcher<low_precision::ConvolutionTransformation>();
+//        common->add_matcher<low_precision::FakeQuantizeDecompositionTransformation>();
+//        common->add_matcher<low_precision::MaxPoolTransformation>();
+
 
         ngraph::pass::Manager manager;
         manager.register_pass<low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
-        manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
-        manager.register_pass<low_precision::PropagatePrecisions>();
-        manager.register_pass<low_precision::AlignConcatQuantizationParamters>();
 
-        std::shared_ptr<GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
+        std::shared_ptr<ngraph::pass::GraphRewrite> markupAvgPoolPrecision = manager.register_pass<ngraph::pass::GraphRewrite>();
+        markupAvgPoolPrecision->add_matcher<low_precision::CreatePrecisionsDependentAttribute<AvgPoolPrecisionPreservedAttribute, opset1::AvgPool>>();
+        markupAvgPoolPrecision->add_matcher<low_precision::PropagateThroughPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
+        markupAvgPoolPrecision->add_matcher<low_precision::UpdateSharedPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
+
+        std::shared_ptr<ngraph::pass::GraphRewrite> precisionsPropagation = manager.register_pass<ngraph::pass::GraphRewrite>();
+        precisionsPropagation->add_matcher<low_precision::CreateAttribute<PrecisionsAttribute, opset1::FakeQuantize>>(AttributeSource::OutputPort);
+        precisionsPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<PrecisionsAttribute>>();
+        precisionsPropagation->add_matcher<low_precision::PropagateToInput<PrecisionsAttribute>>();
+
+        std::shared_ptr<ngraph::pass::GraphRewrite> intervalsAlignment = manager.register_pass<ngraph::pass::GraphRewrite>();
+        intervalsAlignment->add_matcher<low_precision::CreateAttribute<IntervalsAlignmentAttribute, opset1::FakeQuantize>>();
+        intervalsAlignment->add_matcher<low_precision::PropagateThroughPrecisionPreserved<IntervalsAlignmentAttribute>>();
+
+        std::shared_ptr<ngraph::pass::GraphRewrite> alignQuantization = manager.register_pass<ngraph::pass::GraphRewrite>();
+        alignQuantization->add_matcher<low_precision::CreateAttribute<QuantizationAlignmentAttribute>>();
+        alignQuantization->add_matcher<low_precision::PropagateThroughPrecisionPreserved<QuantizationAlignmentAttribute>>();
+        alignQuantization->add_matcher<low_precision::UpdateSharedPrecisionPreserved<QuantizationAlignmentAttribute>>();
+
+        std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
         common->add_matcher<low_precision::ConcatTransformation>();
         common->add_matcher<low_precision::ConvolutionTransformation>();
         common->add_matcher<low_precision::FakeQuantizeDecompositionTransformation>();
@@ -187,9 +216,9 @@ public:
         {
             ngraph::pass::Manager manager;
             //manager.register_pass<low_precision::AlignConcatQuantizationParamters>();
-            std::shared_ptr<ngraph::pass::GraphRewrite> alignQuantizationPropagation = manager.register_pass<ngraph::pass::GraphRewrite>();
-            alignQuantizationPropagation->add_matcher<low_precision::CreateAttribute<IntervalsAlignmentAttribute, opset1::FakeQuantize>>();
-            alignQuantizationPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<IntervalsAlignmentAttribute>>();
+            std::shared_ptr<ngraph::pass::GraphRewrite> intervalsAlignment = manager.register_pass<ngraph::pass::GraphRewrite>();
+            intervalsAlignment->add_matcher<low_precision::CreateAttribute<IntervalsAlignmentAttribute, opset1::FakeQuantize>>();
+            intervalsAlignment->add_matcher<low_precision::PropagateThroughPrecisionPreserved<IntervalsAlignmentAttribute>>();
             manager.run_passes(actualFunction);
             ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming4.svg").run_on_function(actualFunction);
         }
@@ -216,9 +245,9 @@ public:
         {
             ngraph::pass::Manager manager;
             std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
-            //common->add_matcher<low_precision::ConcatTransformation>();
-            //common->add_matcher<low_precision::ConvolutionTransformation>();
-            //common->add_matcher<low_precision::MaxPoolTransformation>();
+            common->add_matcher<low_precision::ConcatTransformation>();
+            common->add_matcher<low_precision::ConvolutionTransformation>();
+            common->add_matcher<low_precision::MaxPoolTransformation>();
             manager.run_passes(actualFunction);
             ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transformed.svg").run_on_function(actualFunction);
         }
@@ -262,27 +291,27 @@ TEST_P(ConcatWithNeighborsWithConvolutionTransformation, CompareFunctions) {
     //ASSERT_TRUE(res.first) << res.second;
 
     auto actualFakeQuantizes = LayerTransformation::get<opset1::FakeQuantize>(actualFunction);
-    ASSERT_EQ(4ul, actualFakeQuantizes.size()) << "unexpected FakeQuantize operations count " << actualFakeQuantizes.size();
-
-    for (auto it = actualFakeQuantizes.begin(); it != actualFakeQuantizes.end(); ++it) {
-        if ((*it)->get_friendly_name() == "fakeQuantizeOnWeights") {
-            actualFakeQuantizes.erase(it);
-            break;
-        }
-    }
+    // TODO: just to debug: if Convolution transformation is turned off
+//    ASSERT_EQ(4ul, actualFakeQuantizes.size()) << "unexpected FakeQuantize operations count " << actualFakeQuantizes.size();
+//    for (auto it = actualFakeQuantizes.begin(); it != actualFakeQuantizes.end(); ++it) {
+//        if ((*it)->get_friendly_name() == "fakeQuantizeOnWeights") {
+//            actualFakeQuantizes.erase(it);
+//            break;
+//        }
+//    }
     ASSERT_EQ(3ul, actualFakeQuantizes.size()) << "unexpected FakeQuantize operations count " << actualFakeQuantizes.size();
+
     ASSERT_TRUE(checkIfOutputAttributesSharedValuesAreTheSame<std::shared_ptr<PrecisionsAttribute>>(actualFakeQuantizes)) <<
         "PrecisionsAttribute shared values are not the same";
 
-    const auto referenceFakeQuantizes = LayerTransformation::get<opset1::FakeQuantize>(referenceFunction);
-    // TODO: not completed
-    //ASSERT_TRUE(checkIfOutputAttributesAreEqual<std::shared_ptr<IntervalsAlignmentAttribute>>(actualFakeQuantizes, referenceFakeQuantizes)) <<
-    //    "attributes are not the equal";
+    auto actualConcatOperations = LayerTransformation::get<opset1::Concat>(actualFunction);
+    ASSERT_EQ(2ul, actualConcatOperations.size());
+    ASSERT_NE(nullptr, ngraph::pass::low_precision::getAttribute<std::shared_ptr<QuantizationAlignmentAttribute>>(actualConcatOperations[0]));
+    ASSERT_NE(nullptr, ngraph::pass::low_precision::getAttribute<std::shared_ptr<QuantizationAlignmentAttribute>>(actualConcatOperations[1]));
 
-    auto operations = LayerTransformation::get<opset1::Concat>(actualFunction);
-    operations.insert(operations.end(), actualFakeQuantizes.begin(), actualFakeQuantizes.end());
-    ASSERT_TRUE(checkIfAttributesSharedValuesAreTheSame<std::shared_ptr<IntervalsAlignmentAttribute>>(operations)) <<
-        "IntervalsAlignmentAttribute are not the same";
+    actualConcatOperations.insert(actualConcatOperations.end(), actualFakeQuantizes.begin(), actualFakeQuantizes.end());
+    ASSERT_TRUE(checkIfAttributesSharedValuesAreTheSame<std::shared_ptr<IntervalsAlignmentAttribute>>(actualConcatOperations)) <<
+        "IntervalsAlignmentAttribute shared values are not the same";
 }
 
 const std::vector<ngraph::element::Type> precisions = {

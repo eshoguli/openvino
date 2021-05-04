@@ -155,6 +155,10 @@ public:
         std::shared_ptr<Variant> first = nullptr;
         for (auto node : nodes) {
             auto value = ngraph::pass::low_precision::getAttribute<Attribute>(node);
+            if (value == nullptr) {
+                return false;
+            }
+
             if (first == nullptr) {
                 first = value;
             } else {
@@ -172,14 +176,11 @@ public:
     static bool checkIfAttributesAreTheSame(const NodeVector& nodes) {
         Variant* first = nullptr;
         for (auto node : nodes) {
-            auto& rt = node->get_rt_info();
-            const std::string& name = VariantWrapper<Attribute>::type_info.name;
-            auto it = rt.find(name);
-            if (it == rt.end()) {
+            auto value = ngraph::pass::low_precision::getAttribute<Attribute>(node);
+            if (value == nullptr) {
                 return false;
             }
 
-            auto value = it->second;
             if (first == nullptr) {
                 first = value.get();
             } else if (value.get() != first) {
