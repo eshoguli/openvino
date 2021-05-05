@@ -91,7 +91,10 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>
 
 void VariantWrapper<QuantizationAlignmentAttributePtr>::merge(
     std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>>& attributes) {
-    //
+    auto currentAttributte = get();
+    for (const auto& attribute : attributes) {
+        currentAttributte->sharedValue->value = currentAttributte->sharedValue->value || attribute->get()->sharedValue->value;
+    }
 }
 
 std::string VariantWrapper<QuantizationAlignmentAttributePtr>::get_string() {

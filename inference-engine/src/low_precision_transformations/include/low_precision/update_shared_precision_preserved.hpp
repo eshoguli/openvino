@@ -32,7 +32,10 @@ public:
     UpdateSharedPrecisionPreserved() {
         ngraph::graph_rewrite_callback callback = [&](pattern::Matcher& m) {
             auto node = m.get_match_root();
-            if (!node || transformation_callback(node)) {
+            if (!node ||
+                is_type<ngraph::opset1::Result>(node) ||
+                is_type<ngraph::opset1::FakeQuantize>(node) ||
+                transformation_callback(node)) {
                 return false;
             }
 

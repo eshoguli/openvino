@@ -124,6 +124,20 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>> Va
 
 void VariantWrapper<IntervalsAlignmentAttributePtr>::merge(
     std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>>>& attributes) {
+    std::shared_ptr<IntervalsAlignmentAttribute> resultAttribute = get();
+    for (const auto& attributeWrapper : attributes) {
+        auto attribute = attributeWrapper->get();
+
+        if (resultAttribute->sharedValue->intervalLow > attribute->sharedValue->intervalLow) {
+            resultAttribute->sharedValue->intervalLow = attribute->sharedValue->intervalLow;
+        }
+
+        if (resultAttribute->sharedValue->intervalHigh < attribute->sharedValue->intervalHigh) {
+            resultAttribute->sharedValue->intervalHigh = attribute->sharedValue->intervalHigh;
+        }
+
+        resultAttribute->sharedValue->isValid = resultAttribute->sharedValue->isValid && attribute->sharedValue->isValid;
+    }
 }
 
 std::string VariantWrapper<IntervalsAlignmentAttributePtr>::get_string() {
