@@ -148,7 +148,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
                 reducedConstant->cast_vector<float>()[0]);
         }
 
-        const auto copyNode = convolution->copy_with_new_inputs({ dequantization.multiply->input_value(0), convolution->input_value(1) });
+        const auto copyNode = convolution->clone_with_new_inputs({ dequantization.multiply->input_value(0), convolution->input_value(1) });
         auto conv = as_type_ptr<opset1::Convolution>(copyNode);
         std::shared_ptr<Node> relaxedNewConvolution;
         if (conv) {
@@ -162,6 +162,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
                     std::vector<element::Type>{deqPrecision, deqPrecision},
                     std::vector<element::Type>{deqPrecision});
         }
+        ngraph::copy_runtime_info(convolution, relaxedNewConvolution);
 
         std::shared_ptr<ngraph::opset1::Multiply> newMultiplyAfter = std::make_shared<op::TypeRelaxed<DequantizationMultiply>>(
             std::vector<element::Type>{ deqPrecision, deqPrecision },
@@ -177,6 +178,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
                 convolution->get_input_node_ptr(0)->get_input_source_output(0),
                 convolution->get_input_node_shared_ptr(1) });
             replace_node(convolution, newConvolution);
+            ngraph::copy_runtime_info(convolution, newConvolution);
             convolution = newConvolution;
         }
     }
@@ -216,13 +218,16 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
                     reshapeFromWeights->input_value(1) }));
             }
 
+            auto newConvolution = convolution->clone_with_new_inputs({
+                convolution->input_value(0),
+                reshapeFromWeights != nullptr ?
+                    reshapeFromWeights :
+                    multiplyFromWeights->input_value(0)
+            });
+            ngraph::copy_runtime_info(convolution, newConvolution);
+
             auto newMultiplyAfter = std::make_shared<DequantizationMultiply>(
-                convolution->copy_with_new_inputs({
-                    convolution->input_value(0),
-                    reshapeFromWeights != nullptr ?
-                        reshapeFromWeights :
-                        multiplyFromWeights->input_value(0)
-                    }),
+                newConvolution,
                 fold<opset1::Convert>(
                     fold_reshape<opset1::Reshape>(
                         multiplyFromWeights->input_value(1),
@@ -267,6 +272,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
                     convolution->get_input_node_ptr(1)->get_input_node_shared_ptr(0) :
                     childNode->copy_with_new_inputs({convertFromWeights->input_value(0), childNode->input_value(1)})});
             replace_node(convolution, newConvolution);
+            ngraph::copy_runtime_info(convolution, newConvolution);
             convolution = newConvolution;
         }
 
