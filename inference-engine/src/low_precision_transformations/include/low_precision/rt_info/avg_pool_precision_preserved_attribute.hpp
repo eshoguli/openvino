@@ -40,10 +40,9 @@ public:
 
     std::shared_ptr<ngraph::Variant> merge(const ngraph::NodeVector& nodes) override;
 
-    // TODO: new method: need this method to merge attribute instances which can be got from different sources: node/input port/output port
-    void merge(std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<AvgPoolPrecisionPreservedAttribute>>>>& attributes);
-
     AvgPoolPrecisionPreservedAttributePtr get() { return this->m_value; }
 
+    // TODO: new method: need this method to merge attribute instances which can be got from different sources: node/input port/output port
+    void merge(std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AvgPoolPrecisionPreservedAttribute>>>>& attributes);
     std::string get_string() override;
 };

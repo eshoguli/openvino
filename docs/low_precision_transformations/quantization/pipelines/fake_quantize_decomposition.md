@@ -5,7 +5,7 @@
 3. [Pipeline #2: Concat per-tensor quantization](#pipeline-2-concat-per-tensor-quantization)
 4. [Pipeline #3: Concat multi-channels quantization](#pipeline-3-concat-multi-channels-quantization)
 5. [Pipeline #4: FakeQuantize connects neighbor cascade Concat operations](#pipeline-4-fakequantize-connects-neighbor-cascade-concat-operations)
-6. [Pipeline #5: AvgPool precision propagation](#pipeline-5-avgpool_precision_propagation)
+6. [Pipeline #5: AvgPool precision propagation](#pipeline-5-avgpool-precision-propagation)
 
 ## Introduction
 `FakeQuantizeDecompositionTransformation` decomposes `FakeQuantize` operation on quantize (`FakeQuantize` with low precision output) and dequantization operations (`Convert`, `Subtract` and `Multiply`). `FakeQuantize` result output precision depends on:
@@ -116,8 +116,11 @@ Features:
 ### Propagate precisions
 ![Propagate precisions result](img/pipeline4/step3_propagate_precisions.svg)
 
+### Align concatization intervals
+![Align concatization intervals result](img/pipeline4/step4_align_concat_intervals.svg)
+
 ### Align concatization quantization
-![Align concatization quantization result](img/pipeline4/step4_align_concat_quantization.svg)
+![Align concatization quantization result](img/pipeline4/step5_align_concat_quantization.svg)
 
 ### Transformations
 ![Transformations result](img/pipeline4/transformed.svg)

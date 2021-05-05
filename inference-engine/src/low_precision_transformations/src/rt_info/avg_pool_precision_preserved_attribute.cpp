@@ -40,7 +40,7 @@ std::shared_ptr<ngraph::Variant> VariantWrapper<AvgPoolPrecisionPreservedAttribu
 }
 
 void VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::merge(
-    std::vector<std::shared_ptr<VariantWrapper<std::shared_ptr<AvgPoolPrecisionPreservedAttribute>>>>& attributes) {
+    std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AvgPoolPrecisionPreservedAttribute>>>>& attributes) {
 }
 
 std::string VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::get_string() {
