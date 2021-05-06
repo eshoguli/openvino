@@ -19,16 +19,15 @@
 #include "low_precision/rt_info/quantization_alignment_attribute.hpp"
 
 #include <low_precision/align_concat_quantization_parameters.hpp>
+#include <low_precision/create_attribute.hpp>
+#include <low_precision/create_precisions_dependent_attribute.hpp>
 #include <low_precision/fake_quantize_decomposition.hpp>
 #include <low_precision/markup_precisions.hpp>
 #include <low_precision/markup_avg_pool_precision_preserved.hpp>
 #include <low_precision/propagate_precisions.hpp>
+#include <low_precision/propagate_through_precision_preserved.hpp>
 #include <low_precision/propagate_to_input.hpp>
 #include <low_precision/update_shared_precision_preserved.hpp>
-
-#include <low_precision/create_attribute.hpp>
-#include <low_precision/create_precisions_dependent_attribute.hpp>
-#include <low_precision/propagate_through_precision_preserved.hpp>
 
 #include <low_precision/concat.hpp>
 #include <low_precision/convolution.hpp>
@@ -133,7 +132,7 @@ public:
             })
         });
 
-#define VISUALIZE_TREE
+//#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
 
 //        ngraph::pass::Manager manager;
@@ -181,7 +180,6 @@ public:
 
 #else
 
-#define VISUALIZE_TREE_UNIX
         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.actual.svg").run_on_function(actualFunction);
         //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.actual").run_on_function(actualFunction);
 

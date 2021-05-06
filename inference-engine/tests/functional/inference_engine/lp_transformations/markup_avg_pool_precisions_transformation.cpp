@@ -98,7 +98,7 @@ public:
             1,
             0);
 
-#define VISUALIZE_TREE
+//#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
         ngraph::pass::low_precision::LowPrecision::TypeRelaxedReplacer pass;
         pass.run_on_function(actualFunction);
