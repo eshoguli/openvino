@@ -50,7 +50,7 @@ void copy_runtime_info_for_ports(const std::shared_ptr<ngraph::Node>& from, cons
         return;
     }
 
-    for (size_t i = 0; i < to->get_input_size(); ++i)
+    for (size_t i = 0; i < from->get_input_size(); ++i)
     {
         auto& source = from->input(i).get_rt_info();
         auto& target = to->input(i).get_rt_info();
@@ -59,7 +59,7 @@ void copy_runtime_info_for_ports(const std::shared_ptr<ngraph::Node>& from, cons
             target[attribute.first] = attribute.second;
         }
     }
-    for (size_t i = 0; i < to->get_output_size(); ++i)
+    for (size_t i = 0; i < from->get_output_size(); ++i)
     {
         auto& source = from->output(i).get_rt_info();
         auto& target = to->output(i).get_rt_info();
