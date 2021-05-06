@@ -310,51 +310,27 @@ DataPrecision LayerTransformation::getDataPrecision(
         THROW_TRANSFORMATION_EXCEPTION << "unxpected results";
     }
 
-    return DataPrecision(
-            precisionDetailsAtOutputIntervals.precision,
-            DataPrecision::getMinValue(precisionDetailsAtOutputIntervals.precision, quantizationDetails.levels),
-            DataPrecision::getMaxValue(precisionDetailsAtOutputIntervals.precision, quantizationDetails.levels),
-            true);
+    if (precisionDetailsAtOutputIntervals.precision != element::undefined) {
+        if (!onWeights) {
+            fillAvailablePrecisions(layer, precisions);
+        }
 
+        // if supportedPrecisions is empty then use the first available, not supported layer will be in original precision
+        if (!precisions.empty()) {
+            const auto foundIt = std::find(precisions.begin(), precisions.end(), precisionDetailsAtOutputIntervals.precision);
+            const element::Type resultPrecision = foundIt != precisions.end() ?
+                precisionDetailsAtOutputIntervals.precision :
+                *precisions.begin();
 
-//    {
-//        if (precisionDetailsAtOutputIntervals.precision != element::undefined) {
-//            if (!onWeights) {
-//                fillAvailablePrecisions(layer, precisions);
-//            }
-//
-//            // if supportedPrecisions is empty then use the first available, not supported layer will be in original precision
-//            if (!precisions.empty()) {
-//                const auto foundIt = std::find(precisions.begin(), precisions.end(), precisionDetailsAtOutputIntervals.precision);
-//                const element::Type resultPrecision = foundIt != precisions.end() ?
-//                                                  precisionDetailsAtOutputIntervals.precision :
-//                                                  *precisions.begin();
-//
-//                const DataPrecision dataPrecision(
-//                        resultPrecision,
-//                        DataPrecision::getMinValue(resultPrecision, quantizationDetails.levels),
-//                        DataPrecision::getMaxValue(resultPrecision, quantizationDetails.levels),
-//                        foundIt != precisions.end() ? precisionDetailsAtOutputIntervals.hasZeroPoint : true);
-//
-//#ifdef LPT_PRINT_DEQUANTIZATION_INFO
-//                printDequantizationInfo(dataPrecision);
-//#endif
-//                return dataPrecision;
-//            }
-//        }
-//    }
-//
-//    const DataPrecision dataPrecision = precisions.empty() ?
-//                                        DataPrecision(element::undefined, 0.f, 0.f, false) :
-//                                        DataPrecision(
-//                                                *precisions.begin(),
-//                                                DataPrecision::getMinValue(*precisions.begin(), quantizationDetails.levels),
-//                                                DataPrecision::getMaxValue(*precisions.begin(), quantizationDetails.levels),
-//                                                true);
-//#ifdef LPT_PRINT_DEQUANTIZATION_INFO
-//    printDequantizationInfo(dataPrecision);
-//#endif
-//    return dataPrecision;
+            const DataPrecision dataPrecision(
+                resultPrecision,
+                DataPrecision::getMinValue(resultPrecision, quantizationDetails.levels),
+                DataPrecision::getMaxValue(resultPrecision, quantizationDetails.levels),
+                foundIt != precisions.end() ? precisionDetailsAtOutputIntervals.hasZeroPoint : true);
+
+            return dataPrecision;
+        }
+    }
 }
 
 void LayerTransformation::fillAvailablePrecisions(std::shared_ptr<Node> layer, std::vector<element::Type>& availablePrecisions) const {
