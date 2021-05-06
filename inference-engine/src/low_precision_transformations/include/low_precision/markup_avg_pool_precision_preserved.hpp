@@ -22,8 +22,6 @@ class TRANSFORMATIONS_API MarkupAvgPoolPrecisionPreserved;
 }  // namespace pass
 }  // namespace ngraph
 
-// Transformation is used to add customization options runtime
-// TODO: make template: AvgPool => Operation, AvgPoolPrecisionPreserved => Attribute
 class ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved : public ngraph::pass::FunctionPass {
 public:
     bool run_on_function(std::shared_ptr<ngraph::Function> f) override;
