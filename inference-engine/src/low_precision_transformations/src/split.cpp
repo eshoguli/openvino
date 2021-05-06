@@ -131,6 +131,21 @@ void SplitTransformation::updateOutputs(
     //        }
     //    }
     //}
+
+    //TODO: Not tested!
+    const std::string originalName = originalNode->get_friendly_name();
+    for (size_t i = 0; i < lastNodes.size(); ++i) {
+        const auto lastNode = lastNodes[i];
+        for (auto output : lastNodes[i]->outputs()) {
+            for (auto input : output.get_target_inputs()) {
+                if (is_type<ngraph::opset1::Result>(input.get_node())) {
+                    originalNode->set_friendly_name(originalName + LayerTransformation::originalLayerPostfix);
+                    lastNode->set_friendly_name(originalName + "." + std::to_string(i));
+                    break;
+                }
+            }
+        }
+    }
 }
 
 bool SplitTransformation::isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept {
