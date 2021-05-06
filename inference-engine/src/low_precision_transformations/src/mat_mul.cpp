@@ -165,7 +165,7 @@ bool MatMulTransformation::transform(TransformationContext &context, ngraph::pat
     replace_node(matMul, newMultiply);
     copy_runtime_info({ newMultiply, matMul }, newMultiply);
 
-    updateOutput(context, newMultiply, matMul);
+    updateOutput(context, newMultiply, newMatMul);
 
     return true;
 }
