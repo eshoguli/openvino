@@ -20,7 +20,7 @@
 #include "low_precision/rt_info/precision_preserved_attribute.hpp"
 #include "low_precision/rt_info/quantization_alignment_attribute.hpp"
 
-#include <low_precision/align_concat_quantization_parameters.hpp>
+#include <low_precision/align_quantization_intervals.hpp>
 #include <low_precision/create_attribute.hpp>
 #include <low_precision/create_precisions_dependent_attribute.hpp>
 #include <low_precision/fake_quantize_decomposition.hpp>

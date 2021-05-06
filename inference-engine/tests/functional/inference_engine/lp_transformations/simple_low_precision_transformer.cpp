@@ -11,6 +11,7 @@
 #include <low_precision/layer_transformation.hpp>
 #include <low_precision/transformation_context.hpp>
 #include <low_precision/low_precision.hpp>
+#include <low_precision/align_quantization_parameters.hpp>
 
 using namespace testing;
 using namespace ngraph::pass;
@@ -21,7 +22,8 @@ SimpleLowPrecisionTransformer::SimpleLowPrecisionTransformer() {
     lowPrecisionManager->register_pass<ngraph::pass::low_precision::MarkupPrecisions>();
     lowPrecisionManager->register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
     lowPrecisionManager->register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::AlignConcatQuantizationParamters>();
+    lowPrecisionManager->register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
+    lowPrecisionManager->register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
 }
 
 void SimpleLowPrecisionTransformer::transform(std::shared_ptr<ngraph::Function>& function) {

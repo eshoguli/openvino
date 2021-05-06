@@ -13,7 +13,7 @@
 #include <transformations/utils/utils.hpp>
 #include <transformations/init_node_info.hpp>
 
-#include <low_precision/align_concat_quantization_parameters.hpp>
+#include <low_precision/align_quantization_intervals.hpp>
 #include <low_precision/fake_quantize_decomposition.hpp>
 #include <low_precision/markup_precisions.hpp>
 #include <low_precision/markup_avg_pool_precision_preserved.hpp>
@@ -23,6 +23,7 @@
 #include <low_precision/concat.hpp>
 //#include <low_precision/concat_multi_channels.hpp>
 #include <low_precision/fake_quantize_decomposition.hpp>
+#include <low_precision/align_quantization_parameters.hpp>
 
 #include "common_test_utils/ngraph_test_utils.hpp"
 #include "lpt_ngraph_functions/concat_function.hpp"
@@ -132,9 +133,14 @@ public:
         ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming3").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager4;
-        manager4.register_pass<ngraph::pass::low_precision::AlignConcatQuantizationParamters>();
+        manager4.register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
         manager4.run_passes(actualFunction);
         ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming4").run_on_function(actualFunction);
+
+        ngraph::pass::Manager manager5;
+        manager5.register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
+        manager5.run_passes(actualFunction);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming5").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager;
         manager.register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>();

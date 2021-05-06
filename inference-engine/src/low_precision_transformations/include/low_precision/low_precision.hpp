@@ -16,7 +16,7 @@
 #include <low_precision/markup_precisions.hpp>
 #include <low_precision/markup_avg_pool_precision_preserved.hpp>
 #include <low_precision/propagate_precisions.hpp>
-#include <low_precision/align_concat_quantization_parameters.hpp>
+#include <low_precision/align_quantization_intervals.hpp>
 
 
 #include <transformations_visibility.hpp>

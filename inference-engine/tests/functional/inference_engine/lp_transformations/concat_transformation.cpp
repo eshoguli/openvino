@@ -4,7 +4,6 @@
 
 #include "layer_transformation.hpp"
 
-#include <string>
 #include <sstream>
 #include <memory>
 #include <vector>
@@ -19,12 +18,12 @@
 #include <low_precision/concat.hpp>
 #include <low_precision/fake_quantize_decomposition.hpp>
 #include <low_precision/rt_info/precision_preserved_attribute.hpp>
+#include <low_precision/align_quantization_parameters.hpp>
 
 #include "common_test_utils/ngraph_test_utils.hpp"
 #include "lpt_ngraph_functions/concat_function.hpp"
 #include "lpt_ngraph_functions/common/builders.hpp"
 #include "lpt_ngraph_functions/common/fake_quantize_on_data.hpp"
-#include "simple_low_precision_transformer.hpp"
 
 using namespace testing;
 using namespace ngraph;
@@ -139,7 +138,8 @@ public:
         manager.register_pass<ngraph::pass::low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
         manager.register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
         manager.register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
-        manager.register_pass<ngraph::pass::low_precision::AlignConcatQuantizationParamters>();
+        manager.register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
+        manager.register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
 
         std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
         common->add_matcher<ngraph::pass::low_precision::ConcatTransformation>();

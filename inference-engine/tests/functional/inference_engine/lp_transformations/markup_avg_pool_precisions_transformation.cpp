@@ -33,6 +33,7 @@
 #include <low_precision/avg_pool.hpp>
 #include <low_precision/convolution.hpp>
 #include <low_precision/max_pool.hpp>
+#include <low_precision/align_quantization_parameters.hpp>
 
 // cleanup transformations
 #include "low_precision/fake_quantize.hpp"
@@ -125,7 +126,8 @@ public:
         precisionsPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<PrecisionsAttribute>>();
         manager.run_passes(actualFunction);
 
-        manager.register_pass<ngraph::pass::low_precision::AlignConcatQuantizationParamters>();
+        manager.register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
+        manager.register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
 
         std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
         common->add_matcher<ngraph::pass::low_precision::AvgPoolTransformation>();
