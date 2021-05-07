@@ -119,7 +119,7 @@ bool ConcatTransformation::transform(TransformationContext& context, ngraph::pat
 
     const auto newConcat = concat->clone_with_new_inputs(dataNodes);
 
-    std::shared_ptr<ngraph::Node> lastDequantization;
+    std::shared_ptr<ngraph::Node> lastDequantization = newConcat;
     if (!convertNodes.empty()) {
         const auto convert = convertNodes[0]->clone_with_new_inputs({ newConcat });
 
