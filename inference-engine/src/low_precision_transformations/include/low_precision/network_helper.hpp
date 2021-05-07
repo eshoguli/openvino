@@ -414,32 +414,32 @@ std::shared_ptr<ngraph::VariantWrapper<T>> getAttributeFromOutput(const Output<N
     return attribute;
 }
 
-// merge: share between other operations - implicit backward propagation
-template <typename T>
-void mergeAndReplace(
-    std::shared_ptr<ngraph::Function> f,
-    const std::shared_ptr<ngraph::Node>& node,
-    std::shared_ptr<ngraph::VariantWrapper<T>> firstExistingIntervalsAttribute,
-    const std::vector<std::shared_ptr<ngraph::Node>>& inputNodes) {
-    if (firstExistingIntervalsAttribute != nullptr) {
-        auto attribute = firstExistingIntervalsAttribute->merge(inputNodes);
-        auto newAttribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<T>>(attribute);
-        assert(newAttribute != nullptr);
-
-        bool wasReplaced = false;
-        for (size_t i = 1ul; i < inputNodes.size(); i++) {
-            auto oldAttribute = ngraph::pass::low_precision::getAttribute<T>(inputNodes[i]);
-            if (oldAttribute != nullptr) {
-                const std::string name = ngraph::VariantWrapper<T>::type_info.name;
-                NetworkHelper::replaceAttributeInNodes(f, name, newAttribute, oldAttribute, node);
-                wasReplaced = true;
-            }
-        }
-        if (!wasReplaced) {
-            node->get_rt_info()[ngraph::VariantWrapper<T>::type_info.name] = newAttribute;
-        }
-    }
-}
+//// merge: share between other operations - implicit backward propagation
+//template <typename T>
+//void mergeAndReplace(
+//    std::shared_ptr<ngraph::Function> f,
+//    const std::shared_ptr<ngraph::Node>& node,
+//    std::shared_ptr<ngraph::VariantWrapper<T>> firstExistingIntervalsAttribute,
+//    const std::vector<std::shared_ptr<ngraph::Node>>& inputNodes) {
+//    if (firstExistingIntervalsAttribute != nullptr) {
+//        auto attribute = firstExistingIntervalsAttribute->merge(inputNodes);
+//        auto newAttribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<T>>(attribute);
+//        assert(newAttribute != nullptr);
+//
+//        bool wasReplaced = false;
+//        for (size_t i = 1ul; i < inputNodes.size(); i++) {
+//            auto oldAttribute = ngraph::pass::low_precision::getAttribute<T>(inputNodes[i]);
+//            if (oldAttribute != nullptr) {
+//                const std::string name = ngraph::VariantWrapper<T>::type_info.name;
+//                NetworkHelper::replaceAttributeInNodes(f, name, newAttribute, oldAttribute, node);
+//                wasReplaced = true;
+//            }
+//        }
+//        if (!wasReplaced) {
+//            node->get_rt_info()[ngraph::VariantWrapper<T>::type_info.name] = newAttribute;
+//        }
+//    }
+//}
 
 template <typename T, typename ... Args>
 std::shared_ptr<T> make_shared_attribute(Args&& ... args) {

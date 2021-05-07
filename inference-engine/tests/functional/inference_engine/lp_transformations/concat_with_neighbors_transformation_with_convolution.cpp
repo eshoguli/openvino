@@ -305,36 +305,36 @@ const std::vector<ConcatWithNeighborsWithConvolutionTestValues> testValues = {
             { {}, {}, {{ 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f }} }
         }
     },
-//    // I8: concat: decomposed FakeQuantize
-//    {
-//        LayerTransformation::createParamsI8I8(),
-//        false,
-//        {
-//            { 256ul, ngraph::Shape({}), {-1.28f / 3.f}, {1.27f / 3.f}, {-128.f}, {127.f} },
-//            { ngraph::element::i8 },
-//            {
-//                { element::f32 },
-//                {},
-//                { 0.003333333333333f }
-//            },
-//            { 256ul, ngraph::Shape({}), {-1.28f / 2.f}, {1.27f / 2.f}, {-1.28f / 2.f}, {1.27f / 2.f} },
-//            {},
-//            {},
-//            { 256ul, ngraph::Shape({}), {-1.28f}, {1.27f}, {-1.28f}, {1.27f} },
-//            {},
-//            {}
-//        },
-//        {
-//            { 256ul, ngraph::Shape({}), {-1.28f / 3.f}, {1.27f / 3.f}, {0.f}, {255.f} },
-//            { 256ul, ngraph::Shape({}), {-1.28f / 2.f}, {1.27f / 2.f}, {64.f}, {192.f} },
-//            { 256ul, ngraph::Shape({}), {-1.28f}, {1.27f}, {0.f}, {255.f} },
-//            ngraph::element::u8,
-//            {{}, {}, {}},
-//            ngraph::element::u8,
-//            { ngraph::element::f32, {128.f}, {{ 0.00333333f, 0.00333333f, 0.00333333f, 0.01f, 0.01f, 0.01f }} },
-//            { {}, {}, {{ 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f }} }
-//        }
-//    }
+    // I8: concat: decomposed FakeQuantize
+    {
+        LayerTransformation::createParamsI8I8(),
+        false,
+        {
+            { 256ul, ngraph::Shape({}), {-1.28f / 3.f}, {1.27f / 3.f}, {-128.f}, {127.f} },
+            { ngraph::element::i8 },
+            {
+                { element::f32 },
+                {},
+                { 0.003333333333333f }
+            },
+            { 256ul, ngraph::Shape({}), {-1.28f / 2.f}, {1.27f / 2.f}, {-1.28f / 2.f}, {1.27f / 2.f} },
+            {},
+            {},
+            { 256ul, ngraph::Shape({}), {-1.28f}, {1.27f}, {-1.28f}, {1.27f} },
+            {},
+            {}
+        },
+        {
+            { 256ul, ngraph::Shape({}), {-1.28f / 3.f}, {1.27f / 3.f}, {0.f}, {255.f} },
+            { 256ul, ngraph::Shape({}), {-1.28f / 2.f}, {1.27f / 2.f}, {64.f}, {192.f} },
+            { 256ul, ngraph::Shape({}), {-1.28f}, {1.27f}, {0.f}, {255.f} },
+            ngraph::element::u8,
+            {{}, {}, {}},
+            ngraph::element::u8,
+            { ngraph::element::f32, {128.f}, {{ 0.00333333f, 0.00333333f, 0.00333333f, 0.01f, 0.01f, 0.01f }} },
+            { {}, {}, {{ 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f, 0.0001f }} }
+        }
+    }
 };
 
 const std::vector<ngraph::Shape> shapes = {

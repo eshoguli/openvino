@@ -3,6 +3,7 @@
 //
 
 #include "low_precision/low_precision.hpp"
+
 #include <memory>
 
 #include <ngraph/ngraph.hpp>
@@ -13,28 +14,14 @@
 #include "ngraph/opsets/opset4.hpp"
 #include "ngraph/opsets/opset6.hpp"
 
-#include "low_precision/rt_info/avg_pool_precision_preserved_attribute.hpp"
-#include "low_precision/rt_info/intervals_alignment_attribute.hpp"
-#include "low_precision/rt_info/shared_value_attribute.hpp"
-#include "low_precision/rt_info/precisions_attribute.hpp"
-#include "low_precision/rt_info/precision_preserved_attribute.hpp"
-#include "low_precision/rt_info/quantization_alignment_attribute.hpp"
-
 #include <low_precision/align_quantization_intervals.hpp>
-#include <low_precision/create_attribute.hpp>
-#include <low_precision/create_precisions_dependent_attribute.hpp>
 #include <low_precision/fake_quantize_decomposition.hpp>
 #include <low_precision/markup_precisions.hpp>
 #include <low_precision/markup_avg_pool_precision_preserved.hpp>
 #include <low_precision/propagate_precisions.hpp>
-#include <low_precision/propagate_through_precision_preserved.hpp>
-#include <low_precision/propagate_to_input.hpp>
-#include <low_precision/update_shared_precision_preserved.hpp>
+#include <low_precision/align_quantization_parameters.hpp>
 
-#include "low_precision/create_attribute.hpp"
-#include "low_precision/propagate_through_precision_preserved.hpp"
-
-//#include <transformations/common_optimizations/lin_op_sequence_fusion.hpp>
+#include <transformations/common_optimizations/lin_op_sequence_fusion.hpp>
 #include "low_precision/pull_reshape_through_dequantization.hpp"
 #include "low_precision/pull_transpose_through_dequantization.hpp"
 
@@ -159,118 +146,61 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     ngraph::pass::Manager manager;
     manager.register_pass<PullReshapeThroughDequantization>(supportedTypes);
     manager.register_pass<PullTransposeThroughDequantization>(supportedTypes);
-    //manager.register_pass<ngraph::pass::LinOpSequenceFusion>();
+    manager.register_pass<ngraph::pass::LinOpSequenceFusion>();
 
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
 
     manager.register_pass<low_precision::MarkupPrecisions>(restrictions);
-
-    std::shared_ptr<ngraph::pass::GraphRewrite> markupAvgPoolPrecision = manager.register_pass<ngraph::pass::GraphRewrite>();
-    markupAvgPoolPrecision->add_matcher<low_precision::CreatePrecisionsDependentAttribute<AvgPoolPrecisionPreservedAttribute, opset1::AvgPool>>();
-    markupAvgPoolPrecision->add_matcher<low_precision::PropagateThroughPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
-    markupAvgPoolPrecision->add_matcher<low_precision::UpdateSharedPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
-
-    std::shared_ptr<ngraph::pass::GraphRewrite> precisionsPropagation = manager.register_pass<ngraph::pass::GraphRewrite>();
-    precisionsPropagation->add_matcher<low_precision::CreateAttribute<PrecisionsAttribute, opset1::FakeQuantize>>(AttributeSource::OutputPort);
-    precisionsPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<PrecisionsAttribute>>();
-    precisionsPropagation->add_matcher<low_precision::PropagateToInput<PrecisionsAttribute>>();
-
-    std::shared_ptr<ngraph::pass::GraphRewrite> intervalsAlignment = manager.register_pass<ngraph::pass::GraphRewrite>();
-    intervalsAlignment->add_matcher<low_precision::CreateAttribute<IntervalsAlignmentAttribute, opset1::FakeQuantize>>();
-    intervalsAlignment->add_matcher<low_precision::PropagateThroughPrecisionPreserved<IntervalsAlignmentAttribute>>();
-
-    std::shared_ptr<ngraph::pass::GraphRewrite> alignQuantization = manager.register_pass<ngraph::pass::GraphRewrite>();
-    alignQuantization->add_matcher<low_precision::CreateAttribute<QuantizationAlignmentAttribute>>();
-    alignQuantization->add_matcher<low_precision::PropagateThroughPrecisionPreserved<QuantizationAlignmentAttribute>>();
-    alignQuantization->add_matcher<low_precision::UpdateSharedPrecisionPreserved<QuantizationAlignmentAttribute>>();
-
-    //{
-    //    // TODO: just to DEBUG: use the same manager
-    //    ngraph::pass::Manager manager1;
-    //    manager1.register_pass<ngraph::pass::low_precision::MarkupPrecisions>(restrictions);
-    //    manager1.run_passes(f);
-    //    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming.1").run_on_function(f);
-
-    //    ngraph::pass::Manager manager2;
-    //    manager2.register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisions>();
-    //    manager2.run_passes(f);
-    //    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming.2").run_on_function(f);
-
-    //    ngraph::pass::Manager manager3;
-    //    manager3.register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
-    //    manager3.run_passes(f);
-    //    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming.3").run_on_function(f);
-    //}
+    manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+    manager.register_pass<low_precision::PropagatePrecisions>();
+    manager.register_pass<low_precision::AlignQuantizationIntervals>();
+    manager.register_pass<low_precision::AlignQuantizationParameters>();
 
 #else
 
-    //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.actual.svg").run_on_function(actualFunction);
-    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.actual").run_on_function(actualFunction);
+    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.actual.svg").run_on_function(f);
+    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.actual").run_on_function(f);
 
     {
-        ngraph::pass::Manager manager;
-        manager.register_pass<low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
-        manager.run_passes(actualFunction);
-        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming1.svg").run_on_function(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming1").run_on_function(actualFunction);
+        ngraph::pass::Manager tmp;
+        tmp.register_pass<low_precision::MarkupPrecisions>(restrictions);
+        tmp.run_passes(f);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming1.svg").run_on_function(f);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming1").run_on_function(f);
     }
 
     {
-        ngraph::pass::Manager manager;
-        std::shared_ptr<ngraph::pass::GraphRewrite> markupAvgPoolPrecision = manager.register_pass<ngraph::pass::GraphRewrite>();
-        markupAvgPoolPrecision->add_matcher<low_precision::CreatePrecisionsDependentAttribute<AvgPoolPrecisionPreservedAttribute, opset1::AvgPool>>();
-        markupAvgPoolPrecision->add_matcher<low_precision::PropagateThroughPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
-        markupAvgPoolPrecision->add_matcher<low_precision::UpdateSharedPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
-        manager.run_passes(actualFunction);
-        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming2.svg").run_on_function(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming2").run_on_function(actualFunction);
+        ngraph::pass::Manager tmp;
+        tmp.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+        tmp.run_passes(f);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming2.svg").run_on_function(f);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming2").run_on_function(f);
     }
 
     {
-        ngraph::pass::Manager manager;
-        std::shared_ptr<ngraph::pass::GraphRewrite> precisionsPropagation = manager.register_pass<ngraph::pass::GraphRewrite>();
-        precisionsPropagation->add_matcher<low_precision::CreateAttribute<PrecisionsAttribute, opset1::FakeQuantize>>(AttributeSource::OutputPort);
-        precisionsPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<PrecisionsAttribute>>();
-        precisionsPropagation->add_matcher<low_precision::PropagateToInput<PrecisionsAttribute>>();
-        manager.run_passes(actualFunction);
-        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming3.svg").run_on_function(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming3").run_on_function(actualFunction);
+        ngraph::pass::Manager tmp;
+        tmp.register_pass<low_precision::PropagatePrecisions>();
+        tmp.run_passes(f);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming3.svg").run_on_function(f);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming3").run_on_function(f);
     }
 
     {
-        ngraph::pass::Manager manager;
-        std::shared_ptr<ngraph::pass::GraphRewrite> intervalsAlignment = manager.register_pass<ngraph::pass::GraphRewrite>();
-        intervalsAlignment->add_matcher<low_precision::CreateAttribute<IntervalsAlignmentAttribute, opset1::FakeQuantize>>();
-        intervalsAlignment->add_matcher<low_precision::PropagateThroughPrecisionPreserved<IntervalsAlignmentAttribute>>();
-        manager.run_passes(actualFunction);
-        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming4.svg").run_on_function(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming4").run_on_function(actualFunction);
+        ngraph::pass::Manager tmp;
+        tmp.register_pass<low_precision::AlignQuantizationIntervals>();
+        tmp.run_passes(f);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming4.svg").run_on_function(f);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming4").run_on_function(f);
     }
 
     {
-        ngraph::pass::Manager manager;
-        std::shared_ptr<ngraph::pass::GraphRewrite> alignQuantizationPropagation = manager.register_pass<ngraph::pass::GraphRewrite>();
-        alignQuantizationPropagation->add_matcher<low_precision::CreateAttribute<QuantizationAlignmentAttribute>>();
-        alignQuantizationPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<QuantizationAlignmentAttribute>>();
-        alignQuantizationPropagation->add_matcher<low_precision::UpdateSharedPrecisionPreserved<QuantizationAlignmentAttribute>>();
-        manager.run_passes(actualFunction);
-        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming5.svg").run_on_function(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming5").run_on_function(actualFunction);
+        ngraph::pass::Manager tmp;
+        tmp.register_pass<low_precision::AlignQuantizationParameters>();
+        tmp.run_passes(f);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming5.svg").run_on_function(f);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming5").run_on_function(f);
     }
-
-    {
-        ngraph::pass::Manager manager;
-        std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
-        common->add_matcher<low_precision::ConcatTransformation>();
-        common->add_matcher<low_precision::ConvolutionTransformation>();
-        common->add_matcher<low_precision::FakeQuantizeDecompositionTransformation>();
-        common->add_matcher<low_precision::MaxPoolTransformation>();
-        manager.run_passes(actualFunction);
-        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transformed.svg").run_on_function(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transformed").run_on_function(actualFunction);
-    }
-
 #endif
 
     std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();

@@ -92,22 +92,23 @@ public:
     virtual ~PropagateThroughPrecisionPreserved() = default;
 
 private:
-    Input<Node> get(const Input<Node>& input) {
-        const auto dequantization = NetworkHelper::getDequantization(input.get_node()->shared_from_this(), input.get_index());
-        if (!dequantization.empty() &&
-            (is_type<opset1::Convert>(dequantization.data.get_node())) &&
-            is_type<opset1::FakeQuantize>(dequantization.data.get_node()->get_input_node_ptr(0))) {
-            //inputNode = dequantization.data.get_node()->get_input_node_shared_ptr(0);
-            assert(dequantization.data.get_target_inputs().size() == 1ul);
-            return *dequantization.data.get_target_inputs().begin();
-        }
-
-        return input;
-    }
+//    Input<Node> get(const Input<Node>& input) {
+//        const auto dequantization = NetworkHelper::getDequantization(input.get_node()->shared_from_this(), input.get_index());
+//        if (!dequantization.empty() &&
+//            (is_type<opset1::Convert>(dequantization.data.get_node())) &&
+//            is_type<opset1::FakeQuantize>(dequantization.data.get_node()->get_input_node_ptr(0))) {
+//            //inputNode = dequantization.data.get_node()->get_input_node_shared_ptr(0);
+//            assert(dequantization.data.get_target_inputs().size() == 1ul);
+//            return *dequantization.data.get_target_inputs().begin();
+//        }
+//
+//        return input;
+//    }
 
     std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>> getSourceOutputAttribute(const Input<Node>& input) {
         //auto inputNode = input.get_source_output().get_node()->shared_from_this();
-        auto input2 = get(input);
+        //auto input2 = get(input);
+        auto input2 = input;
 
         //const auto dequantization = NetworkHelper::getDequantization(input.get_node()->shared_from_this(), input.get_index());
         //if (!dequantization.empty() &&
@@ -143,8 +144,31 @@ private:
     std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>>> getParentInputRestrictions(
         const std::shared_ptr<ngraph::Node> node) {
         std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>>> parentAttributes;
+        auto getInput = [](const std::shared_ptr<ngraph::Node>& node, const size_t index) -> Input<Node> {
+            //const Input<Node>& input = node->input(index);
+            //auto inputNode = input.get_source_output().get_node()->shared_from_this();
+
+            const auto dequantization = NetworkHelper::getDequantization(node, index);
+//            if (dequantization.empty()) {
+//
+//            }
+//                if (is_type<opset1::Convert>(dequantization.data.get_node())) {
+//                    (is_type<opset1::FakeQuantize>(dequantization.data.get_node()->get_input_node_ptr(0)))) {
+//                    return *dequantization.data.get_target_inputs().begin();
+//                }
+//            }
+
+            if (!dequantization.empty() &&
+                (is_type<opset1::Convert>(dequantization.data.get_node())) &&
+                (is_type<opset1::FakeQuantize>(dequantization.data.get_node()->get_input_node_ptr(0)))) {
+                return dequantization.data.get_node()->input(0);
+            }
+
+            return node->input(index);
+        };
         for (size_t index = 0ul; index < node->get_input_size(); index++) {
-            const Input<Node>& input = node->input(index);
+            //const Input<Node>& input = node->input(index);
+            const Input<Node>& input = getInput(node, index);
             //auto inputNode = input.get_source_output().get_node()->shared_from_this();
 
             //const auto dequantization = NetworkHelper::getDequantization(node, index);
