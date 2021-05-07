@@ -307,7 +307,7 @@ DataPrecision LayerTransformation::getDataPrecision(
     std::vector<element::Type> precisions = onWeights ? precisionsOnWeights : precisionsOnActivations;
     PrecisionDetails precisionDetailsAtOutputIntervals = getPrecisionDetails(quantizationDetails);
     if (precisionDetailsAtOutputIntervals.precision == element::undefined) {
-        THROW_TRANSFORMATION_EXCEPTION << "unxpected results";
+        THROW_TRANSFORMATION_EXCEPTION << "unexpected results";
     }
 
     if (precisionDetailsAtOutputIntervals.precision != element::undefined) {
@@ -331,6 +331,7 @@ DataPrecision LayerTransformation::getDataPrecision(
             return dataPrecision;
         }
     }
+    return DataPrecision(element::undefined, 0.f, 0.f, false);
 }
 
 void LayerTransformation::fillAvailablePrecisions(std::shared_ptr<Node> layer, std::vector<element::Type>& availablePrecisions) const {
