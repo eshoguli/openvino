@@ -49,21 +49,18 @@ void setRestriction(
     } else {
         for (const std::pair<size_t, std::set<ngraph::element::Type>>& item : precisionsByPort) {
             Input<Node> input = node->input(item.first);
-            auto& rt = input.get_rt_info();
 
-            // if available precisions for any port is empty then don't update anything
-            const auto it = rt.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
-            if (it != rt.end()) {
-                auto var = (*it).second;
-                auto precisionsAttribute = std::dynamic_pointer_cast<PrecisionsAttribute>(var);
-                if (precisionsAttribute->sharedValue->precisions.empty()) {
-                    return;
-                }
+            auto precisionsAttribute = ngraph::pass::low_precision::getAttribute<std::shared_ptr<PrecisionsAttribute>>(input);
+            if ((precisionsAttribute != nullptr) &&
+                (precisionsAttribute->get()->sharedValue != nullptr) &&
+                (precisionsAttribute->get()->sharedValue->precisions.empty())) {
+                return;
             }
 
             auto attribute = ngraph::pass::low_precision::make_shared_attribute<PrecisionsAttribute>(item.second);
             auto attributeWrapper = std::make_shared<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(attribute);
 
+            auto& rt = input.get_rt_info();
             rt[ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name] = attributeWrapper;
         }
     }

@@ -112,20 +112,10 @@ public:
         });
 
         ngraph::pass::Manager manager;
+
         manager.register_pass<ngraph::pass::low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
-
         manager.register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
-        //std::shared_ptr<ngraph::pass::GraphRewrite> markupAvgPoolPrecision = manager.register_pass<ngraph::pass::GraphRewrite>();
-        //markupAvgPoolPrecision->add_matcher<low_precision::CreatePrecisionsDependentAttribute<AvgPoolPrecisionPreservedAttribute, opset1::AvgPool>>();
-        //markupAvgPoolPrecision->add_matcher<low_precision::PropagateThroughPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
-        //manager.run_passes(actualFunction);
-
-        //manager.register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
-        std::shared_ptr<ngraph::pass::GraphRewrite> precisionsPropagation = manager.register_pass<ngraph::pass::GraphRewrite>();
-        precisionsPropagation->add_matcher<low_precision::CreateAttribute<PrecisionsAttribute, opset1::FakeQuantize>>(AttributeSource::OutputPort);
-        precisionsPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<PrecisionsAttribute>>();
-        manager.run_passes(actualFunction);
-
+        manager.register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
         manager.register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
         manager.register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
 

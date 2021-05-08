@@ -5,7 +5,6 @@
 #include "low_precision/fuse_convert.hpp"
 
 #include <memory>
-#include <string>
 #include <vector>
 
 #include <ngraph/pattern/op/wrap_type.hpp>

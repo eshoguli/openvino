@@ -54,6 +54,7 @@ namespace fq_decomposition {
 DataPrecision getDataPrecision(std::shared_ptr<opset1::FakeQuantize> layer) {
     const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(layer);
 
+    // TODO: use getAtribute anywhere instead: rt.find(ngraph::VariantWrapper<
     auto& rt = layer->output(0).get_rt_info();
     auto it = rt.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
     if (it == rt.end()) {

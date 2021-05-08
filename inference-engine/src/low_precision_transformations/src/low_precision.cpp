@@ -9,19 +9,20 @@
 #include <ngraph/ngraph.hpp>
 #include <ngraph/pass/manager.hpp>
 #include <ngraph/pass/constant_folding.hpp>
-#include "ngraph_ops/type_relaxed.hpp"
-#include "ngraph/opsets/opset1.hpp"
-#include "ngraph/opsets/opset4.hpp"
-#include "ngraph/opsets/opset6.hpp"
+#include <ngraph_ops/type_relaxed.hpp>
+#include <ngraph/opsets/opset1.hpp>
+#include <ngraph/opsets/opset4.hpp>
+#include <ngraph/opsets/opset6.hpp>
 
-#include <low_precision/align_quantization_intervals.hpp>
-#include <low_precision/fake_quantize_decomposition.hpp>
-#include <low_precision/markup_precisions.hpp>
-#include <low_precision/markup_avg_pool_precision_preserved.hpp>
-#include <low_precision/propagate_precisions.hpp>
-#include <low_precision/align_quantization_parameters.hpp>
+#include "low_precision/align_quantization_intervals.hpp"
+#include "low_precision/fake_quantize_decomposition.hpp"
+#include "low_precision/markup_precisions.hpp"
+#include "low_precision/markup_avg_pool_precision_preserved.hpp"
+#include "low_precision/propagate_precisions.hpp"
+#include "low_precision/align_quantization_parameters.hpp"
 
-#include <transformations/common_optimizations/lin_op_sequence_fusion.hpp>
+#include "transformations/common_optimizations/lin_op_sequence_fusion.hpp"
+#include "low_precision/fold_convert.hpp"
 #include "low_precision/pull_reshape_through_dequantization.hpp"
 #include "low_precision/pull_transpose_through_dequantization.hpp"
 
@@ -142,103 +143,129 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     pass.run_on_function(f);
 
     // pass config should be reused
-    const std::vector<ngraph::element::Type> supportedTypes = { ngraph::element::i8, ngraph::element::u8 };
-    ngraph::pass::Manager manager;
-    manager.register_pass<PullReshapeThroughDequantization>(supportedTypes);
-    manager.register_pass<PullTransposeThroughDequantization>(supportedTypes);
-    manager.register_pass<ngraph::pass::LinOpSequenceFusion>();
+    auto passConfig = get_pass_config();
+    {
+        const std::vector<ngraph::element::Type> supportedTypes = {ngraph::element::i8, ngraph::element::u8};
+        ngraph::pass::Manager manager(passConfig);
+        manager.register_pass<PullReshapeThroughDequantization>(supportedTypes);
+        manager.register_pass<PullTransposeThroughDequantization>(supportedTypes);
+        manager.register_pass<ngraph::pass::LinOpSequenceFusion>();
+    }
+
+    {
+        ngraph::pass::Manager manager(passConfig);
 
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-
-    manager.register_pass<low_precision::MarkupPrecisions>(restrictions);
-    manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
-    manager.register_pass<low_precision::PropagatePrecisions>();
-    manager.register_pass<low_precision::AlignQuantizationIntervals>();
-    manager.register_pass<low_precision::AlignQuantizationParameters>();
-
+        manager.register_pass<low_precision::MarkupPrecisions>(restrictions);
+        manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+        manager.register_pass<low_precision::PropagatePrecisions>();
+        manager.register_pass<low_precision::AlignQuantizationIntervals>();
+        manager.register_pass<low_precision::AlignQuantizationParameters>();
 #else
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.actual.svg").run_on_function(f);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.actual").run_on_function(f);
 
-    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.actual.svg").run_on_function(f);
-    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.actual").run_on_function(f);
+        {
+            ngraph::pass::Manager tmp(passConfig);
+            tmp.register_pass<low_precision::MarkupPrecisions>(restrictions);
+            tmp.run_passes(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming1.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming1").run_on_function(f);
+        }
 
-    {
-        ngraph::pass::Manager tmp;
-        tmp.register_pass<low_precision::MarkupPrecisions>(restrictions);
-        tmp.run_passes(f);
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming1.svg").run_on_function(f);
-        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming1").run_on_function(f);
-    }
+        {
+            ngraph::pass::Manager tmp(passConfig);
+            tmp.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+            tmp.run_passes(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming2.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming2").run_on_function(f);
+        }
 
-    {
-        ngraph::pass::Manager tmp;
-        tmp.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
-        tmp.run_passes(f);
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming2.svg").run_on_function(f);
-        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming2").run_on_function(f);
-    }
+        {
+            ngraph::pass::Manager tmp(passConfig);
+            tmp.register_pass<low_precision::PropagatePrecisions>();
+            tmp.run_passes(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming3.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming3").run_on_function(f);
+        }
 
-    {
-        ngraph::pass::Manager tmp;
-        tmp.register_pass<low_precision::PropagatePrecisions>();
-        tmp.run_passes(f);
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming3.svg").run_on_function(f);
-        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming3").run_on_function(f);
-    }
+        {
+            ngraph::pass::Manager tmp(passConfig);
+            tmp.register_pass<low_precision::AlignQuantizationIntervals>();
+            tmp.run_passes(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming4.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming4").run_on_function(f);
+        }
 
-    {
-        ngraph::pass::Manager tmp;
-        tmp.register_pass<low_precision::AlignQuantizationIntervals>();
-        tmp.run_passes(f);
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming4.svg").run_on_function(f);
-        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming4").run_on_function(f);
-    }
-
-    {
-        ngraph::pass::Manager tmp;
-        tmp.register_pass<low_precision::AlignQuantizationParameters>();
-        tmp.run_passes(f);
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming5.svg").run_on_function(f);
-        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming5").run_on_function(f);
-    }
+        {
+            ngraph::pass::Manager tmp(passConfig);
+            tmp.register_pass<low_precision::AlignQuantizationParameters>();
+            tmp.run_passes(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming5.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming5").run_on_function(f);
+        }
 #endif
 
-    std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
-    common->add_matcher<ngraph::pass::low_precision::AddTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::AvgPoolTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::ClampTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::ConcatTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::ConvolutionTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::DepthToSpaceTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::FakeQuantizeTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::InterpolateTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::GroupConvolutionTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::MatMulTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::MaxPoolTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::MultiplyTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::MVNTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::NormalizeL2Transformation>();
-    common->add_matcher<ngraph::pass::low_precision::PReluTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::ReluTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::ReshapeTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::SqueezeTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::SplitTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::StridedSliceTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::TransposeTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::UnsqueezeTransformation>();
-    common->add_matcher<ngraph::pass::low_precision::VariadicSplitTransformation>();
+        std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
+        common->add_matcher<ngraph::pass::low_precision::AddTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::AvgPoolTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::ClampTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::ConcatTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::ConvolutionTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::DepthToSpaceTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::FakeQuantizeTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::InterpolateTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::GroupConvolutionTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::MatMulTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::MaxPoolTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::MultiplyTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::MVNTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::NormalizeL2Transformation>();
+        common->add_matcher<ngraph::pass::low_precision::PReluTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::ReluTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::ReshapeTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::SqueezeTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::SplitTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::StridedSliceTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::TransposeTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::UnsqueezeTransformation>();
+        common->add_matcher<ngraph::pass::low_precision::VariadicSplitTransformation>();
+        manager.run_passes(f);
+    }
 
-    std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = manager.register_pass<ngraph::pass::GraphRewrite>();
-    //cleanup->add_matcher<ngraph::pass::low_precision::FoldConvertTransformation>();
-    //cleanup->add_matcher<ngraph::pass::low_precision::FuseConvertTransformation>();
-    cleanup->add_matcher<ngraph::pass::low_precision::FakeQuantizeTransformation>();
-    cleanup->add_matcher<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>();
-    cleanup->add_matcher<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>();
-    cleanup->add_matcher<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>();
-    cleanup->add_matcher<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>();
+    {
+        ngraph::pass::Manager cleanupManager(passConfig);
+        std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = cleanupManager.register_pass<ngraph::pass::GraphRewrite>();
+        cleanup->add_matcher<ngraph::pass::low_precision::FoldConvertTransformation>();
+        cleanup->add_matcher<ngraph::pass::low_precision::FuseConvertTransformation>();
+        cleanupManager.run_passes(f);
+    }
 
-    manager.run_passes(f);
+    {
+        ngraph::pass::Manager standaloneCleanupManager(passConfig);
+        standaloneCleanupManager.register_pass<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>();
+        standaloneCleanupManager.run_passes(f);
+    }
+
+    {
+        ngraph::pass::Manager standaloneCleanupManager(passConfig);
+        standaloneCleanupManager.register_pass<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>();
+        standaloneCleanupManager.run_passes(f);
+    }
+
+    {
+        ngraph::pass::Manager standaloneCleanupManager(passConfig);
+        standaloneCleanupManager.register_pass<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>();
+        standaloneCleanupManager.run_passes(f);
+    }
+
+    {
+        ngraph::pass::Manager standaloneCleanupManager(passConfig);
+        standaloneCleanupManager.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>();
+        standaloneCleanupManager.run_passes(f);
+    }
 
     return true;
 }
