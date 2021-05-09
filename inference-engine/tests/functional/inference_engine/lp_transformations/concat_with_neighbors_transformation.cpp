@@ -100,8 +100,6 @@ public:
             testValues.actual.fakeQuantize2,
             testValues.actual.fakeQuantize3);
 
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.actual").run_on_function(actualFunction);
-
         //SimpleLowPrecisionTransformer transform;
         //if (testValues.multiChannels) {
         //    transform.add<ngraph::pass::low_precision::ConcatMultiChannelsTransformation, ngraph::opset1::Concat>(testValues.params);
@@ -120,33 +118,27 @@ public:
         ngraph::pass::Manager manager1;
         manager1.register_pass<ngraph::pass::low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
         manager1.run_passes(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming1").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager2;
         manager2.register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
         manager2.run_passes(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming2").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager3;
         manager3.register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
         manager3.run_passes(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming3").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager4;
         manager4.register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
         manager4.run_passes(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming4").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager5;
         manager5.register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
         manager5.run_passes(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming5").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager;
         manager.register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>();
         manager.register_pass<ngraph::pass::low_precision::ConcatTransformation>();
         manager.run_passes(actualFunction);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transformed").run_on_function(actualFunction);
 
         referenceFunction = ngraph::builder::subgraph::ConcatFunction::getReferenceWithNeighbors(
             precision,
@@ -159,8 +151,6 @@ public:
             testValues.result.precisionAfterOp,
             testValues.result.dequantizationAfter1,
             testValues.result.dequantizationAfter2);
-
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.reference").run_on_function(referenceFunction);
     }
 
     static std::string getTestCaseName(testing::TestParamInfo<ConcatTransformationParams> obj) {

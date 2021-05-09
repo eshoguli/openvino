@@ -29,15 +29,7 @@ constexpr VariantTypeInfo VariantWrapper<PrecisionPreservedAttributePtr>::type_i
 std::string VariantWrapper<PrecisionPreservedAttributePtr>::get_string() {
     auto& value = this->m_value;
     std::stringstream ss;
-
-#ifdef LPT_DEBUG
-    const size_t rawPointer = (size_t)&this->m_value;
-    ss << rawPointer << ": ";
-
-    const size_t sharedRawPointer = (size_t)value->sharedValue.get();
-    ss << "shared: " << sharedRawPointer << ",";
-#endif
-
+    ss << m_value->get_string();
     ss << "value: " << (value->sharedValue->value ? "true" : "false");
     return ss.str();
 }

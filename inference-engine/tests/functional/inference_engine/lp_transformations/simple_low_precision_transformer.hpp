@@ -13,10 +13,11 @@
 #include "low_precision/transformation_context.hpp"
 #include <low_precision/iparams_manager.hpp>
 #include <low_precision/ilayer_transformations_manager.hpp>
+#include <low_precision/common/operation_precision_restriction.hpp>
 
 class SimpleLowPrecisionTransformer {
 public:
-    SimpleLowPrecisionTransformer();
+    SimpleLowPrecisionTransformer(const std::vector<ngraph::pass::low_precision::OperationPrecisionRestriction>& precisions = {});
 
     template <class T, class Operation>
     void add(const ngraph::pass::low_precision::LayerTransformation::Params& params) {
@@ -32,7 +33,8 @@ public:
         //transformations.emplace(typeName, transformation);
         //return transformation;
 
-        lowPrecisionManager->register_pass<T>(params);
+        //lowPrecisionManager->register_pass<T>(params);
+        this->common->template add_matcher<T>(params);
     }
 
     template <class T>
@@ -45,5 +47,6 @@ public:
 private:
     ngraph::pass::low_precision::TransformationContext context;
     std::shared_ptr<ngraph::pass::Manager> lowPrecisionManager;
+    std::shared_ptr<ngraph::pass::GraphRewrite> common;
     std::map<std::string, ngraph::pass::low_precision::LayerTransformationPtr> transformations;
 };

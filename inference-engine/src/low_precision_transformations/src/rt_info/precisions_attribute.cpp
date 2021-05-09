@@ -64,33 +64,9 @@ std::shared_ptr<ngraph::Variant> VariantWrapper<std::shared_ptr<PrecisionsAttrib
 std::string VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::get_string() {
     std::stringstream ss;
 
-//#ifdef LPT_DEBUG
-//    const size_t rawPointer = (size_t)m_value.get();
-//    ss << rawPointer << ": ";
-//
-//    const size_t sharedValueRawPointer = (size_t)m_value->sharedValue.get();
-//    ss << "sharedValue: " << sharedValueRawPointer;
-//
-//    bool firstAttribute = true;
-//    ss << ", attributes: [";
-//    for (auto& attributeWeakPtr : m_value->sharedValue->attributes) {
-//        auto attribute = attributeWeakPtr.lock();
-//        if (attribute == nullptr) {
-//            continue;
-//        }
-//
-//        if (!firstAttribute) {
-//            ss << ", ";
-//        }
-//        ss << (size_t)attribute.get();
-//        firstAttribute = false;
-//    }
-//    ss << "], ";
-//#endif
     ss << m_value->get_string();
 
     bool firstPrecision = true;
-
     ss << "precisions: [";
     for (const auto& value : m_value->sharedValue->precisions) {
         if (!firstPrecision) {

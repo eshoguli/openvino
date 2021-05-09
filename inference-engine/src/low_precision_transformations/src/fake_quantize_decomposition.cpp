@@ -53,11 +53,8 @@ namespace fq_decomposition {
 
 DataPrecision getDataPrecision(std::shared_ptr<opset1::FakeQuantize> layer) {
     const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(layer);
-
-    // TODO: use getAtribute anywhere instead: rt.find(ngraph::VariantWrapper<
-    auto& rt = layer->output(0).get_rt_info();
-    auto it = rt.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
-    if (it == rt.end()) {
+    auto attribute = getAttributeFromOutput<std::shared_ptr<PrecisionsAttribute>>(layer->output(0));
+    if (attribute == nullptr) {
         // TODO: explore this case in more details:
         // 1. we should not be here
         // 2. not possible to get optimal precision by decomposed FakeQuantize
@@ -69,7 +66,6 @@ DataPrecision getDataPrecision(std::shared_ptr<opset1::FakeQuantize> layer) {
             precisionDetailsAtOutputIntervals.hasZeroPoint);
     }
 
-    auto attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(it->second);
     std::set<element::Type>& precisions = attribute->get()->sharedValue->precisions;
 
     ngraph::element::Type precision;

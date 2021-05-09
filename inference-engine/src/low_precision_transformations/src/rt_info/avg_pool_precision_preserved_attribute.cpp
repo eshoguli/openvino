@@ -46,15 +46,7 @@ void VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::merge(
 std::string VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::get_string() {
     auto value = this->m_value;
     std::stringstream ss;
-
-#ifdef LPT_DEBUG
-    const size_t rawPointer = (size_t)value.get();
-    ss << rawPointer << ": ";
-
-    const size_t precisionPreservedValueRawPointer = (size_t)value->sharedValue.get();
-    ss << "sharedValue: " << precisionPreservedValueRawPointer << ", ";
-#endif
-
+    ss << m_value->get_string();
     ss << "value: " << (value->sharedValue->value ? "true" : "false");
     return ss.str();
 }

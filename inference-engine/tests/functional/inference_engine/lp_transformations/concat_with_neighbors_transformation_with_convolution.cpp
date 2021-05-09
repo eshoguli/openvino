@@ -128,7 +128,6 @@ public:
 
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-
         ngraph::pass::Manager manager;
         manager.register_pass<low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
         manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
@@ -143,7 +142,6 @@ public:
         common->add_matcher<low_precision::MaxPoolTransformation>();
 
         manager.run_passes(actualFunction);
-
 #else
 
         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.actual.svg").run_on_function(actualFunction);

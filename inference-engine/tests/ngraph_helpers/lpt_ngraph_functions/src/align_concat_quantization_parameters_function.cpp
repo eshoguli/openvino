@@ -88,6 +88,7 @@ std::shared_ptr<ngraph::Function> AlignConcatQuantizationParametersFunction::get
         }
     }
     auto parent = std::dynamic_pointer_cast<ngraph::Node>(std::make_shared<opset1::Concat>(ngraph::OutputVector{ parent1, parent2 }, 1));
+    parent->set_friendly_name("concat");
 
     {
         const size_t outputChannels = 9ul;
