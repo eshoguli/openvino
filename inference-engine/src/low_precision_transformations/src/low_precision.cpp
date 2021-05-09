@@ -257,7 +257,9 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
 
     {
         ngraph::pass::Manager standaloneCleanupManager(passConfig);
-        standaloneCleanupManager.register_pass<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>();
+        // WA: precision restrictions for groupConv must be propagated to MultiplyToGroupConvolution transformation
+        const auto groupConvRestriction = OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(restrictions);
+        standaloneCleanupManager.register_pass<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(groupConvRestriction);
         standaloneCleanupManager.run_passes(f);
     }
 

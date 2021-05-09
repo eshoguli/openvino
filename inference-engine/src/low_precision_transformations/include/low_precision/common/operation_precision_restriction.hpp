@@ -48,6 +48,16 @@ public:
         const bool specifyVersion = false) {
         return OperationPrecisionRestriction(T::get_type_info_static(), specifyVersion, precisionsByPort);
     }
+
+    template <typename T>
+    static PrecisionsByPort getPrecisionsByOperationType(std::vector<OperationPrecisionRestriction>& restrictions) {
+        for (const auto& restriction : restrictions) {
+            if (restriction.operationType == T::get_type_info_static()) {
+                return restriction.precisionsByPort;
+            }
+        }
+        return {};
+    }
 };
 
 }  // namespace low_precision

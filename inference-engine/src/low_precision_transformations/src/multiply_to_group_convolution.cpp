@@ -12,7 +12,9 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-MultiplyToGroupConvolutionTransformation::MultiplyToGroupConvolutionTransformation(const Params& params) : LayerTransformation(params), groupSize(1ul) {
+MultiplyToGroupConvolutionTransformation::MultiplyToGroupConvolutionTransformation(
+    const OperationPrecisionRestriction::PrecisionsByPort& restrictions,
+    const Params& params) : restrictions(restrictions), LayerTransformation(params), groupSize(1ul) {
     auto matcher = pattern::wrap_type<opset1::Multiply>();
 
     ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
@@ -155,9 +157,11 @@ bool MultiplyToGroupConvolutionTransformation::canBeTransformed(const Transforma
         }
     }
 
-    if (updatePrecisions) {
+    if (updatePrecisions && restrictions.size() > 0) {
         const element::Type parentPrecision = dequantization.data.get_element_type();
-        if (std::find(precisionsOnActivations.begin(), precisionsOnActivations.end(), parentPrecision) == precisionsOnActivations.end()) {
+
+        const auto& availablePreisions = restrictions[0].second;
+        if (availablePreisions.find(parentPrecision) == availablePreisions.cend()) {
             return false;
         }
     }

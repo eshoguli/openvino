@@ -7,6 +7,7 @@
 #include <memory>
 #include <ngraph/ngraph.hpp>
 #include "low_precision/layer_transformation.hpp"
+#include "common/operation_precision_restriction.hpp"
 
 namespace ngraph {
 namespace pass {
@@ -14,7 +15,9 @@ namespace low_precision {
 
 class TRANSFORMATIONS_API MultiplyToGroupConvolutionTransformation : public LayerTransformation {
 public:
-    MultiplyToGroupConvolutionTransformation(const Params& params = Params());
+    MultiplyToGroupConvolutionTransformation(
+        const OperationPrecisionRestriction::PrecisionsByPort& restrictions,
+        const Params& params = Params());
     ~MultiplyToGroupConvolutionTransformation() override {}
     bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
     bool canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> layer) const override;
@@ -24,6 +27,7 @@ public:
     void setGroupSize(const size_t groupSize);
     size_t getGroupSize() const;
 private:
+    OperationPrecisionRestriction::PrecisionsByPort restrictions;
     size_t groupSize;
 };
 
