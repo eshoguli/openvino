@@ -51,9 +51,12 @@ public:
                 std::make_shared<AttributeType>());
             rt[ngraph::VariantWrapper<std::shared_ptr<AttributeType>>::type_info.name] = attribute;
 
-            ngraph::pass::low_precision::NetworkHelper::reassign<PrecisionPreservedSharedValue, AttributeType>(
+            ngraph::pass::low_precision::NetworkHelper::reassign<PrecisionPreservedSharedValue, PrecisionPreservedAttribute>(
                     targetSharedValue,
-                    { attribute->get() });
+                    {
+                        std::dynamic_pointer_cast<PrecisionPreservedAttribute>(attribute->get()),
+                        std::dynamic_pointer_cast<PrecisionPreservedAttribute>(precisionPreservedAttribute->get())
+                    });
 
             return true;
         };

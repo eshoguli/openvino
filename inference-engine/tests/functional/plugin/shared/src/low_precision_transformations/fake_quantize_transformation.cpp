@@ -38,9 +38,11 @@ void FakeQuantizeTransformation::SetUp() {
     std::tie(netPrecision, inputShape, targetDevice, params, fakeQuantizeOnData) = this->GetParam();
 
     function = ngraph::builder::subgraph::FakeQuantizeFunction::getOriginal(
+        params,
         netPrecision,
         inputShape,
-        fakeQuantizeOnData);
+        fakeQuantizeOnData,
+        true);
 
     ngraph::pass::InitNodeInfo().run_on_function(function);
 }

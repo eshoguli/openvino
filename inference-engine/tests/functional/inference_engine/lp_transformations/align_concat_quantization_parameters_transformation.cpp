@@ -153,8 +153,6 @@ public:
         }
 #endif
 
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transformed.svg").run_on_function(actualFunction);
-
         referenceFunction = ngraph::builder::subgraph::AlignConcatQuantizationParametersFunction::getReference(
             precision,
             testValues.expected.inputPrecision,
@@ -165,7 +163,7 @@ public:
             testValues.expected.preicsionAfterOperation,
             testValues.expected.dequantizationAfter);
 
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.reference.svg").run_on_function(actualFunction);
+        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.reference.svg").run_on_function(actualFunction);
         //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.reference").run_on_function(actualFunction);
     }
 
