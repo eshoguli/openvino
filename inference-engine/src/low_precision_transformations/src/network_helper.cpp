@@ -1693,6 +1693,24 @@ std::shared_ptr<Node> foldConvert(const Output<Node>& node, const element::Type 
     return fold<opset1::Convert>(node, targetPrecision);
 }
 
+bool isDisabled(const std::shared_ptr<Node>& node) {
+    for (const auto& input : node->inputs()) {
+        auto precisionAttribute = getAttribute<std::shared_ptr<PrecisionsAttribute>>(input);
+        if (precisionAttribute == nullptr) {
+            continue;
+        }
+
+        assert(precisionAttribute->get() != nullptr);
+        assert(precisionAttribute->get()->sharedValue != nullptr);
+
+        const auto& precisionRestrictions = precisionAttribute->get()->sharedValue->precisions;
+        if (precisionRestrictions.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }  // namespace low_precision
 }  // namespace pass
 }  // namespace ngraph

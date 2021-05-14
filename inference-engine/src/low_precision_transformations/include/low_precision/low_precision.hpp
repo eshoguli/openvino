@@ -21,6 +21,7 @@
 
 #include <transformations_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
+#include <low_precision/common/operation_per_tensor_quantization_restriction.hpp>
 #include "low_precision/layer_transformation.hpp"
 #include "low_precision/markup_precisions.hpp"
 
@@ -43,14 +44,16 @@ public:
 
     NGRAPH_RTTI_DECLARATION;
     LowPrecision(
-        const std::vector<OperationPrecisionRestriction>& restrictions = {},
+        const std::vector<OperationPrecisionRestriction>& precisionRestrictions = {},
+        const std::vector<OperationPerTensorQuantizationRestriction>& quantizationRestrictions = {},
         const LayerTransformation::Params = LayerTransformation::Params());
     bool run_on_function(std::shared_ptr<ngraph::Function> f) override;
 
     static bool isFunctionQuantized(const std::shared_ptr<ngraph::Function>& function);
 
 protected:
-    std::vector<OperationPrecisionRestriction> restrictions;
+    std::vector<OperationPrecisionRestriction> precisionRestrictions;
+    std::vector<OperationPerTensorQuantizationRestriction> quantizationRestrictions;
     // remove
     LayerTransformation::Params params;
 };

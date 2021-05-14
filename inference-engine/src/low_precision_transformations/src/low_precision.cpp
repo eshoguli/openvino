@@ -13,6 +13,7 @@
 #include <ngraph/opsets/opset1.hpp>
 #include <ngraph/opsets/opset4.hpp>
 #include <ngraph/opsets/opset6.hpp>
+#include <low_precision/markup_per_tensor_quantization.hpp>
 
 #include "low_precision/align_quantization_intervals.hpp"
 #include "low_precision/fake_quantize_decomposition.hpp"
@@ -74,8 +75,12 @@
 NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::LowPrecision, "LowPrecision", 0);
 
 ngraph::pass::low_precision::LowPrecision::LowPrecision(
-    const std::vector<OperationPrecisionRestriction>& restrictions,
-    const LayerTransformation::Params params) : restrictions(restrictions), params(params) {
+    const std::vector<OperationPrecisionRestriction>& precisionRestrictions,
+    const std::vector<OperationPerTensorQuantizationRestriction>& quantizationRestrictions,
+    const LayerTransformation::Params params) :
+    precisionRestrictions(precisionRestrictions),
+    quantizationRestrictions(quantizationRestrictions),
+    params(params) {
 }
 
 using namespace ngraph::pass::low_precision;
@@ -166,7 +171,8 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
         ngraph::pass::Manager manager(passConfig);
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-        manager.register_pass<low_precision::MarkupPrecisions>(restrictions);
+        manager.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
+        manager.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
         manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
         manager.register_pass<low_precision::PropagatePrecisions>();
         manager.register_pass<low_precision::AlignQuantizationIntervals>();
@@ -180,6 +186,14 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             tmp.register_pass<low_precision::MarkupPrecisions>(restrictions);
             tmp.run_passes(f);
             ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming1.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_function(f);
+        }
+
+        {
+            ngraph::pass::Manager tmp(passConfig);
+            tmp.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+            tmp.run_passes(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming1_2.svg").run_on_function(f);
             //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_function(f);
         }
 
@@ -272,7 +286,7 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     {
         ngraph::pass::Manager standaloneCleanupManager(passConfig);
         // WA: precision restrictions for groupConv must be propagated to MultiplyToGroupConvolution transformation
-        const auto groupConvRestriction = OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(restrictions);
+        const auto groupConvRestriction = OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions);
         standaloneCleanupManager.register_pass<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(params, groupConvRestriction);
         standaloneCleanupManager.run_passes(f);
     }

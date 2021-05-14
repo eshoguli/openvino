@@ -10,8 +10,9 @@
 #include "low_precision/layer_transformation.hpp"
 #include "low_precision/propagate_through_precision_preserved.hpp"
 #include "low_precision/rt_info/precision_preserved_attribute.hpp"
-#include <low_precision/rt_info/quantization_alignment_attribute.hpp>
-#include <low_precision/update_shared_precision_preserved.hpp>
+#include "low_precision/rt_info/quantization_alignment_attribute.hpp"
+#include "low_precision/update_shared_precision_preserved.hpp"
+#include "low_precision/rt_info/per_tensor_quantization_attribute.hpp"
 
 using namespace ngraph;
 using namespace ngraph::pass::low_precision;
@@ -22,10 +23,10 @@ AlignQuantizationParameters::AlignQuantizationParameters(LayerTransformation::Pa
 
 bool ngraph::pass::low_precision::AlignQuantizationParameters::run_on_function(std::shared_ptr<ngraph::Function> f) {
     ngraph::pass::Manager manager;
-    std::shared_ptr<ngraph::pass::GraphRewrite> alignQuantizationPropagation = manager.register_pass<ngraph::pass::GraphRewrite>();
-    alignQuantizationPropagation->add_matcher<low_precision::CreateAttribute<QuantizationAlignmentAttribute>>();
-    alignQuantizationPropagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<QuantizationAlignmentAttribute>>();
-    alignQuantizationPropagation->add_matcher<low_precision::UpdateSharedPrecisionPreserved<QuantizationAlignmentAttribute>>();
+    std::shared_ptr<ngraph::pass::GraphRewrite> propagation = manager.register_pass<ngraph::pass::GraphRewrite>();
+    propagation->add_matcher<low_precision::CreateAttribute<QuantizationAlignmentAttribute>>();
+    propagation->add_matcher<low_precision::PropagateThroughPrecisionPreserved<QuantizationAlignmentAttribute>>();
+    propagation->add_matcher<low_precision::UpdateSharedPrecisionPreserved<QuantizationAlignmentAttributePtr, PerTensorQuantizationAttribute>>();
     manager.run_passes(f);
     return false;
 }

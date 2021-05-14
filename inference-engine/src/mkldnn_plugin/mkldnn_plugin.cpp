@@ -91,6 +91,8 @@
 #  include <windows.h>
 # else
 #  include <cpuid.h>
+#include <low_precision/common/operation_per_tensor_quantization_restriction.hpp>
+
 # endif
 #endif
 
@@ -315,8 +317,13 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
             })
         });
 
+        auto perTensorQuantization = std::vector<OperationPerTensorQuantizationRestriction>({
+            OperationPerTensorQuantizationRestriction::create<ngraph::opset1::Convolution>({0}),
+            OperationPerTensorQuantizationRestriction::create<ngraph::opset1::GroupConvolution>({0})
+        });
+
         ngraph::pass::Manager lptManager;
-        lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(supportedPrecisions);
+        lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(supportedPrecisions, perTensorQuantization);
         lptManager.run_passes(nGraphFunc);
 
         //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transformed.svg").run_on_function(nGraphFunc);

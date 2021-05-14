@@ -10,14 +10,14 @@
 
 #include "common_test_utils/test_common.hpp"
 #include "low_precision/layer_transformation.hpp"
-#include "low_precision/transformation_context.hpp"
-#include <low_precision/iparams_manager.hpp>
-#include <low_precision/ilayer_transformations_manager.hpp>
-#include <low_precision/common/operation_precision_restriction.hpp>
+#include "low_precision/common/operation_precision_restriction.hpp"
+#include "low_precision/common/operation_per_tensor_quantization_restriction.hpp"
 
 class SimpleLowPrecisionTransformer {
 public:
-    SimpleLowPrecisionTransformer(const std::vector<ngraph::pass::low_precision::OperationPrecisionRestriction>& precisions = {});
+    SimpleLowPrecisionTransformer(
+        const std::vector<ngraph::pass::low_precision::OperationPrecisionRestriction>& precisionRestrictions = {},
+        const std::vector<ngraph::pass::low_precision::OperationPerTensorQuantizationRestriction>& quantizationRestrictions = {});
 
     template <class T, class Operation>
     void add(const ngraph::pass::low_precision::LayerTransformation::Params& params) {

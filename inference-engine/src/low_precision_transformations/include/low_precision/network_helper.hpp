@@ -18,6 +18,7 @@
 
 #include "rt_info/shared_value_attribute.hpp"
 #include "rt_info/precisions_attribute.hpp"
+#include "rt_info/per_tensor_quantization_attribute.hpp"
 #include "transformation_context.hpp"
 #include "quantization_details.hpp"
 #include "transformations/utils/utils.hpp"
@@ -418,6 +419,8 @@ std::shared_ptr<ngraph::VariantWrapper<T>> getAttributeFromOutput(const Output<N
     assert(attribute != nullptr);
     return attribute;
 }
+
+bool isDisabled(const std::shared_ptr<Node>& node);
 
 //// merge: share between other operations - implicit backward propagation
 //template <typename T>

@@ -31,6 +31,7 @@ ngraph::pass::low_precision::MarkupPrecisions::MarkupPrecisions(const std::vecto
     }
 }
 
+namespace {
 void setRestriction(
     const std::shared_ptr<Node>& node,
     const std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>>& precisionsByPort) {
@@ -65,6 +66,7 @@ void setRestriction(
         }
     }
 }
+} // namespace
 
 bool ngraph::pass::low_precision::MarkupPrecisions::run_on_function(std::shared_ptr<ngraph::Function> f) {
     for (const std::shared_ptr<Node>& node : f->get_ordered_ops()) {
@@ -92,35 +94,17 @@ bool ngraph::pass::low_precision::MarkupPrecisions::run_on_function(std::shared_
                     continue;
                 }
 
-                const std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>> precisionsByPort = it2->second;
+                const std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>>& precisionsByPort = it2->second;
                 setRestriction(node, precisionsByPort);
             } else {
                 assert(r.precisionsByVersion.size() == 1ul);
 
-                const std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>> precisionsByPort = r.precisionsByVersion.begin()->second;
+                const std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>>& precisionsByPort = r.precisionsByVersion.begin()->second;
                 setRestriction(node, precisionsByPort);
             }
         }
     }
     return true;
-}
-
-bool ngraph::pass::low_precision::MarkupPrecisions::isDisabled(const std::shared_ptr<Node>& node) {
-    for (const auto& input : node->inputs()) {
-        auto& rtInfo = input.get_rt_info();
-        auto it = rtInfo.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
-        if (it == rtInfo.end()) {
-            continue;
-        }
-
-        auto precisionAttribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(it->second);
-        assert(precisionAttribute != nullptr);
-        const auto& precisionRestrictions = precisionAttribute->get()->sharedValue->precisions;
-        if (precisionRestrictions.empty()) {
-            return true;
-        }
-    }
-    return false;
 }
 
 template <class Operation>

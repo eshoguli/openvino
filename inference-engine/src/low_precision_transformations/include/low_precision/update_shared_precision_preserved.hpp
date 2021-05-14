@@ -19,31 +19,49 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-template <typename AttributeType>
+template <typename AttributeType, typename OperationType>
 class UpdateSharedPrecisionPreserved;
 
 }  // namespace low_precision
 }  // namespace pass
 }  // namespace ngraph
 
-template <typename AttributeType>
+template <typename AttributeType, typename ExpectedAttributeType = AttributeType>
 class ngraph::pass::low_precision::UpdateSharedPrecisionPreserved : public ngraph::pass::MatcherPass {
 public:
     UpdateSharedPrecisionPreserved() {
         ngraph::graph_rewrite_callback callback = [&](pattern::Matcher& m) {
             auto node = m.get_match_root();
-            if (!node ||
-                is_type<ngraph::opset1::Result>(node) ||
-                is_type<ngraph::opset1::FakeQuantize>(node) ||
-                transformation_callback(node)) {
-                return false;
+
+            const bool needToCheckExpectedAttributeType = !std::is_same<ExpectedAttributeType, AttributeType>::value;
+            if (!needToCheckExpectedAttributeType) {
+                // expected attribute is ignored, set attributes for node inputs except Result & FakeQuantize operations
+                if (is_type<ngraph::opset1::Result>(node) ||
+                    is_type<ngraph::opset1::FakeQuantize>(node) ||
+                    transformation_callback(node)) {
+                    return false;
+                }
             }
+
+
+//            else {
+//                // check if input has expected attribute
+//                // TODO: input, not node
+//                if (getAttribute<ExpectedAttributeType>(node) == nullptr) {
+//                    return false;
+//                }
+//            }
 
             if (ngraph::pass::low_precision::NetworkHelper::isPrecisionPreserved(node) || is_type<opset1::FakeQuantize>(node)) {
                 return false;
             }
 
             for (auto input : node->inputs()) {
+                if (needToCheckExpectedAttributeType) {
+                    if (getAttribute<ExpectedAttributeType>(input) == nullptr) {
+                        return false;
+                    }
+                }
                 auto parentAttribute = getSourceAttribute(input);
                 if (parentAttribute == nullptr) {
                     continue;
@@ -73,15 +91,15 @@ private:
         return input;
     }
 
-    std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>> getSourceAttribute(const Input<Node>& input) {
+    std::shared_ptr<ngraph::VariantWrapper<AttributeType>> getSourceAttribute(const Input<Node>& input) {
         // TODO: do we really need it?
         auto input2 = get(input);
 
         auto output = input2.get_source_output();
-        auto attribute = ngraph::pass::low_precision::getAttribute<std::shared_ptr<AttributeType>>(output.get_node()->shared_from_this());
+        auto attribute = ngraph::pass::low_precision::getAttribute<AttributeType>(output.get_node()->shared_from_this());
         if (attribute == nullptr) {
             // TODO: do we really need it?
-            attribute = getAttribute<std::shared_ptr<AttributeType>>(output.get_node_shared_ptr());
+            attribute = getAttribute<AttributeType>(output.get_node_shared_ptr());
         }
         return attribute;
     }

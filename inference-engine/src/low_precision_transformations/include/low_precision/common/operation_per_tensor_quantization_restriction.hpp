@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <memory>
-#include <set>
-#include <unordered_set>
 #include <vector>
 
 #include <ngraph/node.hpp>
@@ -19,35 +16,35 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class OperationPrecisionRestriction {
+class OperationPerTensorQuantizationRestriction {
 public:
-    using PrecisionsByPort = std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>>;
+    using RestrictedPorts = std::vector<size_t>;
 
     ngraph::Node::type_info_t operationType;
     bool specifyVersion;
-    std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>> precisionsByPort;
+    std::vector<size_t> restrictedPorts;
 
-    OperationPrecisionRestriction() = default;
-    OperationPrecisionRestriction(
+    OperationPerTensorQuantizationRestriction() = default;
+    OperationPerTensorQuantizationRestriction(
         const ngraph::Node::type_info_t operationType,
         const bool specifyVersion,
-        const PrecisionsByPort& precisionsByPort) :
+        const RestrictedPorts& restrictedPorts) :
         operationType(operationType),
         specifyVersion(specifyVersion),
-        precisionsByPort(precisionsByPort) {}
+        restrictedPorts(restrictedPorts) {}
 
     template <typename T>
-    static OperationPrecisionRestriction create(
-        const PrecisionsByPort& precisionsByPort,
+    static OperationPerTensorQuantizationRestriction create(
+        const RestrictedPorts& restrictedPorts = {},
         const bool specifyVersion = false) {
-        return OperationPrecisionRestriction(T::get_type_info_static(), specifyVersion, precisionsByPort);
+        return OperationPerTensorQuantizationRestriction(T::get_type_info_static(), specifyVersion, restrictedPorts);
     }
 
     template <typename T>
-    static PrecisionsByPort getPrecisionsByOperationType(std::vector<OperationPrecisionRestriction>& restrictions) {
+    static RestrictedPorts getPrecisionsByOperationType(std::vector<OperationPerTensorQuantizationRestriction>& restrictions) {
         for (const auto& restriction : restrictions) {
             if (restriction.operationType == T::get_type_info_static()) {
-                return restriction.precisionsByPort;
+                return restriction.restrictedPorts;
             }
         }
         return {};
