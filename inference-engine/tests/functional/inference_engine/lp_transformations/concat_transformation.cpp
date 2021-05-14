@@ -21,6 +21,7 @@
 #include <low_precision/align_quantization_parameters.hpp>
 #include <low_precision/fuse_subtract_to_fake_quantize.hpp>
 #include <low_precision/fuse_multiply_to_fake_quantize.hpp>
+#include <low_precision/markup_per_tensor_quantization.hpp>
 
 #include "common_test_utils/ngraph_test_utils.hpp"
 #include "lpt_ngraph_functions/concat_function.hpp"
@@ -156,12 +157,19 @@ public:
             ngraph::pass::low_precision::OperationPrecisionRestriction::create<ngraph::opset1::AvgPool>({{0, testValues.params.precisionsOnActivations}})
         });
 
+        auto quantizationRestrictions = testValues.multiChannels ?
+            std::vector<ngraph::pass::low_precision::OperationPerTensorQuantizationRestriction>() :
+            std::vector<ngraph::pass::low_precision::OperationPerTensorQuantizationRestriction>({
+                ngraph::pass::low_precision::OperationPerTensorQuantizationRestriction::create<ngraph::opset1::AvgPool>()
+            });
+
         const auto params = ngraph::pass::low_precision::LayerTransformation::Params(testValues.params.updatePrecisions);
 
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
         ngraph::pass::Manager manager;
         manager.register_pass<ngraph::pass::low_precision::MarkupPrecisions>(supportedPrecisionsOnActivation);
+        manager.register_pass<ngraph::pass::low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
         manager.register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
         manager.register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
         manager.register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
@@ -192,6 +200,12 @@ public:
         manager1.run_passes(actualFunction);
         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming1.svg").run_on_function(actualFunction);
         //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming1").run_on_function(actualFunction);
+
+        ngraph::pass::Manager manager12;
+        manager12.register_pass<ngraph::pass::low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+        manager12.run_passes(actualFunction);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transforming1_2.svg").run_on_function(actualFunction);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transforming1_2").run_on_function(actualFunction);
 
         ngraph::pass::Manager manager2;
         manager2.register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
@@ -240,7 +254,6 @@ public:
         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transformed.svg").run_on_function(actualFunction);
         //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.transformed").run_on_function(actualFunction);
 #endif
-
         // dequantization output precision depends on input precision
         // to avoid huge amount of tests cases let's define dequantization output precision as input precision
         if (!testValues.result.dequantizationAfter.multiply.empty()) {
