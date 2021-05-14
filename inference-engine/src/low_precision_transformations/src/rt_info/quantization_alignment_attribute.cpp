@@ -65,7 +65,7 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>
         return nullptr;
     }
 
-    std::vector<std::shared_ptr<ngraph::Node>> inputNodes;
+    bool allOperationsAreFakeQuantizes = true;
     for (auto index = 0ul; index < node->get_input_size(); ++index) {
         const auto& input = node->input(index);
         auto inputNode = input.get_source_output().get_node_shared_ptr();
@@ -77,13 +77,18 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>
             inputNode = dequantization.data.get_node()->get_input_node_shared_ptr(0);
         }
 
-        if (is_type<opset1::FakeQuantize>(inputNode)) {
-            auto& rt = node->get_rt_info();
-            const auto attribute = std::make_shared<ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>>(
-                make_shared_attribute<QuantizationAlignmentAttribute>());
-            rt[ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>::type_info.name] = attribute;
-            return attribute;
+        if (!is_type<opset1::FakeQuantize>(inputNode)) {
+            allOperationsAreFakeQuantizes = false;
+            break;
         }
+    }
+
+    if (allOperationsAreFakeQuantizes) {
+        auto& rt = node->get_rt_info();
+        const auto attribute = std::make_shared<ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>>(
+            make_shared_attribute<QuantizationAlignmentAttribute>());
+        rt[ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>::type_info.name] = attribute;
+        return attribute;
     }
 
     return nullptr;

@@ -43,15 +43,6 @@ public:
                 }
             }
 
-
-//            else {
-//                // check if input has expected attribute
-//                // TODO: input, not node
-//                if (getAttribute<ExpectedAttributeType>(node) == nullptr) {
-//                    return false;
-//                }
-//            }
-
             if (ngraph::pass::low_precision::NetworkHelper::isPrecisionPreserved(node) || is_type<opset1::FakeQuantize>(node)) {
                 return false;
             }

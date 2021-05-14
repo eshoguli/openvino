@@ -119,7 +119,7 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isPrecisionPreserved(const s
 
     // TODO: think how to handle conditions <= not mandatory for PoC
     // TODO: operation set version is not affected <= not mandatory for PoC
-    static std::unordered_set<std::string> precisionPreserved = {
+    static std::unordered_set<std::string> precisionPreservedOps = {
         { name<opset1::Concat>() },
         { name<opset1::DepthToSpace>() },
         { name<opset1::MaxPool>() },
@@ -137,7 +137,26 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isPrecisionPreserved(const s
         { name<opset1::VariadicSplit>() }
     };
 
-    return precisionPreserved.find(node->get_type_name()) != precisionPreserved.end();
+    const bool precisionPreserved = precisionPreservedOps.find(node->get_type_name()) != precisionPreservedOps.end();
+    if (precisionPreserved) {
+        return precisionPreserved;
+    }
+
+    if (is_type<opset1::Interpolate>(node)) {
+        std::shared_ptr<opset1::Interpolate> interpolate1 = as_type_ptr<opset1::Interpolate>(node);
+        if (interpolate1) {
+            const auto attrs = interpolate1->get_attrs();
+            return attrs.mode == "nearest";
+        }
+
+        std::shared_ptr<opset4::Interpolate> interpolate4 = as_type_ptr<opset4::Interpolate>(node);
+        if (interpolate4) {
+            const auto attrs = interpolate4->get_attrs();
+            return attrs.mode == op::v4::Interpolate::InterpolateMode::nearest;
+        }
+    }
+
+    return false;
 }
 
 bool ngraph::pass::low_precision::MarkupPrecisions::isQuantized(const std::shared_ptr<Node>& node) {

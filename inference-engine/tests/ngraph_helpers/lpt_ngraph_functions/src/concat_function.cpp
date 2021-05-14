@@ -633,8 +633,26 @@ std::shared_ptr<ngraph::Function> ConcatFunction::getOriginalWithIntermediateWit
     auto& rtInfo = concat->get_rt_info();
     rtInfo["Variant::std::string"] = std::make_shared<VariantWrapper<std::string>>("concat");
 
+    const std::vector<size_t> kernel = { 3, 3 };
+    const std::vector<size_t> stride = { 1, 1 };
+    const std::vector<size_t> padBegin = { 0, 0 };
+    const std::vector<size_t> padEnd = { 0, 0 };
+    const ngraph::op::PadType padType = ngraph::op::PadType::NOTSET;
+    const ngraph::op::RoundingType roundingType = ngraph::op::RoundingType::FLOOR;
+
+    const auto avgPool = std::make_shared<ngraph::opset1::AvgPool>(
+        concat,
+        stride,
+        padBegin,
+        padEnd,
+        kernel,
+        true,
+        roundingType,
+        padType);
+    avgPool->set_friendly_name("avgPool");
+
     ngraph::ResultVector results{
-        std::make_shared<ngraph::opset1::Result>(concat),
+        std::make_shared<ngraph::opset1::Result>(avgPool),
     };
 
     std::shared_ptr<ngraph::Function> function = std::make_shared<ngraph::Function>(
@@ -1464,8 +1482,26 @@ std::shared_ptr<ngraph::Function> ConcatFunction::getReferenceWithIntermediateWi
     const auto deqAfter = makeDequantization(concat->output(0), dequantizationAfter);
     deqAfter->set_friendly_name("concat");
 
+    const std::vector<size_t> kernel = { 3, 3 };
+    const std::vector<size_t> stride = { 1, 1 };
+    const std::vector<size_t> padBegin = { 0, 0 };
+    const std::vector<size_t> padEnd = { 0, 0 };
+    const ngraph::op::PadType padType = ngraph::op::PadType::NOTSET;
+    const ngraph::op::RoundingType roundingType = ngraph::op::RoundingType::FLOOR;
+
+    const auto avgPool = std::make_shared<ngraph::opset1::AvgPool>(
+        deqAfter,
+        stride,
+        padBegin,
+        padEnd,
+        kernel,
+        true,
+        roundingType,
+        padType);
+    avgPool->set_friendly_name("avgPool");
+
     ngraph::ResultVector results{
-        std::make_shared<ngraph::opset1::Result>(deqAfter)
+        std::make_shared<ngraph::opset1::Result>(avgPool)
     };
 
     std::shared_ptr<ngraph::Function> function = std::make_shared<ngraph::Function>(

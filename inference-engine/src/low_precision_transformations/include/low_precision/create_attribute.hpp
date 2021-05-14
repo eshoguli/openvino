@@ -38,23 +38,9 @@ class ngraph::pass::low_precision::CreateAttribute : public ngraph::pass::low_pr
 public:
     CreateAttribute(const AttributeSource source = AttributeSource::Node) {
         assert((source == AttributeSource::Node) || (source == AttributeSource::OutputPort));
-//        //auto operation = pattern::wrap_type<OperationType>();
-//
-////        auto is_op_type = [](std::shared_ptr<Node> n) {
-////            return true;
-////        };
-////        auto operation = pattern::wrap_type<pattern::op::Label>(element::f32, Shape{}, is_op_type);
-//        auto is_op_type = [](std::shared_ptr<Node> n) {
-//            return true;
-//        };
         auto operation = std::is_same<OperationType, pattern::op::Label>::value ?
             std::make_shared<pattern::op::Label>(element::f32, Shape{}, [](std::shared_ptr<Node> n) { return true; }) :
             pattern::wrap_type<OperationType>();
-
-
-//        auto operation = ngraph::pattern::wrap_type([](const Output<Node>& value) {
-//            return true;
-//        });
 
         ngraph::graph_rewrite_callback callback = [&](pattern::Matcher& m) {
             auto op = m.get_match_root();
