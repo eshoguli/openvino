@@ -47,11 +47,16 @@
 #include "low_precision/mvn.hpp"
 #include "low_precision/normalize_l2.hpp"
 #include "low_precision/prelu.hpp"
+#include "low_precision/reduce_max.hpp"
+#include "low_precision/reduce_mean.hpp"
+#include "low_precision/reduce_min.hpp"
+#include "low_precision/reduce_sum.hpp"
 #include "low_precision/reshape.hpp"
 #include "low_precision/relu.hpp"
 #include "low_precision/squeeze.hpp"
 #include "low_precision/subtract.hpp"
 #include "low_precision/split.hpp"
+#include "low_precision/shuffle_channels.hpp"
 #include "low_precision/strided_slice.hpp"
 #include "low_precision/transpose.hpp"
 #include "low_precision/unsqueeze.hpp"
@@ -130,6 +135,8 @@ ngraph::pass::low_precision::LowPrecision::TypeRelaxedReplacer::TypeRelaxedRepla
     make_matcher_type_relaxed<opset1::FakeQuantize>(this);
     make_matcher_type_relaxed<opset1::GroupConvolution>(this);
     make_matcher_type_relaxed<opset1::PRelu>(this);
+    make_matcher_type_relaxed<opset1::ReduceMean>(this);
+    make_matcher_type_relaxed<opset1::ReduceSum>(this);
     make_matcher_type_relaxed<opset1::Subtract>(this);
     make_matcher_type_relaxed<opset1::Interpolate>(this);
     make_matcher_type_relaxed<opset1::Multiply>(this);
@@ -226,9 +233,14 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
         common->add_matcher<ngraph::pass::low_precision::MVNTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::NormalizeL2Transformation>(params);
         common->add_matcher<ngraph::pass::low_precision::PReluTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceMaxTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceMeanTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceMinTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceSumTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::ReluTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::ReshapeTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::SqueezeTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ShuffleChannelsTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::SplitTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::StridedSliceTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::TransposeTransformation>(params);

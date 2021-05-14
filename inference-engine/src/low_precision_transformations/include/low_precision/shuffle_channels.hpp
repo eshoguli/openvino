@@ -13,7 +13,7 @@ namespace low_precision {
 
 class TRANSFORMATIONS_API ShuffleChannelsTransformation : public LayerTransformation {
 public:
-    ShuffleChannelsTransformation(const Params& params);
+    ShuffleChannelsTransformation(const Params& params = Params());
     bool transform(TransformationContext& context, ngraph::pattern::Matcher& m) const override;
     bool isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept override;
     bool canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> op) const override;

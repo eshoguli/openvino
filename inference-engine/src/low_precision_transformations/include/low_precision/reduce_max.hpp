@@ -16,7 +16,7 @@ namespace low_precision {
 
 class TRANSFORMATIONS_API ReduceMaxTransformation : public ReduceBaseTransformation {
 public:
-    ReduceMaxTransformation(const Params& params);
+    ReduceMaxTransformation(const Params& params = Params());
     bool isPrecisionPreserved(std::shared_ptr<Node> reduce) const noexcept override;
     bool canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> reduce) const override;
 

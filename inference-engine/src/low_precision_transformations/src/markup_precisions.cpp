@@ -139,12 +139,15 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isPrecisionPreserved(const s
         { name<opset1::Concat>() },
         { name<opset1::DepthToSpace>() },
         { name<opset1::MaxPool>() },
+        { name<opset1::ReduceMax>() },
+        { name<opset1::ReduceMin>() },
         { name<opset1::Relu>() },
         // TODO: there are conditions
         { name<opset1::Reshape>() },
         { name<opset1::Squeeze>() },
         { name<opset1::Split>() },
         { name<opset1::StridedSlice>() },
+        { name<opset1::ShuffleChannels>() },
         { name<opset1::Transpose>() },
         { name<opset1::Unsqueeze>() },
         { name<opset1::VariadicSplit>() }
