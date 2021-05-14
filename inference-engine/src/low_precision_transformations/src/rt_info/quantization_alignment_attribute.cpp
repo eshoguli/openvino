@@ -65,7 +65,8 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>
         return nullptr;
     }
 
-    bool allOperationsAreFakeQuantizes = true;
+    bool leastOneOperationIsFakeQuantize = false;
+    bool leastOneOperationIsNotFakeQuantize = false;
     for (auto index = 0ul; index < node->get_input_size(); ++index) {
         const auto& input = node->input(index);
         auto inputNode = input.get_source_output().get_node_shared_ptr();
@@ -77,13 +78,19 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>>>
             inputNode = dequantization.data.get_node()->get_input_node_shared_ptr(0);
         }
 
+        if (is_type<opset1::Constant>(inputNode)) {
+            continue;
+        }
+
         if (!is_type<opset1::FakeQuantize>(inputNode)) {
-            allOperationsAreFakeQuantizes = false;
+            leastOneOperationIsNotFakeQuantize = true;
             break;
         }
+
+        leastOneOperationIsFakeQuantize = true;
     }
 
-    if (allOperationsAreFakeQuantizes) {
+    if (leastOneOperationIsFakeQuantize && !leastOneOperationIsNotFakeQuantize) {
         auto& rt = node->get_rt_info();
         const auto attribute = std::make_shared<ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>>(
             make_shared_attribute<QuantizationAlignmentAttribute>());
