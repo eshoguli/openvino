@@ -311,9 +311,10 @@ DataPrecision LayerTransformation::getDataPrecision(
 #endif
     std::vector<element::Type> precisions = onWeights ? precisionsOnWeights : precisionsOnActivations;
     PrecisionDetails precisionDetailsAtOutputIntervals = getPrecisionDetails(quantizationDetails);
-    if (precisionDetailsAtOutputIntervals.precision == element::undefined) {
-        THROW_TRANSFORMATION_EXCEPTION << "unexpected results";
-    }
+    //TODO: we really need it here?
+    //if (precisionDetailsAtOutputIntervals.precision == element::undefined) {
+    //    THROW_TRANSFORMATION_EXCEPTION << "unexpected results";
+    //}
 
     if (precisionDetailsAtOutputIntervals.precision != element::undefined) {
         if (!onWeights) {

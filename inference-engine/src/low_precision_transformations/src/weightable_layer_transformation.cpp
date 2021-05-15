@@ -40,12 +40,13 @@ bool WeightableLayerTransformation::canConvolutionBeTransformed(const Transforma
                      NetworkHelper::getDequantization(reshapeFromWeights);
 
     if (dequantization.empty()) {
-        const auto fqOnWeights = getFakeQuantizeOnWeights(layer);
         const auto dataPrecision = getDataPrecisionOnWeights(layer);
         if ((!supportAsymmetricQuantization) && dataPrecision.hasZeroPoint) {
             return false;
         }
-        if (!NetworkHelper::checkZeroPoint(fqOnWeights, dataPrecision)) {
+
+        const auto fqOnWeights = getFakeQuantizeOnWeights(layer);
+        if (!NetworkHelper::checkZeroPoint(fqOnWeights, dataPrecision) || !DataPrecision::isSupported(dataPrecision.precision)) {
             const std::shared_ptr<ngraph::Node> resultConstant = NetworkHelper::fold_fake_quantize(fqOnWeights);
             if (as_type_ptr<opset1::Constant>(resultConstant)) {
                 replace_node(fqOnWeights, resultConstant);
