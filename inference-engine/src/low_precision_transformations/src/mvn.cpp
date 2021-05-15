@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <ngraph/pattern/op/wrap_type.hpp>
+#include <ngraph/pattern/op/or.hpp>
 
 #include "ngraph/type/element_type.hpp"
 #include "ngraph/type/element_type_traits.hpp"
@@ -41,14 +42,9 @@ std::shared_ptr<ngraph::op::Constant> createNewScalesConst(const ngraph::op::Con
 } // namespace mvn
 
 MVNTransformation::MVNTransformation(const Params& params) : LayerTransformation(params) {
-    auto matcher = pattern::wrap_type<ngraph::op::MVN>({ pattern::wrap_type<ngraph::opset1::Multiply>() });
-
-    // TODO: handle MVN6 in matcher
-    //addPattern(
-    //    pass,
-    //    context,
-    //    make_op_pattern<ngraph::opset6::MVN>({ make_op_label<ngraph::opset1::Multiply>(),
-    //                                           make_op_label<ngraph::opset1::Constant>() }));
+    auto mul = pattern::wrap_type<opset1::Multiply>();
+    auto mvn1 = pattern::wrap_type<ngraph::op::MVN>({mul});
+    auto mvn6 = pattern::wrap_type<opset6::MVN>({mul, pattern::wrap_type<opset1::Constant>()});
 
     ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
         auto op = m.get_match_root();
@@ -58,8 +54,11 @@ MVNTransformation::MVNTransformation(const Params& params) : LayerTransformation
         return transform(*context, m);
     };
 
-    auto m = std::make_shared<ngraph::pattern::Matcher>(matcher, "MVNTransformation");
-    this->register_matcher(m, callback);
+    auto matcher = std::make_shared<ngraph::pattern::Matcher>(
+        std::make_shared<pattern::op::Or>(OutputVector{ mvn1, mvn6 }),
+        "MVNTransformation");
+
+    this->register_matcher(matcher, callback);
 }
 
 bool MVNTransformation::canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> operation) const {
