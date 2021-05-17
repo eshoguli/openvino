@@ -11,6 +11,8 @@
 #include <transformations/init_node_info.hpp>
 #include <low_precision/convolution.hpp>
 #include <low_precision/fake_quantize_decomposition.hpp>
+#include <low_precision/fold_fake_quantize.hpp>
+#include <ngraph/pass/constant_folding.hpp>
 
 #include "common_test_utils/ngraph_test_utils.hpp"
 #include "lpt_ngraph_functions/common/dequantization_operations.hpp"
@@ -65,14 +67,18 @@ public:
         transform.add<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation, ngraph::opset1::FakeQuantize>(testValues.params);
         transform.transform(actualFunction);
 
+        ngraph::pass::Manager cleanupManager;
+        cleanupManager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>();
+        cleanupManager.register_pass<ngraph::pass::ConstantFolding>();
+        cleanupManager.run_passes(actualFunction);
+
         referenceFunction = ngraph::builder::subgraph::ConvolutionFunction::getReferenceWithIncorrectWeights(
             testValues.inputShape,
             testValues.inputPrecision,
             testValues.expected.dequantizationBefore,
             testValues.expected.weightsPrecision,
             testValues.expected.weightsValues,
-            testValues.expected.dequantizationAfter,
-            testValues.isCorrect);
+            testValues.expected.dequantizationAfter);
     }
 
     static std::string getTestCaseName(testing::TestParamInfo<ConvolutionWithIncorrectWeightsTestValues> obj) {
@@ -94,24 +100,23 @@ TEST_P(ConvolutionWithIncorrectWeightsTransformation, CompareFunctions) {
 }
 
 const std::vector<ConvolutionWithIncorrectWeightsTestValues> testValues = {
-    // TODO: LPT: not implemented
-//    // incorrect weights
-//    {
-//        ngraph::element::u8,
-//        ngraph::Shape({ 1, 3, 224, 224 }),
-//        LayerTransformation::createParamsU8I8(),
-//        false,
-//        {
-//            {ngraph::element::f32, {}, {0.1f}},
-//            { 255ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
-//        },
-//        {
-//            {ngraph::element::f32, {}, {0.1f}},
-//            ngraph::element::f32,
-//            {-126.f},
-//            {}
-//        },
-//    },
+    // incorrect weights
+    {
+        ngraph::element::u8,
+        ngraph::Shape({ 1, 3, 224, 224 }),
+        LayerTransformation::createParamsU8I8(),
+        false,
+        {
+            {ngraph::element::f32, {}, {0.1f}},
+            { 255ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+        },
+        {
+            {ngraph::element::f32, {}, {0.1f}},
+            ngraph::element::f32,
+            {-129.f},
+            {}
+        },
+    },
     // correct weights
     {
         ngraph::element::u8,

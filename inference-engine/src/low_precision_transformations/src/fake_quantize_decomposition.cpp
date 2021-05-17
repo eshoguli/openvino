@@ -97,81 +97,17 @@ DataPrecision getDataPrecision(std::shared_ptr<opset1::FakeQuantize> layer) {
 
 } // namespace fq_decomposition
 
-bool enabled(const std::shared_ptr<ngraph::Node> node) {
-    for (const Input<Node>& input : node->inputs()) {
-        auto& rt = input.get_rt_info();
-        auto it = rt.find(ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name);
-        if (it != rt.end()) {
-            const auto& attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(it->second);
-            return !attribute->get()->sharedValue->precisions.empty();
-        }
-    }
-    return true;
-}
-
 bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) const {
-    std::shared_ptr<opset1::FakeQuantize> layer = std::dynamic_pointer_cast<opset1::FakeQuantize>(m.get_match_root());
+    auto layer = as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
     if (!NetworkHelper::isQuantizeSupported(layer)) {
         return false;
     }
 
-    //{
-    //    const Output<Node> dataNode = layer->output(0);
-    //    const auto& targetInputs = dataNode.get_target_inputs();
-    //    std::shared_ptr<Node> lastNode = targetInputs.begin()->get_node()->shared_from_this();
-    //}
-
-    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.1").run_on_function(context.function);
-
     layer = NetworkHelper::fuseConvert(layer);
     if (NetworkHelper::isConstantPath(layer)) {
-        // TODO: LPT: not implemented
-        //// fold fq if constant just before fq and child layers aren't supported in LPT
-        //if (as_type<opset1::Constant>(layer->get_input_node_ptr(0))) {
-        //    bool nextOpearionsWillBeNotHandled = true;
-        //    for (auto output : layer->outputs()) {
-        //        for (auto input : output.get_target_inputs()) {
-        //            const auto node = input.get_node();
-
-        //            if (as_type<ngraph::opset1::Reshape>(node)) {
-        //                for (const auto& child : NetworkHelper::consumers(node->shared_from_this())) {
-        //                    if (as_type_ptr<ngraph::opset1::GroupConvolution>(child) && enabled(child)) {
-        //                        nextOpearionsWillBeNotHandled = false;
-        //                        break;
-        //                    }
-        //                }
-        //            }
-
-        //            if (enabled(input.get_node()->shared_from_this())) {
-        //                nextOpearionsWillBeNotHandled = false;
-        //                break;
-        //            }
-        //        }
-
-        //        if (!nextOpearionsWillBeNotHandled) {
-        //            break;
-        //        }
-        //    }
-
-        //    if (nextOpearionsWillBeNotHandled) {
-        //        const std::shared_ptr<ngraph::Node> resultConstant = NetworkHelper::fold_fake_quantize(layer);
-        //        if (as_type_ptr<opset1::Constant>(resultConstant)) {
-        //            replace_node(layer, resultConstant);
-        //            return true;
-        //        }
-        //    }
-        //}
         return false;
     }
-
-    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.2").run_on_function(context.function);
-
-    //{
-    //    const Output<Node> dataNode = layer->output(0);
-    //    const auto& targetInputs = dataNode.get_target_inputs();
-    //    std::shared_ptr<Node> lastNode = targetInputs.begin()->get_node()->shared_from_this();
-    //}
-
+    
     const ngraph::element::Type precision = layer->get_output_element_type(0);
     if (DataPrecision::isSupported(precision)) {
         const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(layer);
@@ -189,31 +125,6 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
         layer = NetworkHelper::composeFakeQuantize(layer);
         if (layer == nullptr) {
             return false;
-        }
-    }
-
-    if (as_type<opset1::Constant>(layer->get_input_node_ptr(0))) {
-        bool nextOpearionsWillBeNotHandled = true;
-        for (auto output : layer->outputs()) {
-            for (auto input : output.get_target_inputs()) {
-                auto activations = paramsManager->getPrecisionsOnActivations(*input.get_node());
-                if (paramsManager->getPrecisionsOnActivations(*input.get_node()).size() != 0ul) {
-                    nextOpearionsWillBeNotHandled = false;
-                    break;
-                }
-            }
-
-            if (!nextOpearionsWillBeNotHandled) {
-                break;
-            }
-        }
-
-        if (nextOpearionsWillBeNotHandled) {
-            const std::shared_ptr<ngraph::Node> resultConstant = NetworkHelper::fold_fake_quantize(layer);
-            if (as_type_ptr<opset1::Constant>(resultConstant)) {
-                replace_node(layer, resultConstant);
-                return true;
-            }
         }
     }
 

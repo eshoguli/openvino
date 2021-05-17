@@ -65,6 +65,7 @@
 
 // cleanup transformations
 #include "low_precision/convert.hpp"
+#include "low_precision/fold_fake_quantize.hpp"
 #include "low_precision/fuse_convert.hpp"
 #include "low_precision/fuse_fake_quantize.hpp"
 #include "low_precision/fuse_subtract_to_fake_quantize.hpp"
@@ -294,6 +295,13 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     {
         ngraph::pass::Manager standaloneCleanupManager(passConfig);
         standaloneCleanupManager.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>(params);
+        standaloneCleanupManager.run_passes(f);
+    }
+
+    {
+        ngraph::pass::Manager standaloneCleanupManager(passConfig);
+        standaloneCleanupManager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
+        standaloneCleanupManager.register_pass<ngraph::pass::ConstantFolding>();
         standaloneCleanupManager.run_passes(f);
     }
 
