@@ -11,7 +11,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API GroupConvolutionTransformation : public ConvolutionTransformation {
+class LP_TRANSFORMATIONS_API GroupConvolutionTransformation : public ConvolutionTransformation {
 public:
     NGRAPH_RTTI_DECLARATION;
     GroupConvolutionTransformation(const Params& params = Params());

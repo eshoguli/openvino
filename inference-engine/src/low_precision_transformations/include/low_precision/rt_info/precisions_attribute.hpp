@@ -12,7 +12,7 @@
 #include <ngraph/node.hpp>
 #include <ngraph/variant.hpp>
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include "low_precision/rt_info/shared_value_attribute.hpp"
 #include "low_precision/layer_transformation.hpp"
@@ -20,14 +20,14 @@
 
 class PrecisionsAttribute;
 
-class TRANSFORMATIONS_API PrecisionsSharedValue : public SharedValue<PrecisionsAttribute> {
+class LP_TRANSFORMATIONS_API PrecisionsSharedValue : public SharedValue<PrecisionsAttribute> {
 public:
     std::vector<ngraph::element::Type> precisions;
 };
 
 using PrecisionsAttributePtr = std::shared_ptr<PrecisionsAttribute>;
 
-class TRANSFORMATIONS_API PrecisionsAttribute : public SharedValueAttribute<PrecisionsSharedValue> {
+class LP_TRANSFORMATIONS_API PrecisionsAttribute : public SharedValueAttribute<PrecisionsSharedValue> {
 public:
     // order defines default precision
     PrecisionsAttribute(const std::vector<ngraph::element::Type>& precisions = {
@@ -37,10 +37,10 @@ public:
     });
 };
 
-extern template class TRANSFORMATIONS_API ngraph::VariantImpl<std::shared_ptr<PrecisionsAttribute>>;
+extern template class LP_TRANSFORMATIONS_API ngraph::VariantImpl<std::shared_ptr<PrecisionsAttribute>>;
 
 template<>
-class TRANSFORMATIONS_API ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>> : public ngraph::VariantImpl<std::shared_ptr<PrecisionsAttribute>> {
+class LP_TRANSFORMATIONS_API ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>> : public ngraph::VariantImpl<std::shared_ptr<PrecisionsAttribute>> {
 public:
     static constexpr ngraph::VariantTypeInfo type_info { "LowPrecision::Precisions", 0 };
 

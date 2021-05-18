@@ -10,7 +10,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API DepthToSpaceTransformation : public TransparentBaseTransformation {
+class LP_TRANSFORMATIONS_API DepthToSpaceTransformation : public TransparentBaseTransformation {
 public:
     NGRAPH_RTTI_DECLARATION;
     DepthToSpaceTransformation(const Params& params = Params());

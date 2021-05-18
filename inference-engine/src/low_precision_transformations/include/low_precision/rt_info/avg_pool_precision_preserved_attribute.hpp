@@ -12,23 +12,23 @@
 #include <ngraph/node.hpp>
 #include <ngraph/variant.hpp>
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include "low_precision/network_helper.hpp"
 #include "low_precision/rt_info/precisions_attribute.hpp"
 #include "low_precision/rt_info/precision_preserved_attribute.hpp"
 #include "low_precision/rt_info/shared_value_attribute.hpp"
 
-class TRANSFORMATIONS_API AvgPoolPrecisionPreservedAttribute : public PrecisionPreservedAttribute {
+class LP_TRANSFORMATIONS_API AvgPoolPrecisionPreservedAttribute : public PrecisionPreservedAttribute {
 public:
 };
 
 using AvgPoolPrecisionPreservedAttributePtr = std::shared_ptr<AvgPoolPrecisionPreservedAttribute>;
 
-extern template class TRANSFORMATIONS_API ngraph::VariantImpl<AvgPoolPrecisionPreservedAttributePtr>;
+extern template class LP_TRANSFORMATIONS_API ngraph::VariantImpl<AvgPoolPrecisionPreservedAttributePtr>;
 
 template<>
-class TRANSFORMATIONS_API ngraph::VariantWrapper<AvgPoolPrecisionPreservedAttributePtr> : public ngraph::VariantImpl<AvgPoolPrecisionPreservedAttributePtr> {
+class LP_TRANSFORMATIONS_API ngraph::VariantWrapper<AvgPoolPrecisionPreservedAttributePtr> : public ngraph::VariantImpl<AvgPoolPrecisionPreservedAttributePtr> {
 public:
     static constexpr ngraph::VariantTypeInfo type_info{ "LowPrecision::AvgPoolPrecisionPreserved", 0 };
 

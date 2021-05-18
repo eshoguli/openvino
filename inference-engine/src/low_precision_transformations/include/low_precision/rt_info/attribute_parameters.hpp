@@ -7,9 +7,9 @@
 #include <memory>
 #include <string>
 #include <ngraph/node.hpp>
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 
-class TRANSFORMATIONS_API AttributeParameters {
+class LP_TRANSFORMATIONS_API AttributeParameters {
 public:
     AttributeParameters(ngraph::element::Type deqPrecision = ngraph::element::f32) : deqPrecision(deqPrecision) {}
     ngraph::element::Type deqPrecision;

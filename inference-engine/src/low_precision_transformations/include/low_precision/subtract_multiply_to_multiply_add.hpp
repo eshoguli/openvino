@@ -12,7 +12,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API SubtractMultiplyToMultiplyAddTransformation : public LayerTransformation {
+class LP_TRANSFORMATIONS_API SubtractMultiplyToMultiplyAddTransformation : public LayerTransformation {
 public:
     NGRAPH_RTTI_DECLARATION;
     SubtractMultiplyToMultiplyAddTransformation(const Params& params = Params());

@@ -11,7 +11,7 @@
 #include <ngraph/variant.hpp>
 #include <ngraph/pattern/op/wrap_type.hpp>
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include "network_helper.hpp"
 #include "lpt_itt.hpp"

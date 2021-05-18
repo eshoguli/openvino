@@ -12,30 +12,30 @@
 #include <ngraph/node.hpp>
 #include <ngraph/variant.hpp>
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include "shared_value_attribute.hpp"
 #include "attribute_parameters.hpp"
 
 class QuantizationAlignmentAttribute;
 
-class TRANSFORMATIONS_API QuantizationAlignmentSharedValue : public SharedValue<QuantizationAlignmentAttribute> {
+class LP_TRANSFORMATIONS_API QuantizationAlignmentSharedValue : public SharedValue<QuantizationAlignmentAttribute> {
 public:
     QuantizationAlignmentSharedValue(const bool value = false) : value(value) {}
     bool value;
 };
 
-class TRANSFORMATIONS_API QuantizationAlignmentAttribute : public SharedValueAttribute<QuantizationAlignmentSharedValue>{
+class LP_TRANSFORMATIONS_API QuantizationAlignmentAttribute : public SharedValueAttribute<QuantizationAlignmentSharedValue>{
 public:
     QuantizationAlignmentAttribute(const bool value = false);
 };
 
 using QuantizationAlignmentAttributePtr = std::shared_ptr<QuantizationAlignmentAttribute>;
 
-extern template class TRANSFORMATIONS_API ngraph::VariantImpl<QuantizationAlignmentAttributePtr>;
+extern template class LP_TRANSFORMATIONS_API ngraph::VariantImpl<QuantizationAlignmentAttributePtr>;
 
 template<>
-class TRANSFORMATIONS_API ngraph::VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>> :
+class LP_TRANSFORMATIONS_API ngraph::VariantWrapper<std::shared_ptr<QuantizationAlignmentAttribute>> :
     public ngraph::VariantImpl<std::shared_ptr<QuantizationAlignmentAttribute>> {
 public:
     static constexpr ngraph::VariantTypeInfo type_info{ "LowPrecision::QuantizationAlignment", 0 };

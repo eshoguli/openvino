@@ -19,7 +19,7 @@
 #include <low_precision/align_quantization_intervals.hpp>
 
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include <low_precision/common/operation_per_tensor_quantization_restriction.hpp>
 #include "low_precision/layer_transformation.hpp"
@@ -29,15 +29,15 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API LowPrecision;
+class LP_TRANSFORMATIONS_API LowPrecision;
 
 }  // namespace low_precision
 }  // namespace pass
 }  // namespace ngraph
 
-class TRANSFORMATIONS_API ngraph::pass::low_precision::LowPrecision : public ngraph::pass::FunctionPass {
+class LP_TRANSFORMATIONS_API ngraph::pass::low_precision::LowPrecision : public ngraph::pass::FunctionPass {
 public:
-    class TRANSFORMATIONS_API TypeRelaxedReplacer : public GraphRewrite {
+    class LP_TRANSFORMATIONS_API TypeRelaxedReplacer : public GraphRewrite {
     public:
         TypeRelaxedReplacer();
     };

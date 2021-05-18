@@ -11,7 +11,7 @@
 #include <ngraph/node.hpp>
 #include <ngraph/variant.hpp>
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include "common/operation_precision_restriction.hpp"
 
@@ -19,7 +19,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API MarkupPrecisions;
+class LP_TRANSFORMATIONS_API MarkupPrecisions;
 
 }  // namespace low_precision
 }  // namespace pass

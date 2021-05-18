@@ -9,7 +9,7 @@
 #include <ngraph/node.hpp>
 #include <ngraph/variant.hpp>
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include <low_precision/layer_transformation.hpp>
 
@@ -17,7 +17,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API AlignQuantizationParameters;
+class LP_TRANSFORMATIONS_API AlignQuantizationParameters;
 
 }  // namespace low_precision
 }  // namespace pass

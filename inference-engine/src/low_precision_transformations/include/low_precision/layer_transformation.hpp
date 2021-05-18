@@ -41,7 +41,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API DataPrecision {
+class LP_TRANSFORMATIONS_API DataPrecision {
 public:
     DataPrecision() : precision(element::undefined), min(0.f), max(0.f), hasZeroPoint(false) {}
 
@@ -148,7 +148,7 @@ inline std::ostream &operator << (std::ostream &os, const DataPrecision& value) 
 }
 
 // Base class for all LP transformations, holds some common data structures
-class TRANSFORMATIONS_API LayerTransformation : public ngraph::pass::MatcherPass {
+class LP_TRANSFORMATIONS_API LayerTransformation : public ngraph::pass::MatcherPass {
 public:
     enum QuantizedTensorAlignment {
         None,

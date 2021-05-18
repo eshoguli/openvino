@@ -10,14 +10,14 @@
 #include <ngraph/node.hpp>
 #include <ngraph/variant.hpp>
 
-#include <transformations_visibility.hpp>
+#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include "low_precision/rt_info/shared_value_attribute.hpp"
 #include "attribute_parameters.hpp"
 
 class IntervalsAlignmentAttribute;
 
-class TRANSFORMATIONS_API IntervalsAlignmentSharedValue : public SharedValue<IntervalsAlignmentAttribute> {
+class LP_TRANSFORMATIONS_API IntervalsAlignmentSharedValue : public SharedValue<IntervalsAlignmentAttribute> {
 public:
     IntervalsAlignmentSharedValue() = default;
     IntervalsAlignmentSharedValue(const float intervalLow, const float intervalHigh, const bool isValid = true) :
@@ -27,7 +27,7 @@ public:
     bool isValid;
 };
 
-class TRANSFORMATIONS_API IntervalsAlignmentAttribute : public SharedValueAttribute<IntervalsAlignmentSharedValue> {
+class LP_TRANSFORMATIONS_API IntervalsAlignmentAttribute : public SharedValueAttribute<IntervalsAlignmentSharedValue> {
 public:
     IntervalsAlignmentAttribute() = default;
     IntervalsAlignmentAttribute(const float intervalLow, const float intervalHigh, const bool isValid = true);
@@ -35,10 +35,10 @@ public:
 
 using IntervalsAlignmentAttributePtr = std::shared_ptr<IntervalsAlignmentAttribute>;
 
-extern template class TRANSFORMATIONS_API ngraph::VariantImpl<IntervalsAlignmentAttributePtr>;
+extern template class LP_TRANSFORMATIONS_API ngraph::VariantImpl<IntervalsAlignmentAttributePtr>;
 
 template<>
-class TRANSFORMATIONS_API ngraph::VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>> :
+class LP_TRANSFORMATIONS_API ngraph::VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>> :
     public ngraph::VariantImpl<std::shared_ptr<IntervalsAlignmentAttribute>> {
 public:
     static constexpr ngraph::VariantTypeInfo type_info{ "LowPrecision::IntervalsAlignment", 0 };

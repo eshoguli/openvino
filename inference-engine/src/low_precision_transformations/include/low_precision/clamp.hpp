@@ -12,7 +12,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
-class TRANSFORMATIONS_API ClampTransformation : public LayerTransformation {
+class LP_TRANSFORMATIONS_API ClampTransformation : public LayerTransformation {
 public:
     NGRAPH_RTTI_DECLARATION;
     ClampTransformation(const Params& params = Params());
