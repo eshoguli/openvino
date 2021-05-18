@@ -175,16 +175,21 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     }
 
     {
-        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepCommon");
-        ngraph::pass::Manager manager(passConfig);
+        OV_ITT_SCOPED_TASK(itt::domains::LPT_LT, "LowPrecisionStepCommon");
+
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-        manager.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
-        manager.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
-        manager.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
-        manager.register_pass<low_precision::PropagatePrecisions>();
-        manager.register_pass<low_precision::AlignQuantizationIntervals>();
-        manager.register_pass<low_precision::AlignQuantizationParameters>();
+        {
+            ngraph::pass::Manager markupAndDecompose(passConfig);
+            markupAndDecompose.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
+            markupAndDecompose.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+            markupAndDecompose.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+            markupAndDecompose.register_pass<low_precision::PropagatePrecisions>();
+            markupAndDecompose.register_pass<low_precision::AlignQuantizationIntervals>();
+            markupAndDecompose.register_pass<low_precision::AlignQuantizationParameters>();
+            markupAndDecompose.register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
+            markupAndDecompose.run_passes(f);
+        }
 #else
         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.actual.svg").run_on_function(f);
         //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.actual").run_on_function(f);
@@ -237,7 +242,7 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming5").run_on_function(f);
         }
 #endif
-
+        ngraph::pass::Manager manager(passConfig);
         std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
         common->add_matcher<ngraph::pass::low_precision::AddTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::AvgPoolTransformation>(params);
@@ -246,7 +251,6 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
         common->add_matcher<ngraph::pass::low_precision::ConvolutionTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::ConvolutionBackpropDataTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::DepthToSpaceTransformation>(params);
-        common->add_matcher<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::FakeQuantizeTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::InterpolateTransformation>(params);
         common->add_matcher<ngraph::pass::low_precision::GroupConvolutionTransformation>(params);
