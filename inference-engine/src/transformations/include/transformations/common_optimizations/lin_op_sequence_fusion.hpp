@@ -42,9 +42,5 @@ public:
 class ngraph::pass::LinOpSequenceFusion: public ngraph::pass::GraphRewrite {
 public:
     NGRAPH_RTTI_DECLARATION;
-    LinOpSequenceFusion() {
-        add_matcher<ngraph::pass::AddMultiplyFusion>();
-        add_matcher<ngraph::pass::AddAddFusion>();
-        add_matcher<ngraph::pass::MultiplyMultiplyFusion>();
-    }
+    LinOpSequenceFusion();
 };

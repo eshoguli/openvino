@@ -17,6 +17,12 @@ using namespace ngraph;
 
 NGRAPH_RTTI_DEFINITION(ngraph::pass::LinOpSequenceFusion, "LinOpSequenceFusion", 0);
 
+ngraph::pass::LinOpSequenceFusion::LinOpSequenceFusion() {
+    add_matcher<ngraph::pass::AddMultiplyFusion>();
+    add_matcher<ngraph::pass::AddAddFusion>();
+    add_matcher<ngraph::pass::MultiplyMultiplyFusion>();
+}
+
 NGRAPH_RTTI_DEFINITION(ngraph::pass::AddMultiplyFusion, "AddMultiplyFusion", 0);
 
 ngraph::pass::AddMultiplyFusion::AddMultiplyFusion() {
