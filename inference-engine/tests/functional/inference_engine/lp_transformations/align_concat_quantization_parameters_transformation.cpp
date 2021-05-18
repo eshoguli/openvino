@@ -87,9 +87,13 @@ public:
             })
         });
 
+        auto perTensorQuantization = std::vector<ngraph::pass::low_precision::OperationPerTensorQuantizationRestriction>({
+            ngraph::pass::low_precision::OperationPerTensorQuantizationRestriction::create<ngraph::opset1::Convolution>({0}),
+        });
+
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-        SimpleLowPrecisionTransformer transform(supportedPrecisions);
+        SimpleLowPrecisionTransformer transform(supportedPrecisions, perTensorQuantization);
         transform.add<ngraph::pass::low_precision::AvgPoolTransformation, ngraph::opset1::AvgPool>(testValues.params);
         transform.add<ngraph::pass::low_precision::ConcatTransformation, ngraph::opset1::Concat>(testValues.params);
         transform.add<ngraph::pass::low_precision::ConvolutionTransformation, ngraph::opset1::Convolution>(testValues.params);
@@ -199,7 +203,7 @@ TEST_P(AlignConcatQuantizationParametersTransformation, CompareFunctions) {
 
 const std::vector<ngraph::element::Type> precisions = {
     ngraph::element::f32,
-    //ngraph::element::f16
+    // ngraph::element::f16
 };
 
 const std::vector<std::string> additionalLayer = {
@@ -207,7 +211,7 @@ const std::vector<std::string> additionalLayer = {
 };
 
 const std::vector<bool> addFQ = {
-    //true,
+    // true,
     false
 };
 
@@ -233,8 +237,7 @@ const std::vector<AlignConcatQuantizationParametersTransformationTestValues> tes
 };
 
 INSTANTIATE_TEST_CASE_P(
-    // TODO: LPT: not implemented: new test: not completed
-    DISABLED_smoke_LPT,
+    smoke_LPT,
     AlignConcatQuantizationParametersTransformation,
     ::testing::Combine(
         ::testing::ValuesIn(precisions),
