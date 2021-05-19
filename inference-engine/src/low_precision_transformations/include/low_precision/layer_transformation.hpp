@@ -13,6 +13,7 @@
 #include <ngraph/ngraph.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 
+#include "lpt_itt.hpp"
 #include "iparams_manager.hpp"
 #include "ilayer_transformations_manager.hpp"
 #include "transformation_context.hpp"
@@ -147,8 +148,13 @@ inline std::ostream &operator << (std::ostream &os, const DataPrecision& value) 
     return os;
 }
 
+class TRANSFORMATIONS_API MatcherPassItt : public ngraph::pass::MatcherPass {
+public:
+    bool apply(std::shared_ptr<ngraph::Node> node) override;
+};
+
 // Base class for all LP transformations, holds some common data structures
-class TRANSFORMATIONS_API LayerTransformation : public ngraph::pass::MatcherPass {
+class TRANSFORMATIONS_API LayerTransformation : public MatcherPassItt {
 public:
     enum QuantizedTensorAlignment {
         None,

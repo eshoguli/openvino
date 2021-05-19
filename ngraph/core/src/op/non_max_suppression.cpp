@@ -5,7 +5,7 @@
 #include "ngraph/op/non_max_suppression.hpp"
 #include <cstring>
 #include <ngraph/validation_util.hpp>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/op/constant.hpp"
 #include "ngraph/op/util/op_types.hpp"

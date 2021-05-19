@@ -6,7 +6,7 @@
 #include <ngraph/validation_util.hpp>
 #include <vector>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/concat.hpp"
 #include "ngraph/op/constant.hpp"
 #include "ngraph/op/gather.hpp"

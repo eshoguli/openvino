@@ -4,7 +4,7 @@
 
 #include "ngraph/op/rnn_cell.hpp"
 #include <cmath>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/builder/reshape.hpp"
 #include "ngraph/op/constant.hpp"
 #include "ngraph/shape.hpp"

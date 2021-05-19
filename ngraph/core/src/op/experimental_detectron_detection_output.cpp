@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/op/experimental_detectron_detection_output.hpp"
 #include "ngraph/runtime/host_tensor.hpp"

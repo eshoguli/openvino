@@ -9,7 +9,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/env_util.hpp"
 #include "ngraph/function.hpp"
 #include "ngraph/graph_util.hpp"
@@ -20,7 +20,7 @@
 #include "ngraph/pass/pass.hpp"
 #include "ngraph/pass/visualize_tree.hpp"
 #include "ngraph/util.hpp"
-#include "perf_counters.hpp"
+#include "ngraph/pass/perf_counters.hpp"
 
 using namespace std;
 using namespace ngraph;

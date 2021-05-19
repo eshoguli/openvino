@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/op/add.hpp"
 #include "ngraph/op/divide.hpp"

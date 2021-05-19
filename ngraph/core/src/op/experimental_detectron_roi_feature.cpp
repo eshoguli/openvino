@@ -6,7 +6,7 @@
 #include <memory>
 #include <utility>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/op/experimental_detectron_roi_feature.hpp"
 

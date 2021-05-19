@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/rnn_sequence.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/util/recurrent_sequence.hpp"
 #include "ngraph/opsets/opset4.hpp"
 

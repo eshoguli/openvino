@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <iterator>
 #include <locale>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/op/add.hpp"

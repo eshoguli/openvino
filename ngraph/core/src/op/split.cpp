@@ -4,7 +4,7 @@
 
 #include "ngraph/runtime/reference/split.hpp"
 #include <numeric>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/builder/split.hpp"
 #include "ngraph/op/constant.hpp"

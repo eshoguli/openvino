@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/scatter_update.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/runtime/reference/scatter_update.hpp"
 #include "ngraph/shape.hpp"
 #include "ngraph/type/element_type.hpp"

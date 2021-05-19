@@ -5,7 +5,7 @@
 #include <memory>
 #include <ngraph/validation_util.hpp>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/convert.hpp"
 #include "ngraph/op/equal.hpp"
 #include "ngraph/op/select.hpp"

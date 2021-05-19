@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/gather_tree.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/shape.hpp"
 
 using namespace std;

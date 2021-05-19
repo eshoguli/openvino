@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/util/broadcast_base.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/op/concat.hpp"
 #include "ngraph/op/constant.hpp"

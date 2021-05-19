@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/tensor_iterator.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/factory.hpp"
 #include "ngraph/graph_util.hpp"
 #include "ngraph/specialize_function.hpp"

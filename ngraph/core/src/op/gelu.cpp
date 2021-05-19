@@ -3,7 +3,7 @@
 //
 
 #include <cmath>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include <ngraph/validation_util.hpp>
 #include "ngraph/builder/make_constant.hpp"

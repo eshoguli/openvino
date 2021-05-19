@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/lstm_sequence.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/builder/autobroadcast.hpp"

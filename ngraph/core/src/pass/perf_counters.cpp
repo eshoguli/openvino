@@ -1,7 +1,7 @@
 // Copyright (C) 2021 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
-#include "perf_counters.hpp"
+#include "ngraph/pass/perf_counters.hpp"
 
 namespace ngraph
 {

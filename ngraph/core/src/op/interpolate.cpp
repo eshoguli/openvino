@@ -8,7 +8,7 @@
 #include <cstring>
 #include <ngraph/validation_util.hpp>
 #include <numeric>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/constant.hpp"
 #include "ngraph/runtime/reference/interpolate.hpp"
 

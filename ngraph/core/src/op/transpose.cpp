@@ -4,7 +4,7 @@
 
 #include <ngraph/validation_util.hpp>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/transpose.hpp"
 #include "ngraph/runtime/reference/transpose.hpp"
 

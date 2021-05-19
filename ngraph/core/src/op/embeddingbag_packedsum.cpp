@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/embeddingbag_packedsum.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/constant.hpp"
 
 using namespace std;

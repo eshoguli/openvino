@@ -3,7 +3,7 @@
 //
 
 #include <algorithm>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/builder/autobroadcast.hpp"
 #include "ngraph/builder/reduce_ops.hpp"

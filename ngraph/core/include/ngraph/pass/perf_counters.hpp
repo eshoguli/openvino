@@ -5,14 +5,14 @@
 #include <mutex>
 #include <unordered_map>
 
-#include <itt.hpp>
+#include <ngraph/pass/itt.hpp>
 #include <ngraph/node.hpp>
 
 namespace ngraph
 {
     namespace pass
     {
-        class PerfCounters
+        class NGRAPH_API PerfCounters
         {
             PerfCounters(PerfCounters const&) = delete;
             PerfCounters& operator=(PerfCounters const&) = delete;

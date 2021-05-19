@@ -4,7 +4,7 @@
 
 #include <algorithm>
 #include <iterator>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/axis_set.hpp"

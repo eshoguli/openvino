@@ -5,7 +5,7 @@
 #include <memory>
 #include <ngraph/validation_util.hpp>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/op/concat.hpp"
 #include "ngraph/runtime/reference/concat.hpp"

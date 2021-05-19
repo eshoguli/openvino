@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/util/fused_op.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/graph_util.hpp"
 

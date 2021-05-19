@@ -4,7 +4,7 @@
 
 #include "ngraph/op/log_softmax.hpp"
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/util.hpp"
 
 using namespace std;

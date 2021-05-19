@@ -6,7 +6,7 @@
 #include <ngraph/runtime/reference/prelu.hpp>
 #include <ngraph/validation_util.hpp>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 using namespace std;
 using namespace ngraph;

@@ -7,7 +7,7 @@
 #include <memory>
 #include <ngraph/ops.hpp>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/function.hpp"
 #include "ngraph/graph_util.hpp"
 #include "ngraph/log.hpp"

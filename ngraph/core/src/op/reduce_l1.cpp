@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/reduce_l1.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/graph_util.hpp"
 #include "ngraph/runtime/host_tensor.hpp"
 #include "ngraph/runtime/reference/reduce_l1.hpp"

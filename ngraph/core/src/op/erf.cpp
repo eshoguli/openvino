@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/erf.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/log.hpp"
 #include "ngraph/util.hpp"
 

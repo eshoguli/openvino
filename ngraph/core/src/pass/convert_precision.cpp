@@ -3,7 +3,7 @@
 //
 
 #include "transformations/convert_precision.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include <memory>
 #include <vector>

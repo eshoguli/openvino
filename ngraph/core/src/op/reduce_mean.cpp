@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/reduce_mean.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/graph_util.hpp"
 #include "ngraph/op/broadcast.hpp"
 #include "ngraph/runtime/host_tensor.hpp"

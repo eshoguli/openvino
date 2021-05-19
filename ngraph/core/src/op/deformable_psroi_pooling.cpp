@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/deformable_psroi_pooling.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 using namespace std;
 using namespace ngraph;

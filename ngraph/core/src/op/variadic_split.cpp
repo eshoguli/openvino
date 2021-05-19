@@ -4,7 +4,7 @@
 
 #include <numeric>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/constant.hpp"
 #include "ngraph/op/util/op_types.hpp"
 #include "ngraph/op/variadic_split.hpp"

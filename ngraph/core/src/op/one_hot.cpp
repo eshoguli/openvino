@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/one_hot.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/op/util/op_types.hpp"
 #include "ngraph/runtime/reference/one_hot.hpp"

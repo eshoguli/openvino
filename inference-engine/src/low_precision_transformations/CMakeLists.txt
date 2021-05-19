@@ -31,7 +31,7 @@ ie_add_vs_version_file(NAME ${TARGET_NAME}
 target_compile_definitions(${TARGET_NAME} PRIVATE inference_engine_transformations_EXPORTS)
 
 target_link_libraries(${TARGET_NAME} PUBLIC inference_engine_transformations
-                                     PRIVATE openvino::itt)
+                                     PRIVATE openvino::itt openvino::conditional_compilation)
 
 target_include_directories(${TARGET_NAME} PUBLIC ${PUBLIC_HEADERS_DIR})
 

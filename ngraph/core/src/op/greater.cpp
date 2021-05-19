@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/greater.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/runtime/host_tensor.hpp"
 #include "ngraph/runtime/reference/greater.hpp"
 

@@ -5,7 +5,7 @@
 #include <numeric>
 
 #include <ngraph/validation_util.hpp>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/non_zero.hpp"
 #include "ngraph/op/op.hpp"
 #include "ngraph/runtime/host_tensor.hpp"

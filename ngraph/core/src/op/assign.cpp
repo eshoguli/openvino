@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/assign.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/read_value.hpp"
 #include "ngraph/op/util/variable.hpp"
 #include "ngraph/op/util/variable_context.hpp"

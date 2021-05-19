@@ -10,12 +10,12 @@
 #include <unordered_set>
 #include <vector>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/env_util.hpp"
 #include "ngraph/log.hpp"
 #include "ngraph/op/util/sub_graph_base.hpp"
 #include "ngraph/pass/graph_rewrite.hpp"
-#include "perf_counters.hpp"
+#include "ngraph/pass/perf_counters.hpp"
 
 using namespace std;
 using namespace ngraph;
@@ -428,7 +428,7 @@ void ngraph::pass::MatcherPass::register_matcher(const std::shared_ptr<ngraph::p
 
 bool ngraph::pass::MatcherPass::apply(std::shared_ptr<ngraph::Node> node)
 {
-    OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::nGraphPass_LT,
+    OV_ITT_SCOPED_TASK(itt::domains::nGraph,
                        pass::internal::perf_counters_graph_rewrite()[get_type_info()]);
     m_new_nodes.clear();
     if (m_handler)

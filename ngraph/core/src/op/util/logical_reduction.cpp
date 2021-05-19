@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/util/logical_reduction.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/constant.hpp"
 #include "ngraph/validation_util.hpp"
 

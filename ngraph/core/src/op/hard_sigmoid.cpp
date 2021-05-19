@@ -3,7 +3,7 @@
 //
 
 #include <memory>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/op/add.hpp"
 #include "ngraph/op/constant.hpp"

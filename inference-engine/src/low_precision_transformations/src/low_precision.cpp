@@ -24,7 +24,7 @@
 #include "low_precision/align_quantization_parameters.hpp"
 
 // TODO: linker error in Windows
-#include "transformations/common_optimizations/lin_op_sequence_fusion.hpp"
+//#include "transformations/common_optimizations/lin_op_sequence_fusion.hpp"
 #include "low_precision/fold_convert.hpp"
 #include "low_precision/pull_reshape_through_dequantization.hpp"
 #include "low_precision/pull_transpose_through_dequantization.hpp"
@@ -164,7 +164,7 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
         const std::vector<ngraph::element::Type> supportedTypes = {ngraph::element::i8, ngraph::element::u8};
         prerequisites->add_matcher<PullReshapeThroughDequantization>(supportedTypes);
         prerequisites->add_matcher<PullTransposeThroughDequantization>(supportedTypes);
-        prerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
+        //prerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
         manager.run_passes(f);
     }
 

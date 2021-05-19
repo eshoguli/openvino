@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/scatter_nd_update.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/runtime/host_tensor.hpp"
 #include "ngraph/runtime/reference/scatter_nd_update.hpp"
 #include "ngraph/validation_util.hpp"

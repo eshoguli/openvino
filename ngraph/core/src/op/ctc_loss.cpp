@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/ctc_loss.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 using namespace std;
 using namespace ngraph;

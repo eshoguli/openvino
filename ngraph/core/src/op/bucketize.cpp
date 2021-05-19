@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/bucketize.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 using namespace ngraph;
 using namespace std;

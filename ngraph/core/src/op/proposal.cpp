@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/proposal.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/op/constant.hpp"
 

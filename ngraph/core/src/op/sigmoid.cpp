@@ -5,7 +5,7 @@
 #include "ngraph/op/sigmoid.hpp"
 #include <ngraph/validation_util.hpp>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/log.hpp"
 #include "ngraph/util.hpp"
 

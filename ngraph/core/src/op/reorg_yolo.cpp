@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/reorg_yolo.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/runtime/reference/reorg_yolo.hpp"
 
 using namespace std;

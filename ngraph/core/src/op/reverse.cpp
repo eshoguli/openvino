@@ -6,7 +6,7 @@
 #include <iterator>
 #include <ngraph/validation_util.hpp>
 #include <sstream>
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 
 #include "ngraph/attribute_visitor.hpp"
 #include "ngraph/function.hpp"

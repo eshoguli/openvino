@@ -6,7 +6,7 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/node.hpp"
 #include "ngraph/op/result.hpp"
 #include "ngraph/runtime/host_tensor.hpp"

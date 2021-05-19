@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/pass/validate.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/graph_util.hpp"
 
 using namespace ngraph;

@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/convert.hpp"
 #include "ngraph/op/greater.hpp"
 #include "ngraph/op/maximum.hpp"

@@ -17,9 +17,33 @@
 #include <vector>
 #include <queue>
 
+#include "ngraph/pass/perf_counters.hpp"
+
+namespace ngraph {
+namespace pass {
+namespace internal {
+
+PerfCounters& perf_counters_graph_rewrite()
+{
+    static PerfCounters counters;
+    return counters;
+}
+
+} // namespace internal
+} // namespace pass
+} // namespace ngraph
+
 namespace ngraph {
 namespace pass {
 namespace low_precision {
+
+bool MatcherPassItt::apply(std::shared_ptr<ngraph::Node> node) {
+    OV_ITT_SCOPE(FIRST_INFERENCE, ngraph::pass::low_precision::itt::domains::LPT_LT, pass::internal::perf_counters_graph_rewrite()[get_type_info()]);
+    m_new_nodes.clear();
+    if (m_handler)
+        return m_handler(node);
+    return false;
+}
 
 const char LayerTransformation::originalLayerPostfix[] = "_original";
 

@@ -5,7 +5,7 @@
 #include "ngraph/op/clamp.hpp"
 #include <ngraph/validation_util.hpp>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/runtime/reference/clamp.hpp"
 #include "ngraph/util.hpp"
 

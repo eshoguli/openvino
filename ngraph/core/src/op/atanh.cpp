@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/atanh.hpp"
 #include "ngraph/runtime/host_tensor.hpp"
 #include "ngraph/runtime/reference/atanh.hpp"

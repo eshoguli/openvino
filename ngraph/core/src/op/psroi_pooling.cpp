@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/psroi_pooling.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/attribute_visitor.hpp"
 
 using namespace std;

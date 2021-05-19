@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/einsum.hpp"
 
 using namespace std;

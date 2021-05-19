@@ -67,7 +67,7 @@ namespace ngraph
                 set_property(property, true);
             }
 
-            bool apply(std::shared_ptr<ngraph::Node> node);
+            virtual bool apply(std::shared_ptr<ngraph::Node> node);
 
             template <typename T, class... Args>
             std::shared_ptr<T> register_new_node(Args&&... args)
@@ -90,7 +90,7 @@ namespace ngraph
                 const ngraph::graph_rewrite_callback& callback,
                 const PassPropertyMask& property = PassProperty::CHANGE_DYNAMIC_STATE);
 
-        private:
+        protected:
             handler_callback m_handler;
             std::shared_ptr<pattern::Matcher> m_matcher;
             std::vector<std::shared_ptr<ngraph::Node>> m_new_nodes;

@@ -3,7 +3,7 @@
 //
 
 #include "ngraph/op/util/gather_base.hpp"
-#include "itt.hpp"
+#include "ngraph/pass/itt.hpp"
 #include "ngraph/op/concat.hpp"
 #include "ngraph/op/constant.hpp"
 #include "ngraph/op/squeeze.hpp"
