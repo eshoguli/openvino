@@ -11,7 +11,7 @@ namespace ArmPlugin {
 
 using FUNC = opset::ActivationFunction;
 
-enum Input {Features, Weights, Bias};
+enum ConvInput {Features, Weights, Bias};
 template<typename Conv>
 static auto ConvParameters(const Conv& node) {
     unsigned int pad_l    = node.get_pads_begin().at(D2::W);
@@ -41,32 +41,24 @@ template<> Converter::Conversion::Ptr Converter::Convert(const opset::ArmConvolu
     }
 }
 
-static auto MakeWeightsArgument(const opset::GroupConvolution& node) {
-    auto ngraphWeightsShape = node.input(Weights).get_shape();
-    return std::make_pair(
-        node.input(Weights),
-        arm_compute::TensorInfo{
-            ShapeCast({
-                ngraphWeightsShape[1],
-                ngraphWeightsShape[0]*ngraphWeightsShape[2],
-                ngraphWeightsShape[3],
-                ngraphWeightsShape[4]
-            }),
-            1,
-            DataTypeCast(node.get_input_element_type(Weights))});
-}
-
 template<> Converter::Conversion::Ptr Converter::Convert(const opset::ArmGroupConvolution& node) {
     arm_compute::PadStrideInfo conv_info;
     arm_compute::Size2D dilation;
     std::tie(conv_info, dilation) = ConvParameters(node);
+    auto ngraphWeightsShape = node.input(Weights).get_shape();
+    _layers.at(node.get_instance_id())._inputs.at(node.input(Weights))->info()->set_tensor_shape(ShapeCast({
+        ngraphWeightsShape[1],
+        ngraphWeightsShape[0]*ngraphWeightsShape[2],
+        ngraphWeightsShape[3],
+        ngraphWeightsShape[4]
+    }));
     if (node.get_input_size() == 3) {
         return MakeConversion<arm_compute::NEDepthwiseConvolutionLayer>(
-            node.input(Features), MakeWeightsArgument(node), node.input(Bias), node.output(0),
+            node.input(Features), node.input(Weights), node.input(Bias), node.output(0),
             conv_info, 1u, arm_compute::ActivationLayerInfo(), dilation);
     } else {
         return MakeConversion<arm_compute::NEDepthwiseConvolutionLayer>(
-            node.input(Features), MakeWeightsArgument(node), nullptr, node.output(0),
+            node.input(Features), node.input(Weights), nullptr, node.output(0),
             conv_info, 1u, arm_compute::ActivationLayerInfo(), dilation);
     }
 }

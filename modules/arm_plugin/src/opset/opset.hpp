@@ -15,5 +15,7 @@
 #include "normalizel2_arm.hpp"
 #include "strided_slice_arm.hpp"
 #include "transpose_arm.hpp"
+#include "quantize.hpp"
+#include "noop_arm.hpp"
 #include "ngraph_opset.hpp"
 #include "utils.hpp"

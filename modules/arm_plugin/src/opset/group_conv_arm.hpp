@@ -7,14 +7,14 @@
 #include "ngraph/coordinate_diff.hpp"
 #include "ngraph_opset.hpp"
 #include "utils.hpp"
+#include "quantize.hpp"
 
 namespace ArmPlugin {
 namespace opset {
 
 class ArmGroupConvolution : public GroupConvolution {
 public:
-    static constexpr ngraph::NodeTypeInfo type_info{"ArmGroupConvolution", 0};
-    const ngraph::NodeTypeInfo& get_type_info() const override { return type_info; }
+    NGRAPH_RTTI_DECLARATION;
     ArmGroupConvolution() = default;
     ~ArmGroupConvolution() override;
 

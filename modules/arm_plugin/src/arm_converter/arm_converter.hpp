@@ -6,6 +6,7 @@
 
 #include <openvino/pp.hpp>
 #include <ie_common.h>
+#include <ie_algorithm.hpp>
 #include <ngraph/function.hpp>
 
 #include <arm_compute/runtime/IFunction.h>
@@ -122,24 +123,36 @@ struct FunctionArgument<Index, ReturnType(*&)(Arguments...)> {
     using type = std::tuple_element_t<Index, std::tuple<Arguments...>>;
 };
 
-struct Layer {
-    using Map = std::unordered_map<std::string, Layer>;
-    std::unique_ptr<arm_compute::IFunction>             _function;
-    std::vector<arm_compute::Tensor*>                   _inputs;
-    std::vector<std::unique_ptr<arm_compute::Tensor>>   _outputs;
+struct Input : ngraph::Input<ngraph::Node> {
+    Input(const ngraph::Input<ngraph::Node>& input) : ngraph::Input<ngraph::Node>{input} {}
+    Input(const ngraph::Input<const ngraph::Node>& input) :
+    Input{reinterpret_cast<const ngraph::Input<ngraph::Node>&>(input)} {}
 };
 
-static const std::string& GetNodeName(const ngraph::Input<const ngraph::Node>& input) {
-    return input.get_node()->get_friendly_name();
+struct Output : ngraph::Output<ngraph::Node> {
+    Output(const ngraph::Output<ngraph::Node>& output) : ngraph::Output<ngraph::Node>{output} {}
+    Output(const ngraph::Output<const ngraph::Node>& output) :
+    Output{reinterpret_cast<const ngraph::Output<ngraph::Node>&>(output)} {}
+};
+
+struct Layer {
+    using Map = std::unordered_map<std::size_t, Layer>;
+    std::unique_ptr<arm_compute::IFunction>                 _function;
+    std::map<Input, arm_compute::Tensor*>                   _inputs;
+    std::map<Output, std::unique_ptr<arm_compute::Tensor>>  _outputs;
+};
+
+static std::size_t GetNodeId(const ngraph::Input<const ngraph::Node>& input) {
+    return input.get_node()->get_instance_id();
 }
-static const std::string& GetNodeName(const std::vector<ngraph::Input<const ngraph::Node>>& inputs) {
-    return inputs.front().get_node()->get_friendly_name();
+static std::size_t GetNodeId(const std::vector<ngraph::Input<const ngraph::Node>>& inputs) {
+    return inputs.front().get_node()->get_instance_id();
 }
-static const std::string& GetNodeName(const ngraph::Output<const ngraph::Node>& output) {
-    return output.get_node()->get_friendly_name();
+static std::size_t GetNodeId(const ngraph::Output<const ngraph::Node>& output) {
+    return output.get_node()->get_instance_id();
 }
-static const std::string& GetNodeName(const std::vector<ngraph::Output<const ngraph::Node>>& outputs) {
-    return outputs.front().get_node()->get_friendly_name();
+static std::size_t GetNodeId(const std::vector<ngraph::Output<const ngraph::Node>>& outputs) {
+    return outputs.front().get_node()->get_instance_id();
 }
 
 template<typename ACFunction, bool Flag>
@@ -199,7 +212,7 @@ struct Converter {
             auto function = MakeFunction<ACFunction,
                 std::is_constructible<ACFunction, std::shared_ptr<arm_compute::IMemoryManager>>::value>::Make(memoryManager);
             function->configure(MakeConversionArg(std::get<I>(_args))...);
-            _converter._layers.at(GetNodeName(std::get<0>(_args)))._function = std::move(function);
+            _converter._layers.at(GetNodeId(std::get<0>(_args)))._function = std::move(function);
         }
         void Configure(const std::shared_ptr<arm_compute::IMemoryManager>& memoryManager) override {
             ConfigureImpl(memoryManager, std::make_index_sequence<sizeof...(Args)>{});
@@ -377,8 +390,7 @@ struct Converter {
             if (input.get_element_type() != type) {
                 IE_THROW() << "Argument types should be the same " << input << " " << type;
             }
-            return {_converter._layers.at(input.get_node()->get_friendly_name())._inputs.at(input.get_index()),
-                    ArgumentType::Input};
+            return {_converter._layers.at(input.get_node()->get_instance_id())._inputs.at(input), ArgumentType::Input};
         }
 
         template<std::size_t I>
@@ -388,7 +400,7 @@ struct Converter {
             if (output.get_element_type() != type) {
                 IE_THROW() << "Argument types should be the same " << output << " " << type;
             }
-            return {_converter._layers.at(output.get_node()->get_friendly_name())._outputs.at(output.get_index()).get(),
+            return {_converter._layers.at(output.get_node()->get_instance_id())._outputs.at(output).get(),
                     ArgumentType::Output};
         }
 
@@ -396,9 +408,10 @@ struct Converter {
         Argument<HostTensors> MakeArgument(HostTensors& hosts) {
             std::vector<arm_compute::ITensor*> tensors;
             IE_ASSERT(hosts._node != nullptr);
-            for (std::size_t i = 0; i < hosts._hosts.size(); i++) {
-                tensors.push_back(_converter._layers.at(hosts._node->get_friendly_name())._outputs.at(i).get());
+            for (auto&& output : hosts._node->outputs()) {
+                tensors.push_back(_converter._layers.at(hosts._node->get_instance_id())._outputs.at(output).get());
             }
+            IE_ASSERT(tensors.size() == hosts._hosts.size());
             return {hosts, tensors, ArgumentType::Output};
         }
 
@@ -406,8 +419,7 @@ struct Converter {
         std::vector<Argument<arm_compute::ITensor*>> MakeArgument(std::vector<ngraph::Input<const ngraph::Node>>& inputs) {
             std::vector<Argument<arm_compute::ITensor*>> input_tensors;
             for (const auto& input : inputs) {
-                Argument<arm_compute::ITensor*> tensor{_converter._layers.at(input.get_node()->get_friendly_name())._inputs.at(input.get_index()),
-                                                        ArgumentType::Input};
+                Argument<arm_compute::ITensor*> tensor{_converter._layers.at(input.get_node()->get_instance_id())._inputs.at(input), ArgumentType::Input};
                 input_tensors.push_back(std::move(tensor));
             }
             return input_tensors;
@@ -426,7 +438,7 @@ struct Converter {
         template<std::size_t... I>
         void ConfigureImpl(const std::shared_ptr<arm_compute::IMemoryManager>& memoryManager, std::index_sequence<I...>) {
             auto function = makeCallableFunction(memoryManager, _callable, MakeArgument<I>(std::get<I>(_args))...);
-            _converter._layers.at(GetNodeName(std::get<0>(_args)))._function = std::move(function);
+            _converter._layers.at(GetNodeId(std::get<0>(_args)))._function = std::move(function);
         }
         void Configure(const std::shared_ptr<arm_compute::IMemoryManager>& memoryManager) override {
             ConfigureImpl(memoryManager, std::make_index_sequence<sizeof...(Args)>{});
@@ -453,8 +465,11 @@ struct Converter {
     using ConvertFn = std::function<Conversion::Ptr(const ngraph::Node&)>;
     template<typename NodeType>
     void Register() {
-        _conversions.emplace(NodeType::type_info,
-            [this] (const ngraph::Node& node) {return Convert(dynamic_cast<const NodeType&>(node));});
+        _conversions.emplace(NodeType::type_info, [this] (const ngraph::Node& node) {
+            auto nodePtr = ngraph::as_type<const NodeType>(&node);
+            IE_ASSERT(nodePtr != nullptr);
+            return Convert(*nodePtr);
+        });
     }
 
     std::map<ngraph::Node::type_info_t, ConvertFn>  _conversions;
@@ -465,10 +480,10 @@ struct Converter {
 template<>
 struct ConversionArg<ngraph::Input<const ngraph::Node>&> {
     operator arm_compute::ITensorInfo*() {
-        return _converter._layers.at(_input.get_node()->get_friendly_name())._inputs.at(_input.get_index())->info();
+        return _converter._layers.at(_input.get_node()->get_instance_id())._inputs.at(_input)->info();
     }
     operator arm_compute::ITensor*() {
-        return _converter._layers.at(_input.get_node()->get_friendly_name())._inputs.at(_input.get_index());
+        return _converter._layers.at(_input.get_node()->get_instance_id())._inputs.at(_input);
     }
     Converter&                    _converter;
     ngraph::Input<const ngraph::Node>&  _input;
@@ -477,10 +492,10 @@ struct ConversionArg<ngraph::Input<const ngraph::Node>&> {
 template<>
 struct ConversionArg<ngraph::Output<const ngraph::Node>&> {
     operator arm_compute::ITensorInfo*() {
-        return _converter._layers.at(_output.get_node()->get_friendly_name())._outputs.at(_output.get_index())->info();
+        return _converter._layers.at(_output.get_node()->get_instance_id())._outputs.at(_output)->info();
     }
     operator arm_compute::ITensor*() {
-        return _converter._layers.at(_output.get_node()->get_friendly_name())._outputs.at(_output.get_index()).get();
+        return _converter._layers.at(_output.get_node()->get_instance_id())._outputs.at(_output).get();
     }
     Converter&                    _converter;
     ngraph::Output<const ngraph::Node>&  _output;
@@ -491,14 +506,14 @@ struct ConversionArg<std::vector<ngraph::Input<const ngraph::Node>>&> {
     operator std::vector<const arm_compute::ITensorInfo*>() const {
         std::vector<const arm_compute::ITensorInfo*> infos;
         for (auto&& input : _inputs) {
-            infos.emplace_back(_converter._layers.at(input.get_node()->get_friendly_name())._inputs.at(input.get_index())->info());
+            infos.emplace_back(_converter._layers.at(input.get_node()->get_instance_id())._inputs.at(input)->info());
         }
         return infos;
     }
     operator std::vector<const arm_compute::ITensor*>() const {
         std::vector<const arm_compute::ITensor*> tensors;
         for (auto&& input : _inputs) {
-            tensors.emplace_back(_converter._layers.at(input.get_node()->get_friendly_name())._inputs.at(input.get_index()));
+            tensors.emplace_back(_converter._layers.at(input.get_node()->get_instance_id())._inputs.at(input));
         }
         return tensors;
     }
@@ -510,36 +525,19 @@ struct ConversionArg<std::vector<ngraph::Output<const ngraph::Node>>&> {
     operator std::vector<arm_compute::ITensorInfo*>() const {
         std::vector<arm_compute::ITensorInfo*> infos;
         for (auto&& output : _outputs) {
-            infos.emplace_back(_converter._layers.at(output.get_node()->get_friendly_name())._outputs.at(output.get_index())->info());
+            infos.emplace_back(_converter._layers.at(output.get_node()->get_instance_id())._outputs.at(output)->info());
         }
         return infos;
     }
     operator std::vector<arm_compute::ITensor*>() const {
         std::vector<arm_compute::ITensor*> tensors;
         for (auto&& output : _outputs) {
-            tensors.emplace_back(_converter._layers.at(output.get_node()->get_friendly_name())._outputs.at(output.get_index()).get());
+            tensors.emplace_back(_converter._layers.at(output.get_node()->get_instance_id())._outputs.at(output).get());
         }
         return tensors;
     }
     Converter&                                          _converter;
     std::vector<ngraph::Output<const ngraph::Node>>&    _outputs;
-};
-
-template<>
-struct ConversionArg<std::pair<ngraph::Input<const ngraph::Node>, arm_compute::TensorInfo>&> {
-    enum {NodeInput, TensorInfo};
-    operator arm_compute::ITensorInfo*() const {
-        return &(std::get<TensorInfo>(_input));
-    }
-    operator arm_compute::ITensor*() const {
-        auto& input = std::get<NodeInput>(_input);
-        auto sourceOutput = input.get_source_output();
-        auto& tensor = _converter._layers.at(sourceOutput.get_node()->get_friendly_name())._outputs.at(sourceOutput.get_index());
-        static_cast<arm_compute::Tensor*>(tensor.get())->allocator()->init(std::get<TensorInfo>(_input));
-        return tensor.get();
-    }
-    Converter&                                                              _converter;
-    std::pair<ngraph::Input<const ngraph::Node>, arm_compute::TensorInfo>&  _input;
 };
 
 #define AP_WRAP(MAKE, F) [&](auto ... v) {return MAKE(F<decltype(v)...>);}
@@ -553,40 +551,46 @@ static auto get_element_type(const ngraph::element::Type& type) {
     return type;
 }
 
-template<typename ... PT, typename F>
-Converter::Conversion::Ptr CallSwitchPT(std::tuple<int, PT...>, F&& f) {
+template<typename, typename ... PT, typename F>
+auto CallSwitchPT(std::tuple<int, PT...>, F&& f) {
         return f(PT{} ...);
 }
 
-template<typename ... PT, typename F, typename IO, typename ... TRest>
-[[noreturn]] Converter::Conversion::Ptr CallSwitchPT(std::tuple<int, PT...>, std::tuple<int>, F&& f, const IO& io, TRest ... args) {
+template<typename ReturnT, typename ... PT, typename F, typename IO, typename ... TRest>
+[[noreturn]] ReturnT CallSwitchPT(std::tuple<int, PT...>, std::tuple<int>, F&& f, const IO& io, TRest ... args) {
     IE_THROW() << "Unsupported Type: " << io;
 }
 
-template<typename ... PT, typename F, typename IO, typename ... T, typename ... TRest>
-Converter::Conversion::Ptr CallSwitchPT(std::tuple<int, PT...>, F&&, const IO&, std::tuple<T...>, TRest ... args);
+template<typename ReturnT, typename ... PT, typename F, typename IO, typename ... T, typename ... TRest>
+auto CallSwitchPT(std::tuple<int, PT...>, F&&, const IO&, std::tuple<T...>, TRest ... args);
 
-template<typename ... PT, typename H, typename ... T, typename F, typename IO, typename ... TRest>
-Converter::Conversion::Ptr CallSwitchPT(std::tuple<int, PT...>, std::tuple<int, H, T...>, F&& f, const IO& io, TRest ... args) {
+template<typename, typename ... PT, typename H, typename ... T, typename F, typename IO, typename ... TRest>
+auto CallSwitchPT(std::tuple<int, PT...>, std::tuple<int, H, T...>, F&& f, const IO& io, TRest ... args) {
     if (ngraph::element::from<H>() == get_element_type(io)) {
-        return CallSwitchPT(std::tuple<int, PT ... , H>{}, std::forward<F>(f), args...);
+        return CallSwitchPT<void>(std::tuple<int, PT ... , H>{}, std::forward<F>(f), args...);
     } else {
-        return CallSwitchPT(std::tuple<int, PT...>{}, std::tuple<int, T...>{}, std::forward<F>(f), io, args...);
+        return CallSwitchPT<
+            decltype(CallSwitchPT<void>(std::tuple<int, PT ... , H>{}, std::forward<F>(f), args...))
+        >(std::tuple<int, PT...>{}, std::tuple<int, T...>{}, std::forward<F>(f), io, args...);
     }
 }
 
-template<typename ... PT, typename F, typename IO, typename ... T, typename ... TRest>
-Converter::Conversion::Ptr CallSwitchPT(std::tuple<int, PT...>, F&& f, const IO& io, std::tuple<T...>, TRest ... args) {
-        return CallSwitchPT(std::tuple<int, PT...>{}, std::tuple<int, T...>{}, std::forward<F>(f), io, args...);
+template<typename ReturnT, typename ... PT, typename F, typename IO, typename ... T, typename ... TRest>
+auto CallSwitchPT(std::tuple<int, PT...>, F&& f, const IO& io, std::tuple<T...>, TRest ... args) {
+        return CallSwitchPT<ReturnT>(std::tuple<int, PT...>{}, std::tuple<int, T...>{}, std::forward<F>(f), io, args...);
 }
 
 template<typename F, typename IO, typename ... T, typename ... TRest>
 auto CallSwitch(F&& f, const IO& io, std::tuple<T...>, TRest ... args) {
-        return CallSwitchPT(std::tuple<int>{}, std::forward<F>(f), io, std::tuple<T...>{}, args...);
+        return CallSwitchPT<void>(std::tuple<int>{}, std::forward<F>(f), io, std::tuple<T...>{}, args...);
 }
 
-constexpr static auto allTypes = std::tuple<std::uint8_t, std::int16_t, std::uint16_t, std::int32_t, std::uint32_t, std::int64_t, ngraph::float16, float>{};
+template<typename ...T0, typename ...T1>
+constexpr static std::tuple<T0..., T1...> merge(std::tuple<T0...>, std::tuple<T1...>) {return {};}
+
+constexpr static auto boolType = std::tuple<bool>{};
 constexpr static auto intTypes = std::tuple<std::uint8_t, std::int16_t, std::uint16_t, std::int32_t, std::uint32_t, std::int64_t>{};
 constexpr static auto indexTypes = std::tuple<std::int32_t, std::int64_t>{};
 constexpr static auto floatTypes = std::tuple<ngraph::float16, float>{};
+constexpr static auto allTypes = merge(intTypes, floatTypes);
 }  //  namespace ArmPlugin
