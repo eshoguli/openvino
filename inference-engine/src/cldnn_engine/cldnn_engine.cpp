@@ -85,6 +85,8 @@
 # include <dlfcn.h>
 #endif
 
+#include "transformations/serialize.hpp"
+
 // Undef DEVICE_TYPE macro which can be defined somewhere in windows headers as DWORD and conflict with our metric
 #ifdef DEVICE_TYPE
 #undef DEVICE_TYPE
@@ -412,6 +414,14 @@ InferenceEngine::CNNNetwork clDNNEngine::CloneAndTransformNetwork(const Inferenc
                 .remove<StridedSliceTransformation, ngraph::opset1::StridedSlice>());
 
             transformer.transform(nGraphFunc);
+
+            {
+                const auto processId = GetCurrentProcessId();
+                ngraph::pass::Serialize serializer(
+                    "c:\\Projects\\temp\\gpu.transformed." + std::to_string(processId) + ".xml",
+                    "c:\\Projects\\temp\\gpu.transformed." + std::to_string(processId) + ".bin");
+                serializer.run_on_function(nGraphFunc);
+            }
         }
 
         {
