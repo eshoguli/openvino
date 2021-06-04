@@ -18,6 +18,7 @@
 #include "low_precision/common/subgraph.hpp"
 #include "low_precision/common/dequantization_op.hpp"
 #include "low_precision/network_helper.hpp"
+#include "low_precision/common/subgraph_state.hpp"
 
 namespace ngraph {
 namespace pass {
@@ -55,6 +56,8 @@ bool ConcatTransformation::transform(TransformationContext& context, ngraph::pat
     if (concatParentsChildrensPrecisions.empty()) {
         return false;
     }
+
+    SubgraphState subgraphState(subgraph);
 
     for (size_t i = 0; i < subgraph.quantizationLayers.size(); ++i) {
         fq = ngraph::as_type_ptr<ngraph::opset1::FakeQuantize>(subgraph.quantizationLayers[i]);
@@ -225,6 +228,9 @@ bool ConcatTransformation::transform(TransformationContext& context, ngraph::pat
     for (const std::shared_ptr<ngraph::Node>& quantizationLayer : subgraph.quantizationLayers) {
         context.quantizedFakeQuantizeNames.insert(quantizationLayer->get_friendly_name());
     }
+
+    subgraphState.compare(context.function);
+
     return true;
 }
 

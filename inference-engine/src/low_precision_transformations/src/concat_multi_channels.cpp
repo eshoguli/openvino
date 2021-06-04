@@ -18,6 +18,7 @@
 #include "low_precision/common/ie_lpt_exception.hpp"
 #include "low_precision/common/subgraph.hpp"
 #include "low_precision/network_helper.hpp"
+#include "low_precision/common/subgraph_state.hpp"
 
 namespace ngraph {
 namespace pass {
@@ -61,6 +62,8 @@ bool ConcatMultiChannelsTransformation::transform(TransformationContext& context
         ConcatTransformation::transform(context, m);
         return false;
     }
+
+    SubgraphState subgraphState(subgraph);
 
     DataPrecision dataPrecision;
     {
@@ -190,6 +193,9 @@ bool ConcatMultiChannelsTransformation::transform(TransformationContext& context
     for (const std::shared_ptr<ngraph::Node>& quantizationLayer : subgraph.quantizationLayers) {
         context.quantizedFakeQuantizeNames.insert(quantizationLayer->get_friendly_name());
     }
+
+    subgraphState.compare(context.function);
+
     return true;
 }
 
