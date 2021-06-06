@@ -416,6 +416,12 @@ InferenceEngine::CNNNetwork clDNNEngine::CloneAndTransformNetwork(const Inferenc
             transformer.transform(nGraphFunc);
 
             {
+                ngraph::pass::Manager manager;
+                manager.register_pass<ngraph::pass::ConstantFolding>();
+                manager.run_passes(nGraphFunc);
+            }
+
+            {
                 const auto processId = GetCurrentProcessId();
                 ngraph::pass::Serialize serializer(
                     "c:\\Projects\\temp\\gpu.transformed." + std::to_string(processId) + ".xml",
