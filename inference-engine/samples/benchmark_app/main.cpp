@@ -111,6 +111,7 @@ T getMedianValue(const std::vector<T>& vec) {
  * @brief The entry point of the benchmark application
  */
 int main(int argc, char* argv[]) {
+    slog::info << "Started!" << slog::endl;
     std::shared_ptr<StatisticsReport> statistics;
     try {
         ExecutableNetwork exeNetwork;
@@ -473,6 +474,11 @@ int main(int argc, char* argv[]) {
 
         // Iteration limit
         uint32_t niter = FLAGS_niter;
+        {
+            std::cout << "Dumping statistics report: skipped" << std::endl;
+            return 0;
+        }
+
         if ((niter > 0) && (FLAGS_api == "async")) {
             niter = ((niter + nireq - 1) / nireq) * nireq;
             if (FLAGS_niter != niter) {
