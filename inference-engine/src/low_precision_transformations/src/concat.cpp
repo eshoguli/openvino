@@ -191,7 +191,7 @@ bool ConcatTransformation::canBeTransformed(const TransformationContext& context
     const auto axis = concat->get_axis();
     const size_t normalizedAxis = normalize_axis(concat->get_friendly_name(), axis, concat->get_output_partial_shape(0).rank());
 
-    // TODO: LPT: to support current flow
+    // TODO: LPT: to support current flow: #58269
     if (normalizedAxis != 1ul) {
         return false;
     }
