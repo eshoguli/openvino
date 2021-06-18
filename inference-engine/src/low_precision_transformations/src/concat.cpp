@@ -196,6 +196,13 @@ bool ConcatTransformation::canBeTransformed(const TransformationContext& context
         return false;
     }
 
+    // TODO: LPT: to support current flow: #58269
+    auto attribute = getAttribute<IntervalsAlignmentAttributePtr>(concat);
+    if (attribute == nullptr) {
+        std::cout << "ConcatTransformation::canBeTransformed: " << concat->get_friendly_name() << std::endl;
+        return false;
+    }
+
     const bool perTensorQuantizationIsRequired = normalizedAxis != 1ul;
 
     element::Type precision;
