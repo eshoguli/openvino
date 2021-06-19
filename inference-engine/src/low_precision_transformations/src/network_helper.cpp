@@ -1734,7 +1734,7 @@ bool NetworkHelper::checkZeroPoint(const std::shared_ptr<Node>& node, const Data
         min = dataPrecision.min - 0.5f;
         max = dataPrecision.max + 0.5f;
         const auto quantizationDetails = QuantizationDetails::getDetails(as_type_ptr<opset1::FakeQuantize>(node));
-        for (size_t i = 0; i < quantizationDetails.outputIntervalsCount; ++i) {
+        for (size_t i = 0; i < quantizationDetails.outputLowValues.size(); ++i) {
             float shift;
             if (quantizationDetails.outputHighValues[i] != quantizationDetails.outputLowValues[i]) {
                 shift = (dataPrecision.min * quantizationDetails.outputHighValues[i] -

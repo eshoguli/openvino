@@ -8,6 +8,7 @@
 #include <ngraph/opsets/opset1.hpp>
 #include <ngraph/pattern/op/wrap_type.hpp>
 
+#include <low_precision/lpt_itt.hpp>
 #include "low_precision/common/ie_lpt_exception.hpp"
 #include "low_precision/rt_info/precisions_attribute.hpp"
 #include "low_precision/rt_info/intervals_alignment_attribute.hpp"
@@ -150,7 +151,9 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
     const element::Type deqPrecision) {
     std::shared_ptr<ngraph::Node> dequantize;
     if (intervalsAlignment != nullptr) {
-        const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(layer);
+        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "decomposeFakeQuantize1");
+        const std::vector<float> outputLowValues = as_type_ptr<opset1::Constant>(layer->get_input_node_shared_ptr(3))->cast_vector<float>();
+        const std::vector<float> outputHighValues = as_type_ptr<opset1::Constant>(layer->get_input_node_shared_ptr(4))->cast_vector<float>();
 
         float dequantizationMul;
         float dequantizationSub;
@@ -161,8 +164,8 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
             dataPrecision.max,
             intervalsAlignment->sharedValue->combinedInterval.low,
             intervalsAlignment->sharedValue->combinedInterval.high,
-            quantizationDetails.outputLowValues[0],
-            quantizationDetails.outputHighValues[0],
+            outputLowValues[0],
+            outputHighValues[0],
             dequantizationMul,
             dequantizationSub,
             updatedOutputLowValue,
@@ -206,6 +209,7 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
 
         dequantize = dequantization.multiply;
     } else {
+        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "decomposeFakeQuantize2");
         // Split FakeQuantize to two parts: Quantize and Dequantize
         auto QDQ = NetworkHelper::decomposeFakeQuantize(
             as_type_ptr<opset1::FakeQuantize>(layer),
@@ -238,8 +242,6 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     if (attribute->get()->sharedValue->precisions.empty()) {
         return false;
     }
-
-    const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(layer);
 
     const ngraph::element::Type outputPrecision = layer->get_output_element_type(0);
     if (DataPrecision::isSupported(outputPrecision)) {
@@ -318,9 +320,15 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     // if IntervalsAlignment attribute is not defined, then FakeQuantize operation intervals define decomposition parameters
     if (dataPrecision.precision == element::undefined) {
         element::Type precision;
+        const auto levels = layer->get_levels();
+        const std::vector<float> outputLowValues = as_type_ptr<opset1::Constant>(layer->get_input_node_shared_ptr(3))->cast_vector<float>();
+        const std::vector<float> outputHighValues = as_type_ptr<opset1::Constant>(layer->get_input_node_shared_ptr(4))->cast_vector<float>();
         if (intervalsAlignment == nullptr) {
             // define precision by FakeQuantize intervals
-            LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(quantizationDetails);
+            LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(
+                levels,
+                outputLowValues,
+                outputHighValues);
             const auto foundIt = std::find(
                 precisionsAttribute->sharedValue->precisions.begin(),
                 precisionsAttribute->sharedValue->precisions.end(),
@@ -337,8 +345,8 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
 
             dataPrecision = DataPrecision(
                 precision,
-                DataPrecision::getMinValue(precision, quantizationDetails.levels),
-                DataPrecision::getMaxValue(precision, quantizationDetails.levels),
+                DataPrecision::getMinValue(precision, levels),
+                DataPrecision::getMaxValue(precision, levels),
                 hasZeroPoint);
         } else {
             // define precision by attribute
@@ -352,9 +360,9 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
 
             dataPrecision = DataPrecision(
                 precision,
-                DataPrecision::getMinValue(precision, quantizationDetails.levels),
-                DataPrecision::getMaxValue(precision, quantizationDetails.levels),
-                LayerTransformation::getPrecisionDetails(quantizationDetails).precision != precision);
+                DataPrecision::getMinValue(precision, levels),
+                DataPrecision::getMaxValue(precision, levels),
+                LayerTransformation::getPrecisionDetails(levels, outputLowValues, outputHighValues).precision != precision);
         }
     }
 

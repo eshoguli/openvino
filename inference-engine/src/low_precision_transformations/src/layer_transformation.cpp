@@ -163,7 +163,10 @@ void LayerTransformation::printDequantizationValues(
 }
 #endif
 
-LayerTransformation::PrecisionDetails LayerTransformation::getPrecisionDetails(const QuantizationDetails& quantizationDetails) {
+LayerTransformation::PrecisionDetails LayerTransformation::getPrecisionDetails(
+    const size_t quantizationLevels,
+    const std::vector<float>& outputLowValues,
+    const std::vector<float>& outputHighValues) {
     // TODO: workaround: hardcoded values
     const float zeroThreshold = 1.e-6f;
     const float quantizationIntervalAsymmetryThreshold = 0.002f;
@@ -174,17 +177,17 @@ LayerTransformation::PrecisionDetails LayerTransformation::getPrecisionDetails(c
     bool unsignedPrecision = true;
 
     bool hasZeroPoint = false;
-    for (size_t i = 0; i < quantizationDetails.outputLowValues.size(); ++i) {
-        const bool signedInterval = std::signbit(quantizationDetails.outputLowValues[i]) != std::signbit(quantizationDetails.outputHighValues[i]);
-        const bool outputLowValueIsNotZero = std::fabs(quantizationDetails.outputLowValues[i]) >= zeroThreshold;
+    for (size_t i = 0; i < outputLowValues.size(); ++i) {
+        const bool signedInterval = std::signbit(outputLowValues[i]) != std::signbit(outputHighValues[i]);
+        const bool outputLowValueIsNotZero = std::fabs(outputLowValues[i]) >= zeroThreshold;
         if (signedInterval && outputLowValueIsNotZero) {
             // signed
             unsignedPrecision = false;
             hasNegative = true;
 
-            if (quantizationDetails.outputHighValues[i] != 0.f) {
-                const float expectedRatio = quantizationDetails.levels == 256 ? asymmetricIntervalSideRatio256 : -1.f;
-                const float actualRatio = quantizationDetails.outputLowValues[i] / quantizationDetails.outputHighValues[i];
+            if (outputHighValues[i] != 0.f) {
+                const float expectedRatio = quantizationLevels == 256 ? asymmetricIntervalSideRatio256 : -1.f;
+                const float actualRatio = outputLowValues[i] / outputHighValues[i];
                 const float actual = std::fabs((actualRatio - expectedRatio) / std::min(actualRatio, expectedRatio));
                 if (actual > quantizationIntervalAsymmetryThreshold) {
                     hasZeroPoint = true;
@@ -239,6 +242,10 @@ LayerTransformation::PrecisionDetails LayerTransformation::getPrecisionDetails(c
     }
 
     return LayerTransformation::PrecisionDetails(element::undefined, hasNegative, hasZeroPoint);
+}
+
+LayerTransformation::PrecisionDetails LayerTransformation::getPrecisionDetails(const QuantizationDetails& quantizationDetails) {
+    return getPrecisionDetails(quantizationDetails.levels, quantizationDetails.outputLowValues, quantizationDetails.outputHighValues);
 }
 
 bool LayerTransformation::isAsymmetricQuantization(const std::shared_ptr<const Node>& layer) {
