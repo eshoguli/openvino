@@ -19,6 +19,7 @@ NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreser
 
 bool ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved::run_on_function(std::shared_ptr<ngraph::Function> f) {
     ngraph::pass::Manager manager;
+    manager.set_per_pass_validation(false);
     std::shared_ptr<ngraph::pass::GraphRewrite> markupAvgPoolPrecision = manager.register_pass<ngraph::pass::GraphRewrite>();
     markupAvgPoolPrecision->add_matcher<low_precision::CreatePrecisionsDependentAttribute<AvgPoolPrecisionPreservedAttribute, opset1::AvgPool>>();
     markupAvgPoolPrecision->add_matcher<low_precision::PropagateThroughPrecisionPreserved<AvgPoolPrecisionPreservedAttribute>>();
