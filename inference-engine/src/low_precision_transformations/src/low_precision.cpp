@@ -181,18 +181,22 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
         {
-            ngraph::pass::Manager markupAndDecompose(passConfig);
-            markupAndDecompose.register_pass<low_precision::MarkupCanBeQuantized>();
-            markupAndDecompose.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
-            markupAndDecompose.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
-            markupAndDecompose.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
-            markupAndDecompose.register_pass<low_precision::PropagatePrecisions>();
-            markupAndDecompose.register_pass<low_precision::AlignQuantizationIntervals>();
-            markupAndDecompose.register_pass<low_precision::AlignQuantizationParameters>();
+            ngraph::pass::Manager markup(passConfig);
+            markup.set_per_pass_validation(false);
+            markup.register_pass<low_precision::MarkupCanBeQuantized>();
+            markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
+            markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+            markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+            markup.register_pass<low_precision::PropagatePrecisions>();
+            markup.register_pass<low_precision::AlignQuantizationIntervals>();
+            markup.register_pass<low_precision::AlignQuantizationParameters>();
+            markup.run_passes(f);
+        }
 
-            markupAndDecompose.register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
-
-            markupAndDecompose.run_passes(f);
+        {
+            ngraph::pass::Manager decompose(passConfig);
+            decompose.register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
+            decompose.run_passes(f);
         }
 #else
 //        #include <low_precision/align_quantization_parameters.hpp>
