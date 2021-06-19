@@ -193,7 +193,10 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>> Va
 
         const std::vector<float> outputLowValues = as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(3))->cast_vector<float>();
         const std::vector<float> outputHighValues = as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(4))->cast_vector<float>();
-        LayerTransformation::PrecisionDetails preferablePrecision = LayerTransformation::getPrecisionDetails(fakeQuantize->get_levels(), outputLowValues, outputHighValues);
+        LayerTransformation::PrecisionDetails preferablePrecision = LayerTransformation::getPrecisionDetails(
+            fakeQuantize->get_levels(),
+            outputLowValues,
+            outputHighValues);
 
         if (preferablePrecision.precision != element::undefined) {
             attribute->get()->sharedValue->preferablePrecisions.insert(preferablePrecision.precision);
