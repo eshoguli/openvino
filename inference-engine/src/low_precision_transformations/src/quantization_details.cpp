@@ -41,7 +41,10 @@ QuantizationDetails::QuantizationDetails(const QuantizationDetails& quantization
 QuantizationDetails::QuantizationDetails(const size_t levels, const std::vector<float>& inputLowValues,
                                          const std::vector<float>& inputHighValues,
                                          const std::vector<float>& outputLowValues,
-                                         const std::vector<float>& outputHighValues)
+                                         const std::vector<float>& outputHighValues,
+                                         const size_t val1,
+                                         const size_t val2,
+                                         const size_t val3)
     : levels(levels),
       inputLowValues(inputLowValues),
       inputHighValues(inputHighValues),

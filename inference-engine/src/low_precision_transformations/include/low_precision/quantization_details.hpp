@@ -27,7 +27,10 @@ public:
             const std::vector<float>& inputLowValues,
             const std::vector<float>& inputHighValues,
             const std::vector<float>& outputLowValues,
-            const std::vector<float>& outputHighValues);
+            const std::vector<float>& outputHighValues,
+            const size_t val1 = 0ul,
+            const size_t val2 = 0ul,
+            const size_t val3 = 0ul);
 
     static bool outputLayoutIsSupported(std::shared_ptr<opset1::FakeQuantize> quantize);
 
