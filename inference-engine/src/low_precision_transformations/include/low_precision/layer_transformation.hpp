@@ -209,6 +209,10 @@ public:
     // Get precision based on FakeQuantize operation.
     // Undefined value is expected. In this case the accuracy has to be defined by the calling code.
     // TODO: LPT: INT8 specific here, where is INT16/INT32?
+    static PrecisionDetails getPrecisionDetails(
+        const size_t quantizationLevels,
+        const std::vector<float>& outputLowValues,
+        const std::vector<float>& outputHighValues);
     static PrecisionDetails getPrecisionDetails(const QuantizationDetails& quantizationDetails);
 
     static bool isAsymmetricQuantization(const std::shared_ptr<const Node>& node);

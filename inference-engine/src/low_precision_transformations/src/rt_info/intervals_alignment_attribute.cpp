@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <ngraph/opsets/opset1.hpp>
+#include <low_precision/lpt_itt.hpp>
 #include "low_precision/network_helper.hpp"
 
 using namespace ngraph;
@@ -121,77 +122,87 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>> Va
 
     float lowInterval;
     float highInterval;
-    FakeQuantizeDequantization dequantization;
     {
-        const auto targetInputs = node->output(0).get_target_inputs();
-        if (targetInputs.size() == 1ul) {
-            dequantization = NetworkHelper::getDequantizationBelow(node);
-        }
-    }
+        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "calculateIntervals");
 
-    const auto outLow = as_type_ptr<opset1::Constant>(node->get_input_node_shared_ptr(3));
-    const auto outHigh = as_type_ptr<opset1::Constant>(node->get_input_node_shared_ptr(4));
-    if (!NetworkHelper::isScalarLike(outLow) || !NetworkHelper::isScalarLike(outHigh)) {
-        return nullptr;
-    }
-
-    if (dequantization.empty()) {
-        const std::vector<float> lowIntervals = outLow->cast_vector<float>();
-        lowInterval = *std::min_element(lowIntervals.begin(), lowIntervals.end());
-
-        const std::vector<float> highIntervals = outHigh->cast_vector<float>();
-        highInterval = *std::max_element(highIntervals.begin(), highIntervals.end());
-    } else {
+        FakeQuantizeDequantization dequantization;
         {
-            auto multiplyResult = dequantization.multiplyConstant == nullptr ?
-                                  node->get_input_node_ptr(3)->shared_from_this() :
-                                  fold<opset1::Multiply>(
-                                              foldConvert(node->get_input_node_ptr(3)->shared_from_this(), params.deqPrecision),
-                                          dequantization.multiplyConstant);
-
-            auto multiplyResultConstant = as_type_ptr<opset1::Constant>(multiplyResult);
-            auto intervals = multiplyResultConstant->cast_vector<float>();
-            lowInterval = *std::min_element(intervals.begin(), intervals.end());
+            const auto targetInputs = node->output(0).get_target_inputs();
+            if (targetInputs.size() == 1ul) {
+                dequantization = NetworkHelper::getDequantizationBelow(node);
+            }
         }
 
-        {
-            auto multiplyResult = dequantization.multiplyConstant == nullptr ?
-                                  node->get_input_node_ptr(4)->shared_from_this() :
-                                  fold<opset1::Multiply>(
-                                          foldConvert(node->get_input_node_ptr(4)->shared_from_this(), params.deqPrecision),
-                                          dequantization.multiplyConstant);
+        const auto outLow = as_type_ptr<opset1::Constant>(node->get_input_node_shared_ptr(3));
+        const auto outHigh = as_type_ptr<opset1::Constant>(node->get_input_node_shared_ptr(4));
+        if (!NetworkHelper::isScalarLike(outLow) || !NetworkHelper::isScalarLike(outHigh)) {
+            return nullptr;
+        }
 
-            auto multiplyResultConstant = as_type_ptr<opset1::Constant>(multiplyResult);
-            auto intervals = multiplyResultConstant->cast_vector<float>();
-            highInterval = *std::max_element(intervals.begin(), intervals.end());
+        if (dequantization.empty()) {
+            const std::vector<float> lowIntervals = outLow->cast_vector<float>();
+            lowInterval = *std::min_element(lowIntervals.begin(), lowIntervals.end());
+
+            const std::vector<float> highIntervals = outHigh->cast_vector<float>();
+            highInterval = *std::max_element(highIntervals.begin(), highIntervals.end());
+        } else {
+            {
+                auto multiplyResult = dequantization.multiplyConstant == nullptr ?
+                    node->get_input_node_ptr(3)->shared_from_this() :
+                    fold<opset1::Multiply>(
+                        foldConvert(node->get_input_node_ptr(3)->shared_from_this(), params.deqPrecision),
+                        dequantization.multiplyConstant);
+
+                auto multiplyResultConstant = as_type_ptr<opset1::Constant>(multiplyResult);
+                auto intervals = multiplyResultConstant->cast_vector<float>();
+                lowInterval = *std::min_element(intervals.begin(), intervals.end());
+            }
+
+            {
+                auto multiplyResult = dequantization.multiplyConstant == nullptr ?
+                    node->get_input_node_ptr(4)->shared_from_this() :
+                    fold<opset1::Multiply>(
+                        foldConvert(node->get_input_node_ptr(4)->shared_from_this(), params.deqPrecision),
+                        dequantization.multiplyConstant);
+
+                auto multiplyResultConstant = as_type_ptr<opset1::Constant>(multiplyResult);
+                auto intervals = multiplyResultConstant->cast_vector<float>();
+                highInterval = *std::max_element(intervals.begin(), intervals.end());
+            }
+        }
+
+        if (std::isinf(lowInterval) || std::isinf(highInterval)) {
+            // ticket: 57172
+            return nullptr;
         }
     }
 
-    if (std::isinf(lowInterval) || std::isinf(highInterval)) {
-        // ticket: 57172
-        return nullptr;
+    {
+        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "create");
+
+        assert(!std::isinf(lowInterval));
+        assert(!std::isinf(highInterval));
+
+        auto& rtInfo = node->get_rt_info();
+        const IntervalsAlignmentSharedValue::Interval interval{ lowInterval, highInterval };
+        const auto attribute = std::make_shared<::ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>>(
+            ngraph::pass::low_precision::make_shared_attribute<IntervalsAlignmentAttribute>(
+                interval,
+                fakeQuantize->get_levels()));
+        rtInfo[ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>::type_info.name] = attribute;
+
+        const std::vector<float> outputLowValues = as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(3))->cast_vector<float>();
+        const std::vector<float> outputHighValues = as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(4))->cast_vector<float>();
+        LayerTransformation::PrecisionDetails preferablePrecision = LayerTransformation::getPrecisionDetails(fakeQuantize->get_levels(), outputLowValues, outputHighValues);
+
+        if (preferablePrecision.precision != element::undefined) {
+            attribute->get()->sharedValue->preferablePrecisions.insert(preferablePrecision.precision);
+        }
+
+        attribute->get()->sharedValue->minLevelsOperation = node->get_friendly_name();
+
+        return attribute;
     }
-
-    assert(!std::isinf(lowInterval));
-    assert(!std::isinf(highInterval));
-
-    auto& rtInfo = node->get_rt_info();
-    const IntervalsAlignmentSharedValue::Interval interval{ lowInterval, highInterval };
-    const auto attribute = std::make_shared<::ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>>(
-        ngraph::pass::low_precision::make_shared_attribute<IntervalsAlignmentAttribute>(
-            interval,
-            fakeQuantize->get_levels()));
-    rtInfo[ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>::type_info.name] = attribute;
-
-    const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(fakeQuantize);
-    LayerTransformation::PrecisionDetails preferablePrecision = LayerTransformation::getPrecisionDetails(quantizationDetails);
-    if (preferablePrecision.precision != element::undefined) {
-        attribute->get()->sharedValue->preferablePrecisions.insert(preferablePrecision.precision);
-    }
-
-    attribute->get()->sharedValue->minLevelsOperation = node->get_friendly_name();
-
-    return attribute;
 }
 
 void VariantWrapper<IntervalsAlignmentAttributePtr>::merge(
