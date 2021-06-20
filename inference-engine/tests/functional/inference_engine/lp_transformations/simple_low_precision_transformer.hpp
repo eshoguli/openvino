@@ -22,24 +22,18 @@ public:
 
     template <class T, class Operation>
     void add(const TestTransformationParams& params) {
-        this->common->add_matcher<T>(TestTransformationParams::toParams(params));
-    }
-
-    template <class T>
-    void register_pass() {
-        lowPrecisionManager->register_pass<T>();
+        commonGraphRewrite->add_matcher<T>(TestTransformationParams::toParams(params));
     }
 
     template <class T>
     void set_callback(const std::function<bool(const std::shared_ptr<const ::ngraph::Node>)>& callback) {
-        lowPrecisionManager->get_pass_config()->set_callback<T>(callback);
+        common->get_pass_config()->set_callback<T>(callback);
     }
 
     void transform(std::shared_ptr<ngraph::Function>& function);
 
-private:
-    ngraph::pass::low_precision::TransformationContext context;
-    std::shared_ptr<ngraph::pass::Manager> lowPrecisionManager;
-    std::shared_ptr<ngraph::pass::GraphRewrite> common;
-    std::map<std::string, ngraph::pass::low_precision::LayerTransformationPtr> transformations;
+    std::shared_ptr<ngraph::pass::Manager> markup;
+    std::shared_ptr<ngraph::pass::Manager> decompose;
+    std::shared_ptr<ngraph::pass::Manager> common;
+    std::shared_ptr<ngraph::pass::GraphRewrite> commonGraphRewrite;
 };

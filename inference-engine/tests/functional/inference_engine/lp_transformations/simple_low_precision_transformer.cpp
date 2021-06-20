@@ -21,14 +21,17 @@ using namespace ngraph::pass;
 SimpleLowPrecisionTransformer::SimpleLowPrecisionTransformer(
     const std::vector<ngraph::pass::low_precision::OperationPrecisionRestriction>& precisionRestrictions,
     const std::vector<ngraph::pass::low_precision::OperationPerTensorQuantizationRestriction>& quantizationRestrictions) {
-    lowPrecisionManager = std::make_shared<ngraph::pass::Manager>();
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::MarkupCanBeQuantized>();
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::MarkupPrecisions>(precisionRestrictions);
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
-    lowPrecisionManager->register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
+
+    markup = std::make_shared<ngraph::pass::Manager>();
+    markup->register_pass<ngraph::pass::low_precision::MarkupCanBeQuantized>();
+    markup->register_pass<ngraph::pass::low_precision::MarkupPrecisions>(precisionRestrictions);
+    markup->register_pass<ngraph::pass::low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+    markup->register_pass<ngraph::pass::low_precision::MarkupAvgPoolPrecisionPreserved>();
+    markup->register_pass<ngraph::pass::low_precision::PropagatePrecisions>();
+    markup->register_pass<ngraph::pass::low_precision::AlignQuantizationIntervals>();
+    markup->register_pass<ngraph::pass::low_precision::AlignQuantizationParameters>();
+
+    decompose = std::make_shared<ngraph::pass::Manager>();
 
     // TODO: to debug only
 //    {
@@ -91,13 +94,15 @@ SimpleLowPrecisionTransformer::SimpleLowPrecisionTransformer(
 //
 //    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.transformed.svg").run_on_function(actualFunction);
 
-    this->common = lowPrecisionManager->register_pass<ngraph::pass::GraphRewrite>();
+    common = std::make_shared<ngraph::pass::Manager>();
+    commonGraphRewrite = common->register_pass<ngraph::pass::GraphRewrite>();
 }
 
 void SimpleLowPrecisionTransformer::transform(std::shared_ptr<ngraph::Function>& function) {
     ngraph::pass::low_precision::LowPrecision::TypeRelaxedReplacer pass;
     pass.run_on_function(function);
 
-    context.function = function;
-    lowPrecisionManager->run_passes(function);
+    markup->run_passes(function);
+    decompose->run_passes(function);
+    common->run_passes(function);
 }
