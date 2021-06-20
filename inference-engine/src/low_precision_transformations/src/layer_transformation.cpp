@@ -266,9 +266,6 @@ DataPrecision LayerTransformation::getDataPrecision(
     printDequantizationInfo(layer);
 #endif
     PrecisionDetails precisionDetailsAtOutputIntervals = getPrecisionDetails(quantizationDetails);
-    //if (precisionDetailsAtOutputIntervals.precision == element::undefined) {
-    //    THROW_TRANSFORMATION_EXCEPTION << "unexpected results";
-    //}
 
     if (precisionDetailsAtOutputIntervals.precision != element::undefined) {
         // if supportedPrecisions is empty then use the first available, not supported layer will be in original precision
