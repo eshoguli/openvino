@@ -164,9 +164,10 @@ public:
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
 
+        const auto params = TestTransformationParams::toParams(testValues.params);
         SimpleLowPrecisionTransformer transformer(supportedPrecisionsOnActivation, quantizationRestrictions);
-        transformer.add<ngraph::pass::low_precision::ConcatTransformation, ngraph::opset1::Concat>(testValues.params);
-        transformer.add<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation, ngraph::opset1::FakeQuantize>(testValues.params);
+        transformer.decompose->register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
+        transformer.commonGraphRewrite->add_matcher<ngraph::pass::low_precision::ConcatTransformation>(params);
         transformer.transform(actualFunction);
 
         {
