@@ -311,11 +311,6 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
         return false;
     }
 
-    // TODO: LPT: old tests support: #58269
-    //if (intervalsAlignment == nullptr) {
-    //    return false;
-    //}
-
     // if IntervalsAlignment attribute is defined then, the attribute defines decomposition parameters,
     // if IntervalsAlignment attribute is not defined, then FakeQuantize operation intervals define decomposition parameters
     if (dataPrecision.precision == element::undefined) {
