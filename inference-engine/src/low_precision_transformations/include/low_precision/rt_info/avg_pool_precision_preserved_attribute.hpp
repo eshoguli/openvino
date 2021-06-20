@@ -39,8 +39,6 @@ public:
 
     VariantWrapper(const value_type& value) : VariantImpl<value_type>(value) {}
 
-    std::shared_ptr<ngraph::Variant> merge(const ngraph::NodeVector& nodes) override;
-
     AvgPoolPrecisionPreservedAttributePtr get() { return this->m_value; }
 
     // TODO: new method: need this method to merge attribute instances which can be got from different sources: node/input port/output port

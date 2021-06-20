@@ -14,9 +14,6 @@
 #include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 
-// TODO: debug only
-#define LPT_DEBUG
-
 template <class SharedAttributeType>
 class LP_TRANSFORMATIONS_API SharedValue;
 
@@ -29,7 +26,6 @@ public:
     std::string get_string() {
         std::stringstream ss;
 
-#ifdef LPT_DEBUG
         const size_t rawPointer = (size_t)this;
         ss << rawPointer << ": ";
 
@@ -51,7 +47,6 @@ public:
             firstAttribute = false;
         }
         ss << "], ";
-#endif
         return ss.str();
     }
 };

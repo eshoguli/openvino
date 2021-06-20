@@ -43,8 +43,9 @@ public:
     // preferable precisions which are preferred by affected quantization operations to avoid zero points
     std::set<element::Type> preferablePrecisions;
 
-    // TODO: debug only
+#ifdef LPT_DEBUG
     std::string minLevelsOperation;
+#endif
 };
 
 class LP_TRANSFORMATIONS_API IntervalsAlignmentAttribute : public SharedValueAttribute<IntervalsAlignmentSharedValue> {
@@ -76,8 +77,6 @@ public:
     }
 
     VariantWrapper(const value_type& value) : VariantImpl<value_type>(value) {}
-
-    std::shared_ptr<Variant> merge(const ngraph::NodeVector& nodes) override;
 
     std::shared_ptr<IntervalsAlignmentAttribute> get() const { return this->m_value; }
 
