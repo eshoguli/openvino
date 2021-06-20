@@ -53,10 +53,6 @@ public:
                 for (auto& input : node->inputs()) {
                     auto parentNode = input.get_source_output().get_node_shared_ptr();
 
-                    // TODO: use source output
-                    auto output = input.get_source_output();
-
-                    // TODO: move to method
                     auto getAttributes = [](const Input<Node>& nodeInput) {
                         const std::string name = ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name;
 
@@ -71,18 +67,6 @@ public:
                                 attributes.push_back(attribute);
                             }
                         }
-                        //else if (NetworkHelper::isPrecisionPreserved(node)) {
-                        //    // inputs
-                        //    for (auto input : node->inputs()) {
-                        //        auto& rt = input.get_rt_info();
-                        //        auto it = rt.find(name);
-                        //        if (it == rt.end()) {
-                        //            continue;
-                        //        }
-                        //        const auto& attribute = std::dynamic_pointer_cast<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>(it->second);
-                        //        attributes.push_back(attribute);
-                        //    }
-                        //}
 
                         return attributes;
                     };
@@ -162,17 +146,15 @@ private:
     }
 
     void handle(std::shared_ptr<ngraph::Function> f, const std::shared_ptr<ngraph::Node>& node) {
-        // TODO: possible need to add validation here to avoid not neccaassary actions for not preserved operations without precision limitations
         const bool precisionPreserved = NetworkHelper::isPrecisionPreserved(node);
-
         if (precisionPreserved) {
             const auto parentRestrictions = getParentInputRestrictions(node);
             if (parentRestrictions.empty()) {
                 return;
             }
 
-            // TODO: there is limitation here: one operation - one output precision
-            // 1. merge parent inputs to one current output
+            // one operation - one output precision
+            // merge parent inputs to one current output
             auto resultAttribute = parentRestrictions[0];
 
             std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>>> toMerge = parentRestrictions;
@@ -181,8 +163,6 @@ private:
 
             for (size_t index = 1ul; index < parentRestrictions.size(); index++) {
                 const auto oldAttribute = parentRestrictions[index]->get();
-                //replaceAttributeInInputs(f, resultAttribute, parentRestrictions[index], node);
-
                 NetworkHelper::reassign<PrecisionsSharedValue, PrecisionsAttribute>(
                     resultAttribute->get()->sharedValue,
                     parentRestrictions[index]->get()->sharedValue->attributes);
@@ -190,17 +170,6 @@ private:
 
             auto& rt = node->get_rt_info();
             rt[ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name] = resultAttribute;
-
-            //// 2. propagate
-            //if (is_type<opset1::FakeQuantize>(node)) {
-            //    auto& outputPortRtInfo = node->outputs()[0].get_rt_info();
-            //    outputPortRtInfo[ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name] = resultAttribute;
-            //} else {
-            //    for (auto& input : node->inputs()) {
-            //        auto& rt = input.get_rt_info();
-            //        rt[ngraph::VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info.name] = resultAttribute;
-            //    }
-            //}
         }
     }
 };

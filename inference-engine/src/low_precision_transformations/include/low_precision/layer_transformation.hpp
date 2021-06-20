@@ -208,7 +208,7 @@ public:
 
     // Get precision based on FakeQuantize operation.
     // Undefined value is expected. In this case the accuracy has to be defined by the calling code.
-    // TODO: LPT: INT8 specific here, where is INT16/INT32?
+    // TODO: LPT: INT8 specific here
     static PrecisionDetails getPrecisionDetails(
         const size_t quantizationLevels,
         const std::vector<float>& outputLowValues,
@@ -226,7 +226,7 @@ public:
     // note: dequantization operations on activations are absent during method execution
     virtual bool isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept = 0;
 
-    // TODO: LPT: not completed: remove whole method
+    // weights specific
     static DataPrecision getDataPrecision(
             const std::shared_ptr<Node>& layer,
             const QuantizationDetails& quantizationDetails,

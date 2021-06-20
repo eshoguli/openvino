@@ -94,7 +94,10 @@ DataPrecision getDataPrecisionByOutputPortAndFakeQuantize(std::shared_ptr<opset1
 // 1. FakeQuantize operation parameters (QuantizationDetails::getDetails & LayerTransformation::getPrecisionDetails)
 // 2. Precisions on port
 DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize> layer) {
-    const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(layer);
+    const size_t levels = layer->get_levels();
+    const std::vector<float> outputLowValues = as_type_ptr<opset1::Constant>(layer->get_input_node_shared_ptr(3))->cast_vector<float>();
+    const std::vector<float> outputHighValues = as_type_ptr<opset1::Constant>(layer->get_input_node_shared_ptr(4))->cast_vector<float>();
+
     auto precisionsAttribute = getAttributeFromOutput<std::shared_ptr<PrecisionsAttribute>>(layer->output(0));
     if (precisionsAttribute == nullptr) {
         // TODO: explore this case in more details:
@@ -102,11 +105,15 @@ DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize>
         assert(true);
 
         // 2. not possible to get optimal precision by decomposed FakeQuantize
-        LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(quantizationDetails);
+        LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(
+            levels,
+            outputLowValues,
+            outputHighValues);
+
         return DataPrecision(
             precisionDetailsAtOutputIntervals.precision,
-            DataPrecision::getMinValue(precisionDetailsAtOutputIntervals.precision, quantizationDetails.levels),
-            DataPrecision::getMaxValue(precisionDetailsAtOutputIntervals.precision, quantizationDetails.levels),
+            DataPrecision::getMinValue(precisionDetailsAtOutputIntervals.precision, levels),
+            DataPrecision::getMaxValue(precisionDetailsAtOutputIntervals.precision, levels),
             precisionDetailsAtOutputIntervals.hasZeroPoint);
     }
 
@@ -115,7 +122,10 @@ DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize>
     ngraph::element::Type precision;
     bool hasZeroPoint;
     if (precisions.size() > 1ul) {
-        LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(quantizationDetails);
+        LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(
+            levels,
+            outputLowValues,
+            outputHighValues);
         const auto foundIt = std::find(precisions.begin(), precisions.end(), precisionDetailsAtOutputIntervals.precision);
 
         if (foundIt == precisions.end()) {
@@ -131,14 +141,17 @@ DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize>
     } else {
         // use only available precision
         precision = *precisions.begin();
-        LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(quantizationDetails);
+        LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(
+            levels,
+            outputLowValues,
+            outputHighValues);
         hasZeroPoint = precisionDetailsAtOutputIntervals.precision != precision;
     }
 
     return DataPrecision(
         precision,
-        DataPrecision::getMinValue(precision, quantizationDetails.levels),
-        DataPrecision::getMaxValue(precision, quantizationDetails.levels),
+        DataPrecision::getMinValue(precision, levels),
+        DataPrecision::getMaxValue(precision, levels),
         hasZeroPoint);
 }
 
