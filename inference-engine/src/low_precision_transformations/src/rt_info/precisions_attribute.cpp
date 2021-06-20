@@ -26,10 +26,6 @@ template class ngraph::VariantImpl<std::shared_ptr<PrecisionsAttribute>>;
 
 constexpr VariantTypeInfo VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::type_info;
 
-std::shared_ptr<ngraph::Variant> VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::merge(const ngraph::NodeVector& nodes) {
-    return nullptr;
-}
-
 std::shared_ptr<VariantWrapper<std::shared_ptr<PrecisionsAttribute>>> VariantWrapper<std::shared_ptr<PrecisionsAttribute>>::create(
     const std::shared_ptr<ngraph::Node>& node,
     const AttributeParameters& params) {

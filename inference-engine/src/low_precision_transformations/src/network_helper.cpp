@@ -298,26 +298,14 @@ std::shared_ptr<Node> NetworkHelper::swapMultiplyAndAdd(std::shared_ptr<opset1::
 void NetworkHelper::copyInfo(
     const std::vector<std::shared_ptr<Node>>& sources,
     const std::vector<std::shared_ptr<Node>>& targets) {
-    //// TODO: merge_runtime_info with correctly defined DEQUANTIZATION
-    //const auto& sourceAttributes = source->get_rt_info();
-    //auto& targetAttrubutes = target->get_rt_info();
-    //for (auto attribute : sourceAttributes) {
-    //    targetAttrubutes[attribute.first] = attribute.second;
-    //}
-
     ngraph::copy_runtime_info(sources, targets);
+
     for (const auto& target : targets) {
         const std::string friendlyName = sources[0]->get_friendly_name();
         if (!friendlyName.empty()) {
             target->set_friendly_name(friendlyName);
         }
 
-        //auto& rt = target->get_rt_info();
-        //if (rt.find(ngraph::VariantWrapper<DequantizationAttr>::type_info.name) != rt.end()) {
-        //    rt.erase(ngraph::VariantWrapper<PrecisionPreservedAttribute>::type_info.name);
-        //    rt.erase(ngraph::VariantWrapper<IntervalsAlignmentAttributePtr>::type_info.name);
-        //    rt.erase(ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>::type_info.name);
-        //}
         {
             // TODO: has to be implemented in ngraph::copy_runtime_info
 
@@ -373,7 +361,7 @@ bool NetworkHelper::isScalarLike(std::shared_ptr<opset1::Constant> constant) {
     // return constant->get_all_data_elements_bitwise_identical();
 
     const auto shape = constant->output(0).get_shape();
-    if (shape.empty() || shape.size() == 1ul) {
+    if (shape_size(shape) == 1ul) {
         return true;
     }
 

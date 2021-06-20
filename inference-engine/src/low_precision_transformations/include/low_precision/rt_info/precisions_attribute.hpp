@@ -48,8 +48,6 @@ public:
 
     VariantWrapper(const value_type& value) : VariantImpl<value_type>(value) {}
 
-    std::shared_ptr<Variant> merge(const ngraph::NodeVector& nodes) override;
-
     std::shared_ptr<Variant> init(const std::shared_ptr<ngraph::Node>& node) override;
 
     std::shared_ptr<PrecisionsAttribute> get() { return this->m_value; }

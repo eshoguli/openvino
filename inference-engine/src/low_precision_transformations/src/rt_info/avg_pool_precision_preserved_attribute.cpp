@@ -18,27 +18,6 @@ template class ngraph::VariantImpl<AvgPoolPrecisionPreservedAttributePtr>;
 
 constexpr VariantTypeInfo VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::type_info;
 
-std::shared_ptr<ngraph::Variant> VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::merge(const ngraph::NodeVector& nodes) {
-    std::shared_ptr<::ngraph::VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>> resultAttributeWrapper;
-
-    for (const std::shared_ptr<ngraph::Node>& node : nodes) {
-        auto attribute = ngraph::pass::low_precision::getAttribute<AvgPoolPrecisionPreservedAttributePtr>(node);
-        if (attribute == nullptr) {
-            continue;
-        }
-
-        if (resultAttributeWrapper == nullptr) {
-            resultAttributeWrapper = attribute;
-        }
-
-        if (!attribute->get()->sharedValue->value) {
-            return attribute;
-        }
-    }
-
-    return resultAttributeWrapper;
-}
-
 void VariantWrapper<AvgPoolPrecisionPreservedAttributePtr>::merge(
     std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AvgPoolPrecisionPreservedAttribute>>>>& attributes) {
 }

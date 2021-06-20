@@ -23,33 +23,6 @@ template class ngraph::VariantImpl<QuantizationAlignmentAttributePtr>;
 
 constexpr VariantTypeInfo VariantWrapper<QuantizationAlignmentAttributePtr>::type_info;
 
-std::shared_ptr<ngraph::Variant> VariantWrapper<QuantizationAlignmentAttributePtr>::merge(const ngraph::NodeVector& nodes) {
-    std::shared_ptr<::ngraph::VariantWrapper<QuantizationAlignmentAttributePtr>> resultAttributeWrapper;
-    std::shared_ptr<QuantizationAlignmentAttribute> resultAttribute;
-
-    // update
-    for (const std::shared_ptr<ngraph::Node>& node : nodes) {
-        auto& rt = node->get_rt_info();
-        auto rtIt = rt.find(VariantWrapper<QuantizationAlignmentAttributePtr>::type_info.name);
-        if (rtIt == rt.end()) {
-            continue;
-        }
-
-        auto attributeWrapper = std::dynamic_pointer_cast<VariantWrapper<QuantizationAlignmentAttributePtr>>(rtIt->second);
-        auto attribute = attributeWrapper->get();
-
-        if (resultAttributeWrapper == nullptr) {
-            resultAttributeWrapper = attributeWrapper;
-            resultAttribute = attribute;
-            continue;
-        }
-
-        resultAttribute->sharedValue->value = resultAttribute->sharedValue->value || attribute->sharedValue->value;
-    }
-
-    return resultAttributeWrapper;
-}
-
 std::shared_ptr<ngraph::Variant> VariantWrapper<QuantizationAlignmentAttributePtr>::init(const std::shared_ptr<ngraph::Node>& node) {
     return nullptr;
 }
