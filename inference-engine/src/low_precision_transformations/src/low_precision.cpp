@@ -13,6 +13,7 @@
 #include <ngraph/opsets/opset1.hpp>
 #include <ngraph/opsets/opset4.hpp>
 #include <ngraph/opsets/opset6.hpp>
+#include <transformations/utils/utils.hpp>
 #include <low_precision/markup_per_tensor_quantization.hpp>
 #include <low_precision/lpt_itt.hpp>
 
@@ -184,12 +185,20 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             ngraph::pass::Manager markup(passConfig);
             markup.set_per_pass_validation(false);
             markup.register_pass<low_precision::MarkupCanBeQuantized>();
-            markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
-            markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
-            markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+            if (!precisionRestrictions.empty()) {
+                markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
+            }
+            if (!quantizationRestrictions.empty()) {
+                markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+            }
+            if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
+                markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+            }
             markup.register_pass<low_precision::PropagatePrecisions>();
-            markup.register_pass<low_precision::AlignQuantizationIntervals>();
-            markup.register_pass<low_precision::AlignQuantizationParameters>();
+            if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
+                markup.register_pass<low_precision::AlignQuantizationIntervals>();
+                markup.register_pass<low_precision::AlignQuantizationParameters>();
+            }
             markup.run_passes(f);
         }
 
