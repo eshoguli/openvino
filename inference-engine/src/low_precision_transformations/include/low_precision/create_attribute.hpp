@@ -39,7 +39,7 @@ public:
     CreateAttribute(const AttributeSource source = AttributeSource::Node) {
         assert((source == AttributeSource::Node) || (source == AttributeSource::OutputPort));
         auto operation = std::is_same<OperationType, pattern::op::Label>::value ?
-            std::make_shared<pattern::op::Label>(element::f32, Shape{}, [](std::shared_ptr<Node> n) { return true; }) :
+            pattern::any_input() :
             pattern::wrap_type<OperationType>();
 
         ngraph::graph_rewrite_callback callback = [&](pattern::Matcher& m) {
