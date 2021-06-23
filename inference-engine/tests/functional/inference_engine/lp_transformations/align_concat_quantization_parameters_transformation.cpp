@@ -253,7 +253,7 @@ const std::vector<AlignConcatQuantizationParametersTransformationTestValues> tes
     }
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     smoke_LPT,
     AlignConcatQuantizationParametersTransformation,
     ::testing::Combine(
