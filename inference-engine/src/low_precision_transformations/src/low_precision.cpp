@@ -202,11 +202,11 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             markup.run_passes(f);
         }
 
-        {
-            ngraph::pass::Manager decompose(passConfig);
-            decompose.register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
-            decompose.run_passes(f);
-        }
+//        {
+//            ngraph::pass::Manager decompose(passConfig);
+//            decompose.register_pass<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
+//            decompose.run_passes(f);
+//        }
 #else
 //        #include <low_precision/align_quantization_parameters.hpp>
 //        #include <low_precision/align_quantization_intervals.hpp>
@@ -291,6 +291,7 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::ConvolutionTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::ConvolutionBackpropDataTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::DepthToSpaceTransformation>(params);
+        commonGraphRewrite->add_matcher<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::FakeQuantizeTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::InterpolateTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::GroupConvolutionTransformation>(params);
