@@ -41,7 +41,7 @@ ConcatTransformation::ConcatTransformation(const Params& params) : LayerTransfor
     this->register_matcher(m, callback);
 }
 
-bool ConcatTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool ConcatTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<ngraph::opset1::Concat> concat = ngraph::as_type_ptr<ngraph::opset1::Concat>(m.get_match_root());
     if (!canBeTransformed(context, concat)) {
         return false;

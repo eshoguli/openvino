@@ -31,7 +31,7 @@ FuseMultiplyToFakeQuantizeTransformation::FuseMultiplyToFakeQuantizeTransformati
     this->register_matcher(m, callback);
 }
 
-bool FuseMultiplyToFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool FuseMultiplyToFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto multiply = m.get_match_root();
     if (!canBeTransformed(context, multiply)) {
         return false;

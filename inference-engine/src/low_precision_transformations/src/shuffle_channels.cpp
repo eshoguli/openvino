@@ -33,7 +33,7 @@ ShuffleChannelsTransformation::ShuffleChannelsTransformation(const Params& param
     this->register_matcher(m, callback);
 }
 
-bool ShuffleChannelsTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) const {
+bool ShuffleChannelsTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     if (!canBeTransformed(context, m.get_match_root())) {
         return false;
     }

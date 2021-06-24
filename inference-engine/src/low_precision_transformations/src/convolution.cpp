@@ -51,7 +51,7 @@ bool ConvolutionTransformation::isQuantizedStatic(const std::shared_ptr<const No
     return WeightableLayerTransformation::isQuantizedStatic(layer, false);
 }
 
-bool ConvolutionTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
+bool ConvolutionTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     auto convolution = m.get_match_root();
 
     if (!canConvolutionBeTransformed(context, convolution)) {

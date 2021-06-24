@@ -30,7 +30,7 @@ FuseFakeQuantizeTransformation::FuseFakeQuantizeTransformation(const Params& par
     this->register_matcher(m, callback);
 }
 
-bool FuseFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool FuseFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<opset1::FakeQuantize> fakeQuantize = as_type_ptr<ngraph::opset1::FakeQuantize>(m.get_match_root());
     do {
         fakeQuantize = handle(context, fakeQuantize);

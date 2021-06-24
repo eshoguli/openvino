@@ -66,7 +66,7 @@ FakeQuantizeDequantization get(const std::shared_ptr<Node> node) {
     return FakeQuantizeDequantization(dataNode, convert, subtract, subtractConvert, subtractConstant, multiply, multiplyConstant);
 }
 
-bool SubtractMultiplyToMultiplyAddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool SubtractMultiplyToMultiplyAddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     auto multiply = m.get_match_root();
     if (!canBeTransformed(context, multiply)) {
         return false;

@@ -17,13 +17,16 @@ class LP_TRANSFORMATIONS_API FakeQuantizeTransformation : public LayerTransforma
 public:
     NGRAPH_RTTI_DECLARATION;
     FakeQuantizeTransformation(const Params& params = Params());
-    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
+    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) override;
     bool isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept override;
 
     static bool checkElementwise(const std::shared_ptr<Node>& eltwise);
 
 private:
-    std::shared_ptr<opset1::FakeQuantize> fuseElementwise(TransformationContext& context, const std::shared_ptr<opset1::FakeQuantize>& fakeQuantize) const;
+    std::shared_ptr<opset1::FakeQuantize> fuseElementwise(
+            TransformationContext& context,
+            MatcherPass* matcherPass,
+            const std::shared_ptr<opset1::FakeQuantize>& fakeQuantize) const;
 };
 
 } // namespace low_precision

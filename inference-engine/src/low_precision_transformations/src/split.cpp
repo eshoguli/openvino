@@ -31,7 +31,7 @@ SplitTransformation::SplitTransformation(const Params& params) : LayerTransforma
     this->register_matcher(m, callback);
 }
 
-bool SplitTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) const {
+bool SplitTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     if (!canBeTransformed(context, m.get_match_root())) {
         return false;
     }

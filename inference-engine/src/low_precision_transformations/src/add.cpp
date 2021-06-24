@@ -106,7 +106,7 @@ AddTransformation::AddTransformation(const Params& params) : EltwiseBaseTransfor
     this->register_matcher(m, callback);
 }
 
-bool AddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool AddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<opset1::Add> op = as_type_ptr<opset1::Add>(m.get_match_root());
     if ((op == nullptr) || (!canBeTransformed(context, op))) {
         return false;

@@ -39,7 +39,7 @@ MatMulTransformation::MatMulTransformation(const Params& params) : LayerTransfor
     this->register_matcher(m, callback);
 }
 
-bool MatMulTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
+bool MatMulTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<opset1::MatMul> matMul = as_type_ptr<opset1::MatMul>(m.get_match_root());
     if ((matMul == nullptr) || !canBeTransformed(context, matMul)) {
         return false;

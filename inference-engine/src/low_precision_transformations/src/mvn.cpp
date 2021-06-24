@@ -105,7 +105,7 @@ bool MVNTransformation::canBeTransformed(const TransformationContext& context, s
     return perTensor && isScalarScales;
 }
 
-bool MVNTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
+bool MVNTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<Node> operation = m.get_match_root();
     if (!canBeTransformed(context, operation)) {
         return false;

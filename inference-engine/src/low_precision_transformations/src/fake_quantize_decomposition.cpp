@@ -157,6 +157,7 @@ DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize>
 
 // TODO: LPT: refactor: use one way to decompose FakeQuantize
 std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
+    MatcherPass* matcherPass,
     std::shared_ptr<opset1::FakeQuantize>& layer,
     const std::shared_ptr<IntervalsAlignmentAttribute>& intervalsAlignment,
     const DataPrecision& dataPrecision,
@@ -196,6 +197,7 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
             roundf(updatedOutputLowValue),
             roundf(updatedOutputHighValue),
             false);
+        matcherPass->register_new_node(newFakeQuantizeLayer);
         newFakeQuantizeLayer->set_levels(levels);
 
         auto dequantization = ngraph::pass::low_precision::NetworkHelper::makeDequantization(
@@ -232,6 +234,7 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
             dataPrecision.hasZeroPoint,
             updatePrecisions);
 
+        matcherPass->register_new_node(std::get<0>(QDQ));
         dequantize = std::get<1>(QDQ);
     }
 
@@ -240,7 +243,7 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
 
 } // namespace fq_decomposition
 
-bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) const {
+bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     auto layer = as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
     if (!NetworkHelper::isQuantizeSupported(layer)) {
         return false;
@@ -375,6 +378,7 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     }
 
     std::shared_ptr<ngraph::Node> dequantize = fq_decomposition::decomposeFakeQuantize(
+        this,
         layer,
         intervalsAlignment,
         dataPrecision,

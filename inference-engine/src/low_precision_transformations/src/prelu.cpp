@@ -34,7 +34,7 @@ PReluTransformation::PReluTransformation(const Params& params) : LayerTransforma
     this->register_matcher(m, callback);
 }
 
-bool PReluTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool PReluTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<Node> prelu = m.get_match_root();
     if (!canBeTransformed(context, prelu)) {
         return false;

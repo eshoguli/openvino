@@ -33,7 +33,7 @@ AvgPoolTransformation::AvgPoolTransformation(const Params& params) : LayerTransf
     this->register_matcher(m, callback);
 }
 
-bool AvgPoolTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool AvgPoolTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     if (!canBeTransformed(context, m.get_match_root())) {
         return false;
     }

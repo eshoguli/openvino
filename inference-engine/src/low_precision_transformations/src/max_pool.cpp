@@ -51,7 +51,7 @@ bool MaxPoolTransformation::canBeTransformed(const TransformationContext& contex
     return true;
 }
 
-bool MaxPoolTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool MaxPoolTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     if (!canBeTransformed(context, m.get_match_root())) {
         return false;
     }

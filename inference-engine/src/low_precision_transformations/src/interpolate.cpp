@@ -52,7 +52,7 @@ InterpolateTransformation::InterpolateTransformation(const Params& params) : Lay
     this->register_matcher(matcher, callback);
 }
 
-bool InterpolateTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
+bool InterpolateTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<Node> interpolate = m.get_match_root();
     if (!canBeTransformed(context, m.get_match_root())) {
         return false;

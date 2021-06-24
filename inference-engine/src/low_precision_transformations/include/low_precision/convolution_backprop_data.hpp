@@ -15,7 +15,7 @@ class LP_TRANSFORMATIONS_API ConvolutionBackpropDataTransformation : public Weig
 public:
     ConvolutionBackpropDataTransformation(const Params& params = Params());
     //void registerMatcherIn(GraphRewrite& pass, TransformationContext& context) const override;
-    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
+    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) override;
     bool canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> op) const override;
     bool isQuantized(const std::shared_ptr<const Node>& layer) const noexcept override;
     static bool isQuantizedStatic(const std::shared_ptr<const Node>& layer) noexcept;

@@ -29,7 +29,7 @@ DepthToSpaceTransformation::DepthToSpaceTransformation(const Params& params) : T
     this->register_matcher(m, callback);
 }
 
-bool DepthToSpaceTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
+bool DepthToSpaceTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<Node> depthToSpace = m.get_match_root();
     if (!canBeTransformed(context, depthToSpace)) {
         return false;

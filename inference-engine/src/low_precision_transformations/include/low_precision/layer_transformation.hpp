@@ -195,7 +195,7 @@ public:
 
     LayerTransformation(const Params& params);
     virtual ~LayerTransformation() = default;
-    virtual bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const = 0;
+    virtual bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) = 0;
 
     void setContext(TransformationContext* context) noexcept;
 
@@ -265,7 +265,7 @@ protected:
         std::shared_ptr<ngraph::Node> lastNode,
         std::string originalName) const;
 
-    void addPattern(ngraph::pass::GraphRewrite& pass, TransformationContext& context, std::shared_ptr<Node> patternRoot) const;
+    void addPattern(ngraph::pass::GraphRewrite& pass, TransformationContext& context, std::shared_ptr<Node> patternRoot);
 
     //TODO: replace with canBeTransformed when quantization by special dimension is supported for all transformations
     bool canBeTransformedSpatialDimension(const TransformationContext& context, std::shared_ptr<Node> layer) const;
