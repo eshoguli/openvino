@@ -56,7 +56,7 @@ std::shared_ptr<Node> removeConvertIfPossibleForSubtract(
     return newSubtract;
 }
 
-bool FuseConvertTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool FuseConvertTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto op = m.get_match_root();
     if (!canBeTransformed(context, op)) {
         return false;

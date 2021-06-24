@@ -16,7 +16,7 @@ class LP_TRANSFORMATIONS_API TransposeTransformation : public LayerTransformatio
 public:
     NGRAPH_RTTI_DECLARATION;
     TransposeTransformation(const Params& params = Params());
-    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
+    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) override;
     bool isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept override;
     bool canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> op) const override;
 };

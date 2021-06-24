@@ -33,7 +33,7 @@ UnsqueezeTransformation::UnsqueezeTransformation(const Params& params) : LayerTr
     this->register_matcher(m, callback);
 }
 
-bool UnsqueezeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool UnsqueezeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     if (!canBeTransformed(context, m.get_match_root())) {
         return false;
     }

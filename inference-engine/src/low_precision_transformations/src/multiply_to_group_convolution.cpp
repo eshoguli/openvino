@@ -31,7 +31,7 @@ MultiplyToGroupConvolutionTransformation::MultiplyToGroupConvolutionTransformati
     this->register_matcher(m, callback);
 }
 
-bool MultiplyToGroupConvolutionTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool MultiplyToGroupConvolutionTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto multiply = m.get_match_root();
     if (!canBeTransformed(context, multiply)) {
         return false;

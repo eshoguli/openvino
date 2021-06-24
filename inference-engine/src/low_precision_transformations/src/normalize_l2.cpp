@@ -97,7 +97,7 @@ bool NormalizeL2Transformation::canBeTransformed(const TransformationContext& co
     return true;
 }
 
-bool NormalizeL2Transformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) const {
+bool NormalizeL2Transformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<Node> operation = m.get_match_root();
     if (!canBeTransformed(context, operation)) {
         return false;

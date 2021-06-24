@@ -30,7 +30,7 @@ FoldConvertTransformation::FoldConvertTransformation(const Params& params) : Lay
     this->register_matcher(matcher, callback);
 }
 
-bool FoldConvertTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool FoldConvertTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto subtract = m.get_match_root();
     if (!canBeTransformed(context, subtract)) {
         return false;

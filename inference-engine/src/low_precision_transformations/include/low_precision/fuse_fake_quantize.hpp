@@ -16,7 +16,7 @@ class LP_TRANSFORMATIONS_API FuseFakeQuantizeTransformation : public LayerTransf
 public:
     NGRAPH_RTTI_DECLARATION;
     FuseFakeQuantizeTransformation(const Params& params);
-    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
+    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) override;
     bool isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept override;
 
 private:

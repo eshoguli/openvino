@@ -15,7 +15,7 @@ class LP_TRANSFORMATIONS_API ConvertTransformation : public LayerTransformation 
 public:
     NGRAPH_RTTI_DECLARATION;
     ConvertTransformation(const Params& params = Params());
-    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
+    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) override;
     bool isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept override;
 };
 

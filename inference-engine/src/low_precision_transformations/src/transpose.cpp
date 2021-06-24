@@ -86,7 +86,7 @@ void transposeDequantizationConstant(std::shared_ptr<Node>& transpose) {
     }
 }
 
-bool TransposeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool TransposeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<Node> transpose = m.get_match_root();
     if (!canBeTransformed(context, transpose)) {
         return false;

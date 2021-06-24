@@ -39,7 +39,7 @@ MultiplyTransformation::MultiplyTransformation(const Params& params) : EltwiseBa
     this->register_matcher(m, callback);
 }
 
-bool MultiplyTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool MultiplyTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     auto multiply = m.get_match_root();
     if (!LayerTransformation::canBeTransformed(context, multiply)) {
         return false;

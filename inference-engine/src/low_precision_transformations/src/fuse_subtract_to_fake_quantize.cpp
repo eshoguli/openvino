@@ -30,7 +30,7 @@ FuseSubtractToFakeQuantizeTransformation::FuseSubtractToFakeQuantizeTransformati
     this->register_matcher(m, callback);
 }
 
-bool FuseSubtractToFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool FuseSubtractToFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto subtract = m.get_match_root();
     if (!canBeTransformed(context, subtract)) {
         return false;

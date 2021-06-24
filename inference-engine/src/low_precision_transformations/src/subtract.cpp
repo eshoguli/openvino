@@ -41,7 +41,7 @@ SubtractTransformation::SubtractTransformation(const Params& params) : LayerTran
     this->register_matcher(m, callback);
 }
 
-bool SubtractTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool SubtractTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<opset1::Subtract> subtract = as_type_ptr<opset1::Subtract>(m.get_match_root());
     if (!canBeTransformed(context, subtract)) {
         return false;

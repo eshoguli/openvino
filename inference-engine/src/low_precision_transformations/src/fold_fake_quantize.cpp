@@ -32,7 +32,7 @@ FoldFakeQuantizeTransformation::FoldFakeQuantizeTransformation(const Params& par
     this->register_matcher(m, callback);
 }
 
-bool FoldFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool FoldFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto fakeQuantize = as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
     if (fakeQuantize == nullptr) {
         return false;

@@ -15,7 +15,7 @@ class LP_TRANSFORMATIONS_API SubtractTransformation : public LayerTransformation
 public:
     NGRAPH_RTTI_DECLARATION;
     SubtractTransformation(const Params& params);
-    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
+    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) override;
 };
 
 } // namespace low_precision

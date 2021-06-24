@@ -88,7 +88,7 @@ StridedSliceTransformation::StridedSliceTransformation(const Params& params) : L
     this->register_matcher(m, callback);
 }
 
-bool StridedSliceTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) const {
+bool StridedSliceTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     if (!StridedSliceTransformation::canBeTransformed(context, m.get_match_root())) {
         return false;
     }

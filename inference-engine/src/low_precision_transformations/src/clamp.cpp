@@ -31,7 +31,7 @@ ClampTransformation::ClampTransformation(const Params& params) : LayerTransforma
     this->register_matcher(m, callback);
 }
 
-bool ClampTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) const {
+bool ClampTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     auto subWithTheSameValues = [](std::shared_ptr<ngraph::opset1::Subtract> sub) {
         if (sub == nullptr) {
             return false;

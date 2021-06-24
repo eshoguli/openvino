@@ -15,7 +15,7 @@ class LP_TRANSFORMATIONS_API MultiplyTransformation : public EltwiseBaseTransfor
 public:
     NGRAPH_RTTI_DECLARATION;
     MultiplyTransformation(const Params& params = Params());
-    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) const override;
+    bool transform(TransformationContext& context, ngraph::pattern::Matcher &m) override;
 };
 
 } // namespace low_precision

@@ -36,7 +36,7 @@ ConvertTransformation::ConvertTransformation(const Params& params) : LayerTransf
     this->register_matcher(m, callback);
 }
 
-bool ConvertTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool ConvertTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<opset1::Convert> convert = as_type_ptr<opset1::Convert>(m.get_match_root());
     if (!convert) {
         return false;

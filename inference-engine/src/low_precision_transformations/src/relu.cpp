@@ -34,7 +34,7 @@ ReluTransformation::ReluTransformation(const Params& params) : LayerTransformati
     this->register_matcher(m, callback);
 }
 
-bool ReluTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) const {
+bool ReluTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<Node> relu = m.get_match_root();
     if (!LayerTransformation::canBeTransformed(context, relu)) {
         return false;
