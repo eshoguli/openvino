@@ -215,72 +215,65 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
 //        #include <low_precision/markup_precisions.hpp>
 //        #include <low_precision/propagate_precisions.hpp>
 
-        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.original.svg").run_on_function(f);
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_function(f);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.original.svg").run_on_function(f);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_function(f);
 
         {
             ngraph::pass::Manager tmp(passConfig);
             tmp.register_pass<low_precision::MarkupCanBeQuantized>();
             tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming1.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_function(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming1.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_function(f);
         }
 
-        {
+        if (!precisionRestrictions.empty()) {
             ngraph::pass::Manager tmp(passConfig);
             tmp.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
             tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming2.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming2").run_on_function(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming2.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming2").run_on_function(f);
         }
 
-        {
+        if (!quantizationRestrictions.empty()) {
             ngraph::pass::Manager tmp(passConfig);
             tmp.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
             tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming3.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming3").run_on_function(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming3.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming3").run_on_function(f);
         }
 
-        {
+        if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
             ngraph::pass::Manager tmp(passConfig);
             tmp.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
             tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming4.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming4").run_on_function(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming4.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming4").run_on_function(f);
         }
 
         {
             ngraph::pass::Manager tmp(passConfig);
             tmp.register_pass<low_precision::PropagatePrecisions>();
             tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming5.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming5").run_on_function(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming5.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming5").run_on_function(f);
         }
 
-        {
+        if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
             ngraph::pass::Manager tmp(passConfig);
             tmp.register_pass<low_precision::AlignQuantizationIntervals>();
             tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming6.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming6").run_on_function(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming6.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming6").run_on_function(f);
         }
 
-        {
+        if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
             ngraph::pass::Manager tmp(passConfig);
             tmp.register_pass<low_precision::AlignQuantizationParameters>();
             tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming7.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming7").run_on_function(f);
+            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming7.svg").run_on_function(f);
+            //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming7").run_on_function(f);
         }
 
-        {
-            ngraph::pass::Manager tmp(passConfig);
-            tmp.register_pass<low_precision::FakeQuantizeDecompositionTransformation>();
-            tmp.run_passes(f);
-            //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming8.svg").run_on_function(f);
-            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming8").run_on_function(f);
-        }
 #endif
         ngraph::pass::Manager common(passConfig);
         std::shared_ptr<ngraph::pass::GraphRewrite> commonGraphRewrite = common.register_pass<ngraph::pass::GraphRewrite>();
@@ -363,7 +356,8 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     }
 
 #ifdef VISUALIZE_TREE
-    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_function(f);
+    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transformed.svg").run_on_function(f);
+    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_function(f);
 #endif
 
     return true;
