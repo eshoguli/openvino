@@ -316,15 +316,10 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
 
         // TODO: LPT: move to one pass manager: one GraphRewrite for all (?) cleanup
         {
-            ngraph::pass::Manager standaloneCleanupManager(passConfig);
-            standaloneCleanupManager.register_pass<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>(params);
-            standaloneCleanupManager.run_passes(f);
-        }
-
-        {
-            ngraph::pass::Manager standaloneCleanupManager(passConfig);
-            standaloneCleanupManager.register_pass<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>(params);
-            standaloneCleanupManager.run_passes(f);
+            ngraph::pass::Manager cleanup(passConfig);
+            cleanup.register_pass<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>(params);
+            cleanup.register_pass<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>(params);
+            cleanup.run_passes(f);
         }
 
         {
