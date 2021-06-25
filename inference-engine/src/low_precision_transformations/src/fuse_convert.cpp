@@ -88,12 +88,14 @@ bool FuseConvertTransformation::transform(TransformationContext& context, ngraph
                     ngraph::op::TemporaryReplaceOutputType(op->get_input_node_shared_ptr(1), element::f32).get());
             NetworkHelper::setOutDataPrecisionForTypeRelaxed(newOp, op->get_output_element_type(0));
             replace_node(op, newOp);
+        } else {
+            return false;
         }
 
-        if (newOp != nullptr) {
-            ngraph::copy_runtime_info({ convert, op }, newOp);
-            newOp->set_friendly_name(op->get_friendly_name());
-        }
+        ngraph::copy_runtime_info({ convert, op }, newOp);
+        newOp->set_friendly_name(op->get_friendly_name());
+
+        register_new_node(newOp);
     }
 
     return true;
