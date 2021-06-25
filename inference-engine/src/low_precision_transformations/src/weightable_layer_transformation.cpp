@@ -276,10 +276,11 @@ bool WeightableLayerTransformation::isPrecisionPreserved(std::shared_ptr<Node> l
     return false;
 }
 
-void WeightableLayerTransformation::decomposeFakeQuantizeForWeightsPath(const std::shared_ptr<Node>& node, const size_t outChannelsShapeIndex) const {
+bool WeightableLayerTransformation::decomposeFakeQuantizeForWeightsPath(const std::shared_ptr<Node>& node, const size_t outChannelsShapeIndex) const {
     const auto fq = getFakeQuantizeOnWeights(node);
     if (fq == nullptr) {
-        return;
+        // FakeQuantize has been decomposed already
+        return true;
     }
 
     const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(fq);
@@ -301,9 +302,16 @@ void WeightableLayerTransformation::decomposeFakeQuantizeForWeightsPath(const st
         outChannelsShapeIndex);
 
     std::shared_ptr<ngraph::Node> fqOnWeights = std::get<0>(tuple);
+    // TODO: LPT: issue #58685
+    if ((!updatePrecisions) && (fqOnWeights == nullptr)) {
+        return false;
+    }
+
     if (as_type_ptr<ngraph::opset1::Constant>(fqOnWeights) == nullptr) {
         THROW_IE_LPT_EXCEPTION(*fqOnWeights) << "FakeQuantize on weights was not folded to constant";
     }
+
+    return true;
 }
 
 bool WeightableLayerTransformation::isGroup(const std::shared_ptr<Node>& layer) {

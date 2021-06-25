@@ -198,7 +198,12 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
     }
 
     {
-        decomposeFakeQuantizeForWeightsPath(convolution);
+        const bool decomposed = decomposeFakeQuantizeForWeightsPath(convolution);
+        assert((updatePrecisions && decomposed) || (!updatePrecisions));
+        if (!updatePrecisions && !decomposed) {
+            // TODO: LPT: issue #58685
+            return false;
+        }
 
         std::shared_ptr<opset1::Reshape> reshapeFromWeights = as_type_ptr<opset1::Reshape>(convolution->input_value(1).get_node_shared_ptr());
 

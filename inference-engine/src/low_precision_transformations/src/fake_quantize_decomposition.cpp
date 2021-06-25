@@ -185,6 +185,10 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
             updatedOutputLowValue,
             updatedOutputHighValue);
 
+        if ((updatePrecisions == false) && (dequantizationMul == 1.f) && (dequantizationSub == 0.f)) {
+            return nullptr;
+        }
+
         //TODO: pass min levels as a parameter?
         if (levels < 2ul) {
             return nullptr;
@@ -234,7 +238,11 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
             dataPrecision.hasZeroPoint,
             updatePrecisions);
 
-        matcherPass->register_new_node(std::get<0>(QDQ));
+        const auto newFakeQuantize = std::get<0>(QDQ);
+        if (newFakeQuantize == nullptr) {
+            return nullptr;
+        }
+        matcherPass->register_new_node(newFakeQuantize);
         dequantize = std::get<1>(QDQ);
     }
 
@@ -384,6 +392,9 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
         dataPrecision,
         updatePrecisions,
         deqPrecision);
+    if (dequantize == nullptr) {
+        return false;
+    }
 
     updateOutput(context, dequantize, layer);
 

@@ -135,22 +135,42 @@ const std::vector<FakeQuantizeAndTwoOutputBranchesWithConvolutionTestValues> fak
             {{}, {}, {{ 1.f }, ngraph::element::f32, { 1, 1, 1, 1 }}},
         }
     },
+    // TODO: LPT: issue #58685
+//    // not update precisions
+//    {
+//        LayerTransformation::createParamsU8I8().setUpdatePrecisions(false),
+//        {
+//            { 256ul, {}, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+//            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+//        },
+//        {
+//            { 256ul, {}, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            ngraph::element::f32,
+//            {{}, {}, {}},
+//            ngraph::element::f32,
+//            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+//            {{}, {}, {{ 1.f }, ngraph::element::f32, { 1, 1, 1, 1 }}},
+//            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+//            {{}, {}, {{ 1.f }, ngraph::element::f32, { 1, 1, 1, 1 }}},
+//        }
+//    },
     // not update precisions
     {
         LayerTransformation::createParamsU8I8().setUpdatePrecisions(false),
         {
             { 256ul, {}, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
-            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
-            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -1.27f }, { 1.27f } },
+            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -1.27f }, { 1.27f } },
         },
         {
-            { 256ul, {}, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+            { 256ul, {}, { 0.f }, { 2.55f }, { 0.f }, { 255.f } },
             ngraph::element::f32,
             {{}, {}, {}},
             ngraph::element::f32,
-            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+            { },
             {{}, {}, {{ 1.f }, ngraph::element::f32, { 1, 1, 1, 1 }}},
-            { 255ul, {1, 1, 1, 1}, { 0.f }, { 254.f }, { -127.f }, { 127.f } },
+            { },
             {{}, {}, {{ 1.f }, ngraph::element::f32, { 1, 1, 1, 1 }}},
         }
     }

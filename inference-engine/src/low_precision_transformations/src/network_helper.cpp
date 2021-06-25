@@ -982,6 +982,12 @@ std::tuple<std::shared_ptr<Node>, std::shared_ptr<Node>> NetworkHelper::decompos
         }
     }
 
+    if ((!updatePrecision) &&
+        std::any_of(scales.begin(), scales.end(), [](const float value) { return value == 1.f; }) &&
+        std::any_of(shifts.begin(), shifts.end(), [](const float value) { return value == 0.f; })) {
+        return std::make_tuple(nullptr, nullptr);
+    }
+
     std::shared_ptr<Node> shift = hasZeroPoint ?
         std::make_shared<opset1::Constant>(deqPrecision, outputLow.get_shape(), shifts) :
         nullptr;
