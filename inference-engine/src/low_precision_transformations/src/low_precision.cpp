@@ -313,15 +313,11 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             cleanup->add_matcher<ngraph::pass::low_precision::FuseConvertTransformation>(params);
             cleanup->add_matcher<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>(params);
             cleanup->add_matcher<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>(params);
-            cleanupManager.run_passes(f);
-        }
-
-        {
-            ngraph::pass::Manager standaloneCleanupManager(passConfig);
             // WA: precision restrictions for groupConv must be propagated to MultiplyToGroupConvolution transformation
-            const auto groupConvRestriction = OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions);
-            standaloneCleanupManager.register_pass<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(params, groupConvRestriction);
-            standaloneCleanupManager.run_passes(f);
+            cleanup->add_matcher<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(
+                params,
+                OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions));
+            cleanupManager.run_passes(f);
         }
 
         // TODO: LPT: is legacy?
