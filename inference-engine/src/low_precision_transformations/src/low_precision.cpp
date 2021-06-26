@@ -317,21 +317,12 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             cleanup->add_matcher<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(
                 params,
                 OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions));
+
+            cleanupManager.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>(params);
+            cleanupManager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
+            cleanupManager.register_pass<ngraph::pass::ConstantFolding>();
+
             cleanupManager.run_passes(f);
-        }
-
-        // TODO: LPT: is legacy?
-        {
-            ngraph::pass::Manager standaloneCleanupManager(passConfig);
-            standaloneCleanupManager.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>(params);
-            standaloneCleanupManager.run_passes(f);
-        }
-
-        {
-            ngraph::pass::Manager standaloneCleanupManager(passConfig);
-            standaloneCleanupManager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
-            standaloneCleanupManager.register_pass<ngraph::pass::ConstantFolding>();
-            standaloneCleanupManager.run_passes(f);
         }
     }
 
