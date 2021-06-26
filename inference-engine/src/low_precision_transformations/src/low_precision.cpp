@@ -177,38 +177,28 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     }
 
     {
-        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepCommon");
-
+        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepMarkup");
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-        {
-            ngraph::pass::Manager markup(passConfig);
-            markup.set_per_pass_validation(false);
-            markup.register_pass<low_precision::MarkupCanBeQuantized>();
-            if (!precisionRestrictions.empty()) {
-                markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
-            }
-            if (!quantizationRestrictions.empty()) {
-                markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
-            }
-            if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
-                markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
-            }
-            markup.register_pass<low_precision::PropagatePrecisions>();
-            if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
-                markup.register_pass<low_precision::AlignQuantizationIntervals>();
-                markup.register_pass<low_precision::AlignQuantizationParameters>();
-            }
-            markup.run_passes(f);
+        ngraph::pass::Manager markup(passConfig);
+        markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::MarkupCanBeQuantized>();
+        if (!precisionRestrictions.empty()) {
+            markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
         }
+        if (!quantizationRestrictions.empty()) {
+            markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+        }
+        if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
+            markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+        }
+        markup.register_pass<low_precision::PropagatePrecisions>();
+        if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
+            markup.register_pass<low_precision::AlignQuantizationIntervals>();
+            markup.register_pass<low_precision::AlignQuantizationParameters>();
+        }
+        markup.run_passes(f);
 #else
-//        #include <low_precision/align_quantization_parameters.hpp>
-//        #include <low_precision/align_quantization_intervals.hpp>
-//        #include <low_precision/markup_avg_pool_precision_preserved.hpp>
-//        #include <low_precision/markup_per_tensor_quantization.hpp>
-//        #include <low_precision/markup_precisions.hpp>
-//        #include <low_precision/propagate_precisions.hpp>
-
         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.original.svg").run_on_function(f);
         //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_function(f);
 
@@ -267,8 +257,11 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transforming7.svg").run_on_function(f);
             //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming7").run_on_function(f);
         }
-
 #endif
+    }
+
+    {
+        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepCommon");
         ngraph::pass::Manager common(passConfig);
         std::shared_ptr<ngraph::pass::GraphRewrite> commonGraphRewrite = common.register_pass<ngraph::pass::GraphRewrite>();
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::AddTransformation>(params);
@@ -306,24 +299,22 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
 
     {
         OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionCleanup");
-        {
-            ngraph::pass::Manager cleanupManager(passConfig);
-            std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = cleanupManager.register_pass<ngraph::pass::GraphRewrite>();
-            cleanup->add_matcher<ngraph::pass::low_precision::FoldConvertTransformation>(params);
-            cleanup->add_matcher<ngraph::pass::low_precision::FuseConvertTransformation>(params);
-            cleanup->add_matcher<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>(params);
-            cleanup->add_matcher<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>(params);
-            // WA: precision restrictions for groupConv must be propagated to MultiplyToGroupConvolution transformation
-            cleanup->add_matcher<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(
-                params,
-                OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions));
+        ngraph::pass::Manager cleanupManager(passConfig);
+        std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = cleanupManager.register_pass<ngraph::pass::GraphRewrite>();
+        cleanup->add_matcher<ngraph::pass::low_precision::FoldConvertTransformation>(params);
+        cleanup->add_matcher<ngraph::pass::low_precision::FuseConvertTransformation>(params);
+        cleanup->add_matcher<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>(params);
+        cleanup->add_matcher<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>(params);
+        // WA: precision restrictions for groupConv must be propagated to MultiplyToGroupConvolution transformation
+        cleanup->add_matcher<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(
+            params,
+            OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions));
 
-            cleanupManager.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>(params);
-            cleanupManager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
-            cleanupManager.register_pass<ngraph::pass::ConstantFolding>();
+        cleanupManager.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>(params);
+        cleanupManager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
+        cleanupManager.register_pass<ngraph::pass::ConstantFolding>();
 
-            cleanupManager.run_passes(f);
-        }
+        cleanupManager.run_passes(f);
     }
 
 #ifdef VISUALIZE_TREE
