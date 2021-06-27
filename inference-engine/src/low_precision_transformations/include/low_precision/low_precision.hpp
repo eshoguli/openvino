@@ -29,11 +29,24 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
+class LP_TRANSFORMATIONS_API MarkupOptimizations;
 class LP_TRANSFORMATIONS_API LowPrecision;
 
 }  // namespace low_precision
 }  // namespace pass
 }  // namespace ngraph
+
+class LP_TRANSFORMATIONS_API ngraph::pass::low_precision::MarkupOptimizations : public ngraph::pass::FunctionPass {
+public:
+    NGRAPH_RTTI_DECLARATION;
+    MarkupOptimizations(
+        const std::vector<OperationPrecisionRestriction>& precisionRestrictions,
+        const std::vector<OperationPerTensorQuantizationRestriction>& quantizationRestrictions);
+    bool run_on_function(std::shared_ptr<ngraph::Function> f) override;
+private:
+    const std::vector<OperationPrecisionRestriction>& precisionRestrictions;
+    const std::vector<OperationPerTensorQuantizationRestriction>& quantizationRestrictions;
+};
 
 class LP_TRANSFORMATIONS_API ngraph::pass::low_precision::LowPrecision : public ngraph::pass::FunctionPass {
 public:

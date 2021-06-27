@@ -156,48 +156,78 @@ ngraph::pass::low_precision::LowPrecision::TypeRelaxedReplacer::TypeRelaxedRepla
     make_matcher_type_relaxed<opset4::Interpolate>(this);
 }
 
+NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::MarkupOptimizations, "MarkupOptimizations", 0);
+
+MarkupOptimizations::MarkupOptimizations(
+    const std::vector<OperationPrecisionRestriction>& precisionRestrictions,
+    const std::vector<OperationPerTensorQuantizationRestriction>& quantizationRestrictions) :
+    precisionRestrictions(precisionRestrictions),
+    quantizationRestrictions(quantizationRestrictions) {}
+
+bool ngraph::pass::low_precision::MarkupOptimizations::run_on_function(std::shared_ptr<ngraph::Function> f) {
+    ngraph::pass::Manager markup(get_pass_config());
+    markup.set_per_pass_validation(false);
+    markup.register_pass<low_precision::MarkupCanBeQuantized>();
+    if (!precisionRestrictions.empty()) {
+        markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
+    }
+    if (!quantizationRestrictions.empty()) {
+        markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+    }
+    if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
+        markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+    }
+    markup.register_pass<low_precision::PropagatePrecisions>();
+    if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
+        markup.register_pass<low_precision::AlignQuantizationIntervals>();
+        markup.register_pass<low_precision::AlignQuantizationParameters>();
+    }
+    markup.run_passes(f);
+    return false;
+}
+
 bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<ngraph::Function> f) {
     auto passConfig = get_pass_config();
 
-    {
-        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionPrerequisites");
-        ngraph::pass::Manager manager(passConfig);
-        auto prerequisites = manager.register_pass<ngraph::pass::GraphRewrite>();
-        const std::vector<ngraph::element::Type> supportedTypes = {ngraph::element::i8, ngraph::element::u8};
-        prerequisites->add_matcher<PullReshapeThroughDequantization>(supportedTypes);
-        prerequisites->add_matcher<PullTransposeThroughDequantization>(supportedTypes);
-        prerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
-        manager.run_passes(f);
-    }
+//    {
+//        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionPrerequisites");
+//        ngraph::pass::Manager manager(passConfig);
+//        auto prerequisites = manager.register_pass<ngraph::pass::GraphRewrite>();
+//        const std::vector<ngraph::element::Type> supportedTypes = {ngraph::element::i8, ngraph::element::u8};
+//        prerequisites->add_matcher<PullReshapeThroughDequantization>(supportedTypes);
+//        prerequisites->add_matcher<PullTransposeThroughDequantization>(supportedTypes);
+//        prerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
+//        manager.run_passes(f);
+//    }
 
-    {
-        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepTypeRelaxedReplacer");
-        TypeRelaxedReplacer pass;
-        pass.run_on_function(f);
-    }
+//    {
+//        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepTypeRelaxedReplacer");
+//        TypeRelaxedReplacer pass;
+//        pass.run_on_function(f);
+//    }
 
     {
         OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepMarkup");
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-        ngraph::pass::Manager markup(passConfig);
-        markup.set_per_pass_validation(false);
-        markup.register_pass<low_precision::MarkupCanBeQuantized>();
-        if (!precisionRestrictions.empty()) {
-            markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
-        }
-        if (!quantizationRestrictions.empty()) {
-            markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
-        }
-        if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
-            markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
-        }
-        markup.register_pass<low_precision::PropagatePrecisions>();
-        if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
-            markup.register_pass<low_precision::AlignQuantizationIntervals>();
-            markup.register_pass<low_precision::AlignQuantizationParameters>();
-        }
-        markup.run_passes(f);
+//        ngraph::pass::Manager markup(passConfig);
+//        markup.set_per_pass_validation(false);
+//        markup.register_pass<low_precision::MarkupCanBeQuantized>();
+//        if (!precisionRestrictions.empty()) {
+//            markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions);
+//        }
+//        if (!quantizationRestrictions.empty()) {
+//            markup.register_pass<low_precision::MarkupPerTensorQuantization>(quantizationRestrictions);
+//        }
+//        if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
+//            markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>();
+//        }
+//        markup.register_pass<low_precision::PropagatePrecisions>();
+//        if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
+//            markup.register_pass<low_precision::AlignQuantizationIntervals>();
+//            markup.register_pass<low_precision::AlignQuantizationParameters>();
+//        }
+//        markup.run_passes(f);
 #else
         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.original.svg").run_on_function(f);
         //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_function(f);
@@ -263,6 +293,40 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
     {
         OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionStepCommon");
         ngraph::pass::Manager common(passConfig);
+
+        auto prerequisites = common.register_pass<ngraph::pass::GraphRewrite>();
+        const std::vector<ngraph::element::Type> supportedTypes = {ngraph::element::i8, ngraph::element::u8};
+        prerequisites->add_matcher<PullReshapeThroughDequantization>(supportedTypes);
+        prerequisites->add_matcher<PullTransposeThroughDequantization>(supportedTypes);
+        prerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
+
+        auto typeRelaxedReplacer = common.register_pass<ngraph::pass::GraphRewrite>();
+        auto typeRelaxedReplacerPtr = typeRelaxedReplacer.get();
+        make_matcher_type_relaxed<opset1::Add>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::AvgPool>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::Clamp>(typeRelaxedReplacerPtr);
+        /// new Concat uses clone_with_new_inputs as result for TypeRelaxed we need to manage output precision manually
+        /// just unwrap to TypeRelaxed
+        // TODO: this update is absent in master
+        //make_matcher_type_relaxed<opset1::Concat>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::Convolution>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::ConvolutionBackpropData>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::DepthToSpace>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::FakeQuantize>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::GroupConvolution>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::PRelu>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::ReduceMean>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::ReduceSum>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::Subtract>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::Interpolate>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::Multiply>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<op::MVN>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset6::MVN>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset1::NormalizeL2>(typeRelaxedReplacerPtr);
+        make_matcher_type_relaxed<opset4::Interpolate>(typeRelaxedReplacerPtr);
+
+        common.register_pass<ngraph::pass::low_precision::MarkupOptimizations>(precisionRestrictions, quantizationRestrictions);
+
         std::shared_ptr<ngraph::pass::GraphRewrite> commonGraphRewrite = common.register_pass<ngraph::pass::GraphRewrite>();
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::AddTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::AvgPoolTransformation>(params);
