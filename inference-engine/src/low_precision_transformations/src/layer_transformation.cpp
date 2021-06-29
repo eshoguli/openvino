@@ -45,7 +45,12 @@ bool LayerTransformation::canBeTransformed(const TransformationContext& context,
 
 bool LayerTransformation::canBeTransformedStatic(const std::shared_ptr<Node>& layer) {
     for (const auto& output : layer->outputs()) {
-        const size_t size = output.get_shape().size();
+        const auto rank = output.get_partial_shape().rank();
+        if (rank.is_dynamic()) {
+            return false;
+        }
+
+        const size_t size = rank.get_length();
         if ((size < 2ul) || (size > 5ul)) {
             return false;
         }

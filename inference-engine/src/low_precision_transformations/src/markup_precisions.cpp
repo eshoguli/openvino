@@ -172,10 +172,6 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isPrecisionPreserved(const s
 }
 
 bool ngraph::pass::low_precision::MarkupPrecisions::isSupported(const std::shared_ptr<Node>& node) {
-    if (!LayerTransformation::canBeTransformedStatic(node)) {
-        return false;
-    }
-
     static std::unordered_set<std::string> supportedOps = {
         { name<opset1::Add>() },
         { name<opset1::AvgPool>() },
@@ -215,5 +211,5 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isSupported(const std::share
         { name<opset1::VariadicSplit>() }
     };
 
-    return supportedOps.find(node->get_type_name()) != supportedOps.end();
+    return (supportedOps.find(node->get_type_name()) != supportedOps.end()) && LayerTransformation::canBeTransformedStatic(node);
 }
