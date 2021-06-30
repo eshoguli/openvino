@@ -581,7 +581,6 @@ std::shared_ptr<ngraph::Node> NetworkHelper::separateInStandaloneBranch(std::sha
         Output<Node> parent = dequantization.data;
         if (dequantization.convert != nullptr) {
             auto convert = dequantization.convert->clone_with_new_inputs({ parent });
-            convert->set_friendly_name(parent.get_node_shared_ptr()->get_name() + "_new");
             copy_runtime_info(parent.get_node_shared_ptr(), convert);
             parent = convert->output(0);
         }
@@ -596,7 +595,6 @@ std::shared_ptr<ngraph::Node> NetworkHelper::separateInStandaloneBranch(std::sha
             }
 
             auto subtract = dequantization.subtract->clone_with_new_inputs({parent, parentOnWeights->clone_with_new_inputs(outputs) });
-            subtract->set_friendly_name(parent.get_node_shared_ptr()->get_name() + "_new");
             copy_runtime_info(parent.get_node_shared_ptr(), subtract);
             parent = subtract->output(0);
         }
@@ -605,7 +603,6 @@ std::shared_ptr<ngraph::Node> NetworkHelper::separateInStandaloneBranch(std::sha
             auto multiply = dequantization.multiply->clone_with_new_inputs({
                 parent,
                 dequantization.multiply->get_input_node_shared_ptr(1)->clone_with_new_inputs({}) });
-            multiply->set_friendly_name(parent.get_node_shared_ptr()->get_name() + "_new");
             copy_runtime_info(parent.get_node_shared_ptr(), multiply);
             parent = multiply->output(0);
         }
@@ -620,7 +617,6 @@ std::shared_ptr<ngraph::Node> NetworkHelper::separateInStandaloneBranch(std::sha
         const std::shared_ptr<Node> newNode = node->clone_with_new_inputs(inputs);
         copy_runtime_info(node, newNode);
         replace_node(node, newNode);
-        newNode->set_friendly_name(node->get_friendly_name());
 
         return newNode;
     }
@@ -1334,7 +1330,7 @@ FakeQuantizeDequantization NetworkHelper::getDequantization(const std::shared_pt
     return FakeQuantizeDequantization(dataNode, convert, subtract, subtractConvert, subtractConstant, multiply, multiplyConstant);
 }
 
-FakeQuantizeDequantization NetworkHelper::getDequantizationBelow(const std::shared_ptr<Node>& node) {
+FakeQuantizeDequantization NetworkHelper::getDequantizationBelow(const std::shared_ptr<Node>& node, const bool convertIsMandatory) {
     const Output<Node> dataNode = node->output(0);
     const auto& targetInputs = dataNode.get_target_inputs();
     if (targetInputs.size() == 0ul) {
@@ -1344,6 +1340,10 @@ FakeQuantizeDequantization NetworkHelper::getDequantizationBelow(const std::shar
     std::shared_ptr<Node> lastNode = targetInputs.begin()->get_node()->shared_from_this();
 
     const std::shared_ptr<opset1::Convert> convert = as_type_ptr<opset1::Convert>(lastNode);
+    if (convertIsMandatory && (convert == nullptr)) {
+        return FakeQuantizeDequantization();
+    }
+
     if (convert != nullptr) {
         if ((convert->input(0).get_element_type() != element::i8) && (convert->input(0).get_element_type() != element::u8) &&
             (convert->output(0).get_element_type() != element::f32)) {
@@ -1593,11 +1593,13 @@ NetworkHelper::InsertDequantizationResult NetworkHelper::moveDequantizationAfter
                     dequantization.subtractConstant->output(0).get_element_type();
             }
 
-            parent = std::make_shared<DequantizationSubtract>(
-                parent,
-                dequantization.subtractConstant->output(0).get_element_type() == parentPrecision ?
-                    dequantization.subtractConstant :
-                    foldConvert(dequantization.subtractConstant, parentPrecision));
+            parent = std::make_shared<op::TypeRelaxed<DequantizationSubtract>>(
+                std::vector<element::Type>{element::f32, element::f32}, std::vector<element::Type>{ element::f32 },
+                ngraph::op::TemporaryReplaceOutputType(parent, element::f32).get(),
+                ngraph::op::TemporaryReplaceOutputType(
+                    dequantization.subtractConstant->output(0).get_element_type() == parentPrecision ?
+                        dequantization.subtractConstant :
+                        foldConvert(dequantization.subtractConstant, parentPrecision), element::f32).get());
             ngraph::copy_runtime_info({ newOperation, parent }, parent);
         } else {
             parent = std::make_shared<DequantizationSubtract>(parent, dequantization.subtractConvert);
