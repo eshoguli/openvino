@@ -56,6 +56,14 @@ bool LayerTransformation::canBeTransformedStatic(const std::shared_ptr<Node>& la
         }
     }
 
+    for (const auto& input : layer->inputs()) {
+        const auto sourceOutput = input.get_source_output();
+        const auto shape = sourceOutput.get_partial_shape();
+        if (shape.is_dynamic() || shape.rank().is_dynamic()) {
+            return false;
+        }
+    }
+
     const auto dequantization = NetworkHelper::getDequantization(layer);
     if (!dequantization.empty()) {
         auto perChannelQuantization = [](const Shape dataShape, Shape constShape) {

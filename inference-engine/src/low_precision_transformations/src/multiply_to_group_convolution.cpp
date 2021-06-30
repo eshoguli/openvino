@@ -203,8 +203,13 @@ bool MultiplyToGroupConvolutionTransformation::canBeTransformedToGroupConvolutio
         return false;
     }
 
-    const Shape shape = layer->output(0).get_shape();
-    return (shape.size() == 4ul) || (shape.size() == 5ul);
+    const auto shape = layer->output(0).get_partial_shape();
+    if (shape.is_dynamic()) {
+        return false;
+    }
+
+    const auto rank = shape.rank();
+    return (!rank.is_dynamic()) && ((rank.get_length() == 4ul) || (rank.get_length() == 5ul));
 }
 
 void MultiplyToGroupConvolutionTransformation::setGroupSize(const size_t groupSize) {

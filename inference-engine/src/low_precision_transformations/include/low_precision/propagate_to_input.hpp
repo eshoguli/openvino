@@ -69,6 +69,11 @@ public:
 private:
     // TODO: possible duplicate: PropagateThroughPrecisionPreserved::getParentInputRestrictions
     std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>> getSourceOutputAttribute(const Input<Node>& input) {
+        const auto shape = input.get_source_output().get_partial_shape();
+        if (shape.is_dynamic() || shape.rank().is_dynamic()) {
+            return nullptr;
+        }
+
         auto getInput = [](const Input<Node>& input) {
             const auto dequantization = NetworkHelper::getDequantization(input.get_node()->shared_from_this(), input.get_index());
             if (!dequantization.empty() &&

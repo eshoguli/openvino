@@ -82,7 +82,10 @@ bool FakeQuantizeDequantization::checkShape(const std::shared_ptr<ngraph::Node>&
         return true;
     }
 
-    if (elementwise->output(0).get_shape() != elementwise->get_input_shape(branchIndex == 1 ? 0 : 1)) {
+    const auto shape = elementwise->output(0).get_partial_shape();
+    if (shape.is_dynamic() ||
+        shape.rank().is_dynamic() ||
+        (elementwise->output(0).get_shape() != elementwise->get_input_shape(branchIndex == 1 ? 0 : 1))) {
         return false;
     }
 
