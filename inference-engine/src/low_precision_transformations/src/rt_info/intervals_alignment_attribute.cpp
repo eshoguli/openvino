@@ -56,7 +56,7 @@ std::shared_ptr<VariantWrapper<std::shared_ptr<IntervalsAlignmentAttribute>>> Va
         {
             const auto targetInputs = node->output(0).get_target_inputs();
             if (targetInputs.size() == 1ul) {
-                dequantization = NetworkHelper::getDequantizationBelow(node);
+                dequantization = NetworkHelper::getDequantizationBelow(node, true);
             }
         }
 

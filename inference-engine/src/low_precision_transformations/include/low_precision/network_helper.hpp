@@ -153,7 +153,7 @@ public:
 
     static FakeQuantizeDequantization getDequantization(const std::shared_ptr<Node>& node, const size_t parentIndex = 0ul, const bool inPlace = false);
 
-    static FakeQuantizeDequantization getDequantizationBelow(const std::shared_ptr<Node>& node);
+    static FakeQuantizeDequantization getDequantizationBelow(const std::shared_ptr<Node>& node, const bool convertIsMandatory = false);
 
     static FakeQuantizeDequantization normalizeDequantization(FakeQuantizeDequantization dequantization);
 
