@@ -358,13 +358,8 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::TransposeTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::UnsqueezeTransformation>(params);
         commonGraphRewrite->add_matcher<ngraph::pass::low_precision::VariadicSplitTransformation>(params);
-        common.run_passes(f);
-    }
 
-    {
-        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionCleanup");
-        ngraph::pass::Manager cleanupManager(passConfig);
-        std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = cleanupManager.register_pass<ngraph::pass::GraphRewrite>();
+        std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = common.register_pass<ngraph::pass::GraphRewrite>();
         cleanup->add_matcher<ngraph::pass::low_precision::FoldConvertTransformation>(params);
         cleanup->add_matcher<ngraph::pass::low_precision::FuseConvertTransformation>(params);
         cleanup->add_matcher<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>(params);
@@ -374,11 +369,11 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
             params,
             OperationPrecisionRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions));
 
-        cleanupManager.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>(params);
-        cleanupManager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
-        cleanupManager.register_pass<ngraph::pass::ConstantFolding>();
+        common.register_pass<ngraph::pass::low_precision::SubtractMultiplyToMultiplyAddTransformation>(params);
+        common.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
+        common.register_pass<ngraph::pass::ConstantFolding>();
 
-        cleanupManager.run_passes(f);
+        common.run_passes(f);
     }
 
 #ifdef VISUALIZE_TREE
