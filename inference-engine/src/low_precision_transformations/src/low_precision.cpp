@@ -108,6 +108,8 @@ void make_matcher_type_relaxed(ngraph::pass::GraphRewrite* transformation) {
             THROW_IE_LPT_EXCEPTION(*l_node) << "unexpected operation type";
         }
 
+        OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecisionTypeRelaxedMatcher");
+
         std::vector<element::Type> inputPrecisions;
         for (auto& inputs : l_node->inputs()) {
             inputPrecisions.push_back(inputs.get_element_type());
