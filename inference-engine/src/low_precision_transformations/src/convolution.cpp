@@ -62,6 +62,8 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
         } else {
             NetworkHelper::foldDequantization(dequantization.multiply, 0, true);
         }
+
+        std::cout << convolution->get_friendly_name() << ": not handled" << std::endl;
         return true;
     }
 
@@ -236,6 +238,8 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
         }
 
         if (subtractFromWeights != nullptr) {
+            std::cout << convolution->get_friendly_name() << ": subtract on weights" << std::endl;
+
             // optimize zero point on weights
             auto optimizedSubtract = NetworkHelper::optimizeSubtract(subtractFromWeights);
 
@@ -245,15 +249,26 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
             } else {
                 subtractFromWeights = as_type_ptr<opset1::Subtract>(optimizedSubtract);
 
-                const Shape weightsShape = subtractFromWeights->input(0).get_shape();
-                Shape zeroPointShape(weightsShape.size(), 1ul);
-                zeroPointShape[0] = weightsShape[0];
 
-                auto zeroPointConstant = fold<opset1::Broadcast>(
-                    subtractFromWeights->input_value(1),
-                    std::make_shared<opset1::Constant>(element::i32, Shape{ zeroPointShape.size() }, zeroPointShape));
-                NetworkHelper::copyInfo(subtractFromWeights->get_input_node_shared_ptr(1), zeroPointConstant);
-                replace_node(subtractFromWeights->get_input_node_shared_ptr(1), zeroPointConstant);
+                if (reshapeFromWeights == nullptr) {
+                    auto newConvolution = convolution->clone_with_new_inputs({
+                        convolution->get_input_node_shared_ptr(0),
+                        subtractFromWeights->get_input_node_shared_ptr(0) });
+                    replace_node(convolution, newConvolution);
+                    convolution = newConvolution;
+
+                    subtractFromWeights = nullptr;
+                } else {
+                    const Shape weightsShape = subtractFromWeights->input(0).get_shape();
+                    Shape zeroPointShape(weightsShape.size(), 1ul);
+                    zeroPointShape[0] = weightsShape[0];
+
+                    auto zeroPointConstant = fold<opset1::Broadcast>(
+                        subtractFromWeights->input_value(1),
+                        std::make_shared<opset1::Constant>(element::i32, Shape{ zeroPointShape.size() }, zeroPointShape));
+                    NetworkHelper::copyInfo(subtractFromWeights->get_input_node_shared_ptr(1), zeroPointConstant);
+                    replace_node(subtractFromWeights->get_input_node_shared_ptr(1), zeroPointConstant);
+                }
             }
         }
 
@@ -302,6 +317,8 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
         auto& rt = onWeights->get_rt_info();
         rt["DISABLED_CONSTANT_FOLDING"] = std::make_shared<ngraph::VariantWrapper<std::string>>("");
     }
+
+    std::cout << convolution->get_friendly_name() << ": handled" << std::endl;
     return true;
 }
 } // namespace low_precision
