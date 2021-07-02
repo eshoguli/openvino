@@ -81,8 +81,10 @@ bool ngraph::pass::low_precision::MarkupPrecisions::run_on_function(std::shared_
             continue;
         }
 
+        // TODO: don't need to set restrictions for not supported operations
+        // if don't set restrictions for not supported operations then accuracy drop appears, issue #59197
         const bool supported = is_type<opset1::Result>(node) || isSupported(node);
-        if (!supported) {
+        if (!supported || !LayerTransformation::canBeTransformedStatic(node)) {
             setRestriction(node, std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>> { {0ul, {}}});
             continue;
         }
@@ -172,10 +174,6 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isPrecisionPreserved(const s
 }
 
 bool ngraph::pass::low_precision::MarkupPrecisions::isSupported(const std::shared_ptr<Node>& node) {
-    if (!LayerTransformation::canBeTransformedStatic(node)) {
-        return false;
-    }
-
     static std::unordered_set<std::string> supportedOps = {
         { name<opset1::Add>() },
         { name<opset1::AvgPool>() },
