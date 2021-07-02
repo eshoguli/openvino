@@ -31,12 +31,12 @@ public:
     public:
         PerTensorQuantization() = default;
         PerTensorQuantization(const bool versionIsRequired) : versionIsRequired(versionIsRequired) {}
-        void add(const uint64_t version, const std::vector<size_t>& precisions) {
-            precisionsByVersion.emplace(version, precisions);
+        void add(const uint64_t version, const std::vector<size_t>& ports) {
+            portsByVersion.emplace(version, ports);
         }
 
         bool versionIsRequired;
-        std::unordered_map<uint64_t, std::vector<size_t>> precisionsByVersion;
+        std::unordered_map<uint64_t, std::vector<size_t>> portsByVersion;
     };
 
     NGRAPH_RTTI_DECLARATION;

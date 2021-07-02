@@ -19,7 +19,7 @@ ngraph::pass::low_precision::MarkupPerTensorQuantization::MarkupPerTensorQuantiz
         const auto it = restrictionsByOperation.find(restriction.operationType.name);
         if (it == restrictionsByOperation.end()) {
             PerTensorQuantization r(restriction.specifyVersion);
-            r.precisionsByVersion.emplace(restriction.operationType.version, restriction.restrictedPorts);
+            r.portsByVersion.emplace(restriction.operationType.version, restriction.restrictedPorts);
             restrictionsByOperation.emplace(restriction.operationType.name, r);
         } else {
             it->second.add(restriction.operationType.version, restriction.restrictedPorts);
@@ -64,17 +64,15 @@ bool ngraph::pass::low_precision::MarkupPerTensorQuantization::run_on_function(s
 
         auto& restriction = typeIt->second;
         if (restriction.versionIsRequired) {
-            const auto it2 = restriction.precisionsByVersion.find(node->get_type_info().version);
-            if (it2 == restriction.precisionsByVersion.end()) {
+            const auto it2 = restriction.portsByVersion.find(node->get_type_info().version);
+            if (it2 == restriction.portsByVersion.end()) {
                 continue;
             }
 
             const std::vector<size_t>& restrictedPorts = it2->second;
             setRestriction(node, restrictedPorts);
         } else {
-            assert(restriction.precisionsByVersion.size() == 1ul);
-
-            const std::vector<size_t>& restrictedPorts = restriction.precisionsByVersion.begin()->second;
+            const std::vector<size_t>& restrictedPorts = restriction.portsByVersion.begin()->second;
             setRestriction(node, restrictedPorts);
         }
     }
