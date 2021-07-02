@@ -29,6 +29,7 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
+class LP_TRANSFORMATIONS_API TypeRelaxedReplacer;
 class LP_TRANSFORMATIONS_API MarkupOptimizations;
 class LP_TRANSFORMATIONS_API LowPrecision;
 
@@ -48,13 +49,14 @@ private:
     const std::vector<OperationPerTensorQuantizationRestriction>& quantizationRestrictions;
 };
 
+class LP_TRANSFORMATIONS_API ngraph::pass::low_precision::TypeRelaxedReplacer : public ngraph::pass::GraphRewrite {
+public:
+    NGRAPH_RTTI_DECLARATION;
+    TypeRelaxedReplacer();
+};
+
 class LP_TRANSFORMATIONS_API ngraph::pass::low_precision::LowPrecision : public ngraph::pass::FunctionPass {
 public:
-    class LP_TRANSFORMATIONS_API TypeRelaxedReplacer : public GraphRewrite {
-    public:
-        TypeRelaxedReplacer();
-    };
-
     NGRAPH_RTTI_DECLARATION;
     LowPrecision(
         const std::vector<OperationPrecisionRestriction>& precisionRestrictions = {},

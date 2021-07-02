@@ -101,7 +101,7 @@ public:
 
 //#define VISUALIZE_TREE
 #ifndef VISUALIZE_TREE
-        ngraph::pass::low_precision::LowPrecision::TypeRelaxedReplacer pass;
+        ngraph::pass::low_precision::TypeRelaxedReplacer pass;
         pass.run_on_function(actualFunction);
 
         auto supportedPrecisionsOnActivation = std::vector<ngraph::pass::low_precision::OperationPrecisionRestriction>({
