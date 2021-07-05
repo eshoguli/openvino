@@ -3,22 +3,16 @@
 //
 
 #include "low_precision/align_quantization_intervals.hpp"
-
 #include <memory>
-
 #include <ngraph/opsets/opset1.hpp>
 #include "low_precision/create_attribute.hpp"
-#include "low_precision/layer_transformation.hpp"
 #include "low_precision/propagate_through_precision_preserved.hpp"
 #include "low_precision/rt_info/intervals_alignment_attribute.hpp"
-#include "low_precision/rt_info/precision_preserved_attribute.hpp"
 
 using namespace ngraph;
 using namespace ngraph::pass::low_precision;
 
 NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::AlignQuantizationIntervals, "AlignQuantizationIntervals", 0);
-
-AlignQuantizationIntervals::AlignQuantizationIntervals(LayerTransformation::Params params) : params(params) {}
 
 bool ngraph::pass::low_precision::AlignQuantizationIntervals::run_on_function(std::shared_ptr<ngraph::Function> f) {
     ngraph::pass::Manager manager;

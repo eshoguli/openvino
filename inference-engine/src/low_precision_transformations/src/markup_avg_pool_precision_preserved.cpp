@@ -3,15 +3,12 @@
 //
 
 #include "low_precision/markup_avg_pool_precision_preserved.hpp"
-
 #include <memory>
-
 #include <ngraph/opsets/opset1.hpp>
-#include "low_precision/rt_info/avg_pool_precision_preserved_attribute.hpp"
 #include "low_precision/create_precisions_dependent_attribute.hpp"
+#include "low_precision/rt_info/avg_pool_precision_preserved_attribute.hpp"
 #include "low_precision/propagate_through_precision_preserved.hpp"
 #include "low_precision/update_shared_precision_preserved.hpp"
-#include "low_precision/network_helper.hpp"
 
 using namespace ngraph;
 

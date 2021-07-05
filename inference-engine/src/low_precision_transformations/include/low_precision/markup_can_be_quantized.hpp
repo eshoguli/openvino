@@ -5,11 +5,8 @@
 #pragma once
 
 #include <memory>
-
-#include <ngraph/node.hpp>
-
-#include <low_precision/lpt_visibility.hpp>
-#include <ngraph/pass/graph_rewrite.hpp>
+#include <ngraph/pass/pass.hpp>
+#include "low_precision/lpt_visibility.hpp"
 
 namespace ngraph {
 namespace pass {

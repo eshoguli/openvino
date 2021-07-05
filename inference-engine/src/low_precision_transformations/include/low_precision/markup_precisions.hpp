@@ -8,12 +8,9 @@
 #include <set>
 #include <vector>
 
-#include <ngraph/node.hpp>
-#include <ngraph/variant.hpp>
-
-#include <low_precision/lpt_visibility.hpp>
-#include <ngraph/pass/graph_rewrite.hpp>
-#include "common/operation_precision_restriction.hpp"
+#include <ngraph/pass/pass.hpp>
+#include "low_precision/lpt_visibility.hpp"
+#include "low_precision/common/operation_precision_restriction.hpp"
 
 namespace ngraph {
 namespace pass {
@@ -30,8 +27,7 @@ class ngraph::pass::low_precision::MarkupPrecisions : public ngraph::pass::Funct
 public:
     class Restriction {
     public:
-        Restriction() = default;
-        Restriction(const bool versionIsRequired) : versionIsRequired(versionIsRequired) {}
+        explicit Restriction(const bool versionIsRequired) : versionIsRequired(versionIsRequired) {}
         void add(const uint64_t version, const std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>>& precisions) {
             precisionsByVersion.emplace(version, precisions);
         }
@@ -41,12 +37,11 @@ public:
     };
 
     NGRAPH_RTTI_DECLARATION;
-    MarkupPrecisions(const std::vector<OperationPrecisionRestriction>& restrictions = {});
+    explicit MarkupPrecisions(const std::vector<OperationPrecisionRestriction>& restrictions = {});
     bool run_on_function(std::shared_ptr<ngraph::Function> f) override;
 
 private:
     static bool isPrecisionPreserved(const std::shared_ptr<Node>& node);
     static bool isSupported(const std::shared_ptr<Node>& node);
-
     std::unordered_map<std::string, Restriction> restrictionsByOperation;
 };
