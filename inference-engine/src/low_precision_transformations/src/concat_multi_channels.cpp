@@ -47,6 +47,11 @@ bool ConcatMultiChannelsTransformation::transform(TransformationContext& context
         return false;
     }
 
+    if (concat->get_friendly_name() == "Concat_314") {
+        std::cout << "ConcatMultiChannelsTransformation::transform: " << concat->get_friendly_name() << std::endl;
+        return false;
+    }
+
     ngraph::pass::low_precision::Subgraph subgraph(layerTransformationsManager);
     std::unordered_set<std::string> handledLayers;
     if (!subgraph.fillSubgraphForConcat(concat, handledLayers)) {
