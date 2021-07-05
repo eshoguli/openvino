@@ -3,23 +3,17 @@
 //
 
 #include "low_precision/align_quantization_parameters.hpp"
-
 #include <memory>
-
 #include "low_precision/create_attribute.hpp"
-#include "low_precision/layer_transformation.hpp"
 #include "low_precision/propagate_through_precision_preserved.hpp"
-#include "low_precision/rt_info/precision_preserved_attribute.hpp"
 #include "low_precision/rt_info/quantization_alignment_attribute.hpp"
-#include "low_precision/update_shared_precision_preserved.hpp"
 #include "low_precision/rt_info/per_tensor_quantization_attribute.hpp"
+#include "low_precision/update_shared_precision_preserved.hpp"
 
 using namespace ngraph;
 using namespace ngraph::pass::low_precision;
 
 NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::AlignQuantizationParameters, "AlignQuantizationParameters", 0);
-
-AlignQuantizationParameters::AlignQuantizationParameters(LayerTransformation::Params params) : params(params) {}
 
 bool ngraph::pass::low_precision::AlignQuantizationParameters::run_on_function(std::shared_ptr<ngraph::Function> f) {
     ngraph::pass::Manager manager;

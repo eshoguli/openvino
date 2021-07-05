@@ -8,13 +8,13 @@
 #include <vector>
 
 #include <ngraph/node.hpp>
-#include <ngraph/variant.hpp>
-#include <ngraph/pattern/op/wrap_type.hpp>
-
-#include <low_precision/lpt_visibility.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
-#include "network_helper.hpp"
-#include "lpt_itt.hpp"
+#include <ngraph/pattern/op/wrap_type.hpp>
+#include <ngraph/variant.hpp>
+
+#include "low_precision/lpt_visibility.hpp"
+#include "low_precision/network_helper.hpp"
+#include "low_precision/lpt_itt.hpp"
 
 namespace ngraph {
 namespace pass {
@@ -76,8 +76,6 @@ public:
         auto matcher = std::make_shared<ngraph::pattern::Matcher>(pattern::any_input(), "PropagateThroughPrecisionPreserved");
         this->register_matcher(matcher, callback);
     }
-
-    virtual ~PropagateThroughPrecisionPreserved() = default;
 
 private:
     std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>> getSourceOutputAttribute(const Input<Node>& input) {

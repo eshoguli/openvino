@@ -10,13 +10,13 @@
 #include <vector>
 
 #include <ngraph/node.hpp>
+#include <ngraph/pass/graph_rewrite.hpp>
 #include <ngraph/variant.hpp>
 
-#include <low_precision/lpt_visibility.hpp>
-#include <ngraph/pass/graph_rewrite.hpp>
-#include "low_precision/rt_info/shared_value_attribute.hpp"
 #include "low_precision/layer_transformation.hpp"
-#include "attribute_parameters.hpp"
+#include "low_precision/lpt_visibility.hpp"
+#include "low_precision/rt_info/attribute_parameters.hpp"
+#include "low_precision/rt_info/shared_value_attribute.hpp"
 
 namespace ngraph {
 
@@ -52,7 +52,6 @@ public:
 
     std::shared_ptr<PrecisionsAttribute> get() { return this->m_value; }
 
-    // TODO: new method:
     // create attribute instance for node
     static std::shared_ptr<VariantWrapper<std::shared_ptr<PrecisionsAttribute>>> create(
         const std::shared_ptr<ngraph::Node>& node,

@@ -5,13 +5,8 @@
 #pragma once
 
 #include <memory>
-
-#include <ngraph/node.hpp>
-#include <ngraph/variant.hpp>
-
-#include <low_precision/lpt_visibility.hpp>
-#include <ngraph/pass/graph_rewrite.hpp>
-#include <low_precision/layer_transformation.hpp>
+#include <ngraph/pass/pass.hpp>
+#include "low_precision/lpt_visibility.hpp"
 
 namespace ngraph {
 namespace pass {
@@ -26,9 +21,5 @@ class LP_TRANSFORMATIONS_API AlignQuantizationIntervals;
 class ngraph::pass::low_precision::AlignQuantizationIntervals : public ngraph::pass::FunctionPass {
 public:
     NGRAPH_RTTI_DECLARATION;
-    AlignQuantizationIntervals(LayerTransformation::Params params = LayerTransformation::Params());
     bool run_on_function(std::shared_ptr<ngraph::Function> f) override;
-
-protected:
-    LayerTransformation::Params params;
 };
