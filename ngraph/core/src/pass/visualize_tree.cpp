@@ -16,6 +16,7 @@
 #include "ngraph/pass/pass.hpp"
 #include "ngraph/pass/visualize_tree.hpp"
 #include "ngraph/util.hpp"
+#include "ngraph/variant.hpp"
 
 using namespace ngraph;
 using namespace std;
@@ -481,6 +482,7 @@ string pass::VisualizeTree::get_attributes(shared_ptr<Node> node)
         static const bool nvtos = getenv_bool("NGRAPH_VISUALIZE_TREE_OUTPUT_SHAPES");
         static const bool nvtot = getenv_bool("NGRAPH_VISUALIZE_TREE_OUTPUT_TYPES");
         static const bool nvtio = getenv_bool("NGRAPH_VISUALIZE_TREE_IO");
+        static const bool nvtrti = getenv_bool("NGRAPH_VISUALIZE_TREE_RUNTIME_INFO");
 
         if (nvtos || nvtot || nvtio)
         {
@@ -495,6 +497,20 @@ string pass::VisualizeTree::get_attributes(shared_ptr<Node> node)
                         label << pretty_partial_shape(input.get_partial_shape());
                     label << ": " << node->get_input_node_ptr(input.get_index())->get_name()
                           << ": out" << input.get_source_output().get_index();
+
+                    if (nvtrti)
+                    {
+                        auto& rt = input.get_rt_info();
+                        bool first = true;
+                        for (const auto& item : rt)
+                        {
+                            auto attributeValue =
+                                item.second == nullptr ? "[EMPTY]" : item.second->to_string();
+                            label << (first ? " " : ", ")
+                                  << item.first + "{" + attributeValue + "}";
+                            first = false;
+                        }
+                    }
                 }
             }
             for (const auto& output : node->outputs())
@@ -505,6 +521,19 @@ string pass::VisualizeTree::get_attributes(shared_ptr<Node> node)
                     label << "{" << output.get_element_type().get_type_name() << "}";
                 if (nvtos)
                     label << pretty_partial_shape(output.get_partial_shape());
+
+                if (nvtrti)
+                {
+                    auto& rt = output.get_rt_info();
+                    bool first = true;
+                    for (const auto& item : rt)
+                    {
+                        auto attributeValue =
+                            item.second == nullptr ? "[EMPTY]" : item.second->to_string();
+                        label << (first ? " " : ", ") << item.first + "{" + attributeValue + "}";
+                        first = false;
+                    }
+                }
             }
         }
 
@@ -545,9 +574,14 @@ string pass::VisualizeTree::get_node_name(shared_ptr<Node> node)
         if (!rt.empty())
         {
             rc += "\\nrt info: ";
+            bool first = true;
             for (const auto& item : rt)
             {
-                rc += item.first + " ";
+                const auto attributeValue =
+                    item.second == nullptr ? "[EMPTY]" : item.second->to_string();
+                rc += (first ? " " : "\\n") + item.first +
+                      (attributeValue.empty() ? "" : ("{" + attributeValue + "}"));
+                first = false;
             }
         }
     }
