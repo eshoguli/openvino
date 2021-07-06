@@ -267,7 +267,7 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     }
 
     auto attribute = getAttributeFromOutput<std::shared_ptr<PrecisionsAttribute>>(layer->output(0));
-    if (attribute->get()->sharedValue->precisions.empty()) {
+    if ((attribute == nullptr) || (attribute->get()->sharedValue->precisions.empty())) {
         return false;
     }
 
