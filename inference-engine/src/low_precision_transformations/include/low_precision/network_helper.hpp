@@ -309,7 +309,6 @@ public:
         }
     }
 
-    //TODO: not covered by unit tests
     static size_t calculateLevels(
         const float dataPrecisionMin,
         const float dataPrecisionMax,

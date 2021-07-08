@@ -20,13 +20,6 @@ public:
     bool canConvolutionBeTransformed(const TransformationContext& context, std::shared_ptr<Node> layer) const;
     bool isPrecisionPreserved(std::shared_ptr<Node> layer) const noexcept override;
 
-    // TODO: stub
-    static bool checkPrecisionOnActivation(
-        const std::shared_ptr<const ngraph::Node>& node,
-        const std::vector<ngraph::element::Type>& supportedPrecisionsOnActivations) {
-        return true;
-    }
-
     static bool isQuantizedStatic(const std::shared_ptr<const Node>& layer, const bool reshapeIsRequired) noexcept;
 
 protected:
