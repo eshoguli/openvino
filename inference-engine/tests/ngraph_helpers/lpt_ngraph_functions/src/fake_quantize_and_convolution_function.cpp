@@ -48,10 +48,11 @@ std::shared_ptr<ngraph::Function> FakeQuantizeAndConvolutionFunction::get(
 
     const auto convolution = std::make_shared<ngraph::opset1::Convolution>(
         maxPool, //fqOnData.empty() ? input : fakeQuantizeOnActivations,
-        fqOnWeights.empty() ? weights->output(0) :
-        ngraph::builder::makeFakeQuantize(
-            weights, precision, fqOnWeights.quantizationLevel, fqOnWeights.constantShape,
-            fqOnWeights.inputLowValues, fqOnWeights.inputHighValues, fqOnWeights.outputLowValues, fqOnWeights.outputHighValues),
+        fqOnWeights.empty() ?
+            weights->output(0) :
+            ngraph::builder::makeFakeQuantize(
+                weights, precision, fqOnWeights.quantizationLevel, fqOnWeights.constantShape,
+                fqOnWeights.inputLowValues, fqOnWeights.inputHighValues, fqOnWeights.outputLowValues, fqOnWeights.outputHighValues),
         ngraph::Strides{ 1, 1 },
         ngraph::CoordinateDiff{ 0, 0 },
         ngraph::CoordinateDiff{ 0, 0 },

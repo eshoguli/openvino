@@ -35,6 +35,10 @@ std::string ConvolutionTransformation::getTestCaseName(testing::TestParamInfo<Co
     return result.str();
 }
 
+InferenceEngine::Blob::Ptr ConvolutionTransformation::GenerateInput(const InferenceEngine::InputInfo &info) const {
+    return LayerTransformation::GenerateInput(ngraph::element::u8, info.getTensorDesc(), 1.f);
+}
+
 void ConvolutionTransformation::SetUp() {
     threshold = 0.1f;
 

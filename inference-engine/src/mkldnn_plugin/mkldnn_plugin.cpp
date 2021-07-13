@@ -307,6 +307,8 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
 
     manager.run_passes(nGraphFunc);
 
+    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.common.svg").run_on_function(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         OV_ITT_SCOPE(FIRST_INFERENCE, MKLDNNPlugin::itt::domains::MKLDNN_LT, "LowPrecisionTransformations");
@@ -344,6 +346,8 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
             return LayerTransformation::isAsymmetricQuantization(node) || WeightableLayerTransformation::isAsymmetricOnWeights(node);
         });
         lptManager.run_passes(nGraphFunc);
+
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transformed.svg").run_on_function(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;
