@@ -55,7 +55,6 @@ public:
     void SetUp() override {
         ngraph::element::Type precision;
         ngraph::PartialShape shape;
-        // bool addFakeQuantize;
         std::string additionalLayer;
         AvgPoolWithChildTransformationTestValues testValues;
         std::tie(precision, shape, testValues) = GetParam();
@@ -87,7 +86,6 @@ public:
     static std::string getTestCaseName(testing::TestParamInfo<AvgPoolWithChildTransformationParams> obj) {
         ngraph::element::Type precision;
         ngraph::PartialShape shape;
-        // bool addFakeQuantize;
         std::string additionalLayer;
         AvgPoolWithChildTransformationTestValues testValues;
         std::tie(precision, shape, testValues) = obj.param;
@@ -117,12 +115,12 @@ TEST_P(AvgPoolWithChildTransformation, CompareFunctions) {
 }
 
 const std::vector<ngraph::element::Type> precisions = {
-    ngraph::element::f32,
-    // ngraph::element::f16
+    ngraph::element::f32
 };
 
 const std::vector<ngraph::PartialShape> shapes = {
-    { 1, 3, 72, 48 }
+    { 1, 3, 72, 48 },
+    { 4, 3, 72, 48 }
 };
 
 const std::vector<AvgPoolWithChildTransformationTestValues> testValues = {

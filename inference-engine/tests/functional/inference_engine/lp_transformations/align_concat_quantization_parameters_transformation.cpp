@@ -134,8 +134,7 @@ TEST_P(AlignConcatQuantizationParametersTransformation, CompareFunctions) {
 }
 
 const std::vector<ngraph::element::Type> precisions = {
-    ngraph::element::f32,
-    // ngraph::element::f16
+    ngraph::element::f32
 };
 
 const std::vector<std::string> additionalLayer = {
@@ -143,12 +142,12 @@ const std::vector<std::string> additionalLayer = {
 };
 
 const std::vector<bool> addFQ = {
-    // true,
     false
 };
 
 const std::vector<ngraph::Shape> shapes = {
-    { 1, 3, 9, 9 }
+    { 1, 3, 9, 9 },
+    { 4, 3, 9, 9 }
 };
 
 const std::vector<AlignConcatQuantizationParametersTransformationTestValues> testValues = {
