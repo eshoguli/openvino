@@ -917,6 +917,7 @@ std::shared_ptr<ngraph::Function> ConcatFunction::get(
         parent2 = makeDequantization(parent2, dequantization2);
     }
 
+    assert(parent1->get_output_element_type(0) == parent2->get_output_element_type(0));
     const std::shared_ptr<ngraph::opset1::Concat> concat = std::make_shared<ngraph::opset1::Concat>(ngraph::OutputVector{ parent1, parent2 }, axis);
     concat->set_friendly_name("concat");
     addAttributes({ concat }, concatAttributes);

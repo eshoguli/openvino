@@ -69,6 +69,28 @@ FakeQuantizeOnDataWithConstant::FakeQuantizeOnDataWithConstant(
     attributes(attributes)
 {}
 
+FakeQuantizeOnDataWithConstant::FakeQuantizeOnDataWithConstant(
+    const size_t quantizationLevel,
+    const Constant& inputLow,
+    const Constant& inputHigh,
+    const Constant& outputLow,
+    const Constant& outputHigh,
+    const ngraph::element::Type outputPrecision,
+    const std::vector<std::shared_ptr<Variant>>& attributes) :
+    quantizationLevel(quantizationLevel),
+    constantShapes({inputLow.shape, inputHigh.shape, outputLow.shape, outputHigh.shape}),
+    inputLowValues(inputLow.values),
+    inputHighValues(inputHigh.values),
+    outputLowValues(outputLow.values),
+    outputHighValues(outputHigh.values),
+    inputLow(inputLow),
+    inputHigh(inputHigh),
+    outputLow(outputLow),
+    outputHigh(outputHigh),
+    outputPrecision(outputPrecision),
+    attributes(attributes)
+{}
+
 FakeQuantizeOnDataWithConstant::~FakeQuantizeOnDataWithConstant() {}
 
 bool FakeQuantizeOnDataWithConstant::empty() const {

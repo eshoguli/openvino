@@ -292,13 +292,13 @@ std::shared_ptr<ngraph::opset1::FakeQuantize> makeFakeQuantize(
             subtractMax);
     } else {
         inputLowNode = ngraph::builder::makeConstant(
-            constantPrecision,
+            fqOnData.inputLow.empty() ? constantPrecision : fqOnData.inputLow.outPrecision,
             fqOnData.constantShapes.empty() ? ngraph::Shape{} : fqOnData.constantShapes[0],
             fqOnData.inputLowValues,
             fqOnData.inputLowValues.empty());
 
         inputHighNode = ngraph::builder::makeConstant(
-            constantPrecision,
+            fqOnData.inputHigh.empty() ? constantPrecision : fqOnData.inputHigh.outPrecision,
             fqOnData.constantShapes.empty() ?
                 ngraph::Shape{} :
                 (fqOnData.constantShapes.size() == 1 ? fqOnData.constantShapes[0] : fqOnData.constantShapes[1]),
@@ -307,7 +307,7 @@ std::shared_ptr<ngraph::opset1::FakeQuantize> makeFakeQuantize(
     }
 
     const auto outputLowNode = ngraph::builder::makeConstant(
-        constantPrecision,
+        fqOnData.outputLow.empty() ? constantPrecision : fqOnData.outputLow.outPrecision,
         fqOnData.constantShapes.empty() ?
             ngraph::Shape{} :
             (fqOnData.constantShapes.size() == 1 ? fqOnData.constantShapes[0] : fqOnData.constantShapes[2]),
@@ -315,7 +315,7 @@ std::shared_ptr<ngraph::opset1::FakeQuantize> makeFakeQuantize(
         fqOnData.outputLowValues.empty());
 
     const auto outputHighNode = ngraph::builder::makeConstant(
-        constantPrecision,
+        fqOnData.outputHigh.empty() ? constantPrecision : fqOnData.outputHigh.outPrecision,
         fqOnData.constantShapes.empty() ?
             ngraph::Shape{} :
             (fqOnData.constantShapes.size() == 1 ? fqOnData.constantShapes[0] : fqOnData.constantShapes[3]),

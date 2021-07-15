@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <ngraph/ngraph.hpp>
+#include "constant.hpp"
 
 namespace ngraph {
 namespace builder {
@@ -73,6 +74,15 @@ public:
         const ngraph::element::Type outputPrecision = ngraph::element::undefined,
         const std::vector<std::shared_ptr<Variant>>& attributes = {});
 
+    FakeQuantizeOnDataWithConstant(
+        const size_t quantizationLevel,
+        const Constant& inputLow,
+        const Constant& inputHigh,
+        const Constant& outputLow,
+        const Constant& outputHigh,
+        const ngraph::element::Type outputPrecision = ngraph::element::undefined,
+        const std::vector<std::shared_ptr<Variant>>& attributes = {});
+
     virtual ~FakeQuantizeOnDataWithConstant();
 
     virtual bool empty() const;
@@ -83,6 +93,12 @@ public:
     std::vector<float> inputHighValues;
     std::vector<float> outputLowValues;
     std::vector<float> outputHighValues;
+
+    Constant inputLow;
+    Constant inputHigh;
+    Constant outputLow;
+    Constant outputHigh;
+
     ngraph::element::Type outputPrecision;
     std::vector<std::shared_ptr<Variant>> attributes;
 };
