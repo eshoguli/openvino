@@ -44,20 +44,27 @@ public:
                     return false;
                 }
 
-                const auto parentRestrictions = getParentInputRestrictions(node);
-                if (parentRestrictions.empty()) {
+                auto restrictions = getParentInputRestrictions(node);
+                if (restrictions.empty()) {
                     return false;
                 }
 
-                auto resultAttribute = parentRestrictions[0];
+                for (const auto input : node->inputs()) {
+                    const auto nodeRestriction = getAttribute<std::shared_ptr<AttributeType>>(input);
+                    if (nodeRestriction != nullptr) {
+                        restrictions.push_back(nodeRestriction);
+                    }
+                }
 
-                std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>>> toMerge = parentRestrictions;
+                auto resultAttribute = restrictions[0];
+
+                std::vector<std::shared_ptr<ngraph::VariantWrapper<std::shared_ptr<AttributeType>>>> toMerge = restrictions;
                 // TODO: LPT: handle pointer on itself in VariantWrapper<IntervalsAlignmentAttributePtr>::merge and remove erase, task #59498
                 toMerge.erase(toMerge.begin());
                 resultAttribute->merge(toMerge);
 
-                for (size_t index = 1ul; index < parentRestrictions.size(); index++) {
-                    const auto attributes = parentRestrictions[index]->get()->sharedValue->attributes;
+                for (size_t index = 1ul; index < restrictions.size(); index++) {
+                    const auto attributes = restrictions[index]->get()->sharedValue->attributes;
                     for (const auto attributeWeakPtr : attributes) {
                         auto attribute = attributeWeakPtr.lock();
                         if (attribute == nullptr) {
