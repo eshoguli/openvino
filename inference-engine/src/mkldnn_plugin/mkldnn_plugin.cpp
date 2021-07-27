@@ -91,6 +91,8 @@
 #include "nodes/mkldnn_normalize_node.h"
 #include "ngraph_transformations/convert_to_cpu_specific_opset.hpp"
 
+#include "transformations/serialize.hpp"
+
 #if !defined(__arm__) && !defined(_M_ARM) && !defined(__aarch64__) && !defined(_M_ARM64)
 # ifdef _WIN32
 #  include <intrin.h>
@@ -318,6 +320,11 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
 
     manager.run_passes(nGraphFunc);
 
+    ngraph::pass::Serialize(
+        "/Users/eshoguli/projects/temp/poc/cpu.common.xml",
+        "/Users/eshoguli/projects/temp/poc/cpu.common.bin").run_on_function(nGraphFunc);
+    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.common.svg").run_on_function(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         OV_ITT_SCOPE(FIRST_INFERENCE, MKLDNNPlugin::itt::domains::MKLDNN_LT, "LowPrecisionTransformations");
@@ -361,6 +368,11 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
             return MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
         });
         lptManager.run_passes(nGraphFunc);
+
+        ngraph::pass::Serialize(
+            "/Users/eshoguli/projects/temp/poc/cpu.transformed.xml",
+            "/Users/eshoguli/projects/temp/poc/cpu.transformed.bin").run_on_function(nGraphFunc);
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.transformed.svg").run_on_function(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;

@@ -28,10 +28,14 @@ ie_faster_build(${TARGET_NAME}
 ie_add_vs_version_file(NAME ${TARGET_NAME}
                        FILEDESCRIPTION "Inference Engine LP transformations library")
 
-target_link_libraries(${TARGET_NAME} PUBLIC inference_engine_transformations
+target_link_libraries(${TARGET_NAME} PUBLIC inference_engine inference_engine_transformations
                                      PRIVATE openvino::itt)
 
-target_include_directories(${TARGET_NAME} PUBLIC ${PUBLIC_HEADERS_DIR})
+target_include_directories(${TARGET_NAME}
+        PUBLIC ${PUBLIC_HEADERS_DIR}
+        PRIVATE $<TARGET_PROPERTY:inference_engine_preproc_s,INTERFACE_INCLUDE_DIRECTORIES>)
+
+set_ie_threading_interface_for(${TARGET_NAME})
 
 add_cpplint_target(${TARGET_NAME}_cpplint FOR_TARGETS ${TARGET_NAME})
 

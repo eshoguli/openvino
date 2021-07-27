@@ -22,6 +22,7 @@
 #include "low_precision/markup_precisions.hpp"
 #include "low_precision/markup_can_be_quantized.hpp"
 #include "low_precision/markup_avg_pool_precision_preserved.hpp"
+#include "low_precision/markup_threads.hpp"
 #include "low_precision/propagate_precisions.hpp"
 #include "low_precision/align_quantization_parameters.hpp"
 
@@ -29,6 +30,7 @@
 #include "low_precision/fold_convert.hpp"
 #include "low_precision/pull_reshape_through_dequantization.hpp"
 #include "low_precision/pull_transpose_through_dequantization.hpp"
+#include "low_precision/parallel_graph_rewrite.hpp"
 
 // branch specific transformations
 #include "low_precision/concat.hpp"
@@ -182,7 +184,10 @@ bool ngraph::pass::low_precision::MarkupOptimizations::run_on_function(std::shar
         markup.register_pass<low_precision::AlignQuantizationIntervals>();
         markup.register_pass<low_precision::AlignQuantizationParameters>();
     }
+    markup.register_pass<low_precision::MarkupThreads>();
     markup.run_passes(f);
+
+    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.markup.svg").run_on_function(f);
     return false;
 }
 
@@ -202,7 +207,7 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_function(std::shared_ptr<
 
     manager.register_pass<ngraph::pass::low_precision::MarkupOptimizations>(precisionRestrictions, quantizationRestrictions);
 
-    std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
+    std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::low_precision::ParallelGraphRewrite>();
     common->add_matcher<ngraph::pass::low_precision::AddTransformation>(params);
     common->add_matcher<ngraph::pass::low_precision::AvgPoolTransformation>(params);
     common->add_matcher<ngraph::pass::low_precision::ClampTransformation>(params);
