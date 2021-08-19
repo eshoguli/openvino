@@ -4,10 +4,14 @@
 
 #include "low_precision/parallel_graph_rewrite.hpp"
 #include <ie_parallel.hpp>
+#include <thread>
 #include <ngraph/pattern/op/wrap_type.hpp>
 #include <ngraph/op/util/sub_graph_base.hpp>
 #include "low_precision/network_helper.hpp"
 #include "low_precision/rt_info/thread_attribute.hpp"
+#include "unistd.h"
+
+#include "tbb/task_group.h"
 
 using namespace std;
 using namespace ngraph;
@@ -21,6 +25,82 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::run_on_function(std::sha
         nodes_to_run.emplace_back(node);
     }
     return apply_matcher_passes(f, std::move(nodes_to_run));
+}
+
+struct ApplyMatcherPassesParams {
+    ngraph::pass::low_precision::ParallelGraphRewrite* graphRewrite;
+    shared_ptr<Function> f;
+    deque<std::shared_ptr<Node>> nodes_to_run;
+};
+
+bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes_in_thread(
+    shared_ptr<Function> f,
+    deque<std::shared_ptr<Node>> nodes_to_run,
+    std::shared_ptr<Node>& node) {
+    bool rewritten = false;
+    const auto& threadAttribute = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(node);
+    if ((threadAttribute != nullptr) && (!threadAttribute->get().handled)) {
+        threadAttribute->get().handled = true;
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.before.svg").run_on_function(f);
+
+        tbb::task_group g;
+        std::stringstream  ss;
+        ss << "main thread (" <<
+            "thread: " << std::this_thread::get_id() << ", " <<
+            "nodes: " << nodes_to_run.size() << "): " <<
+            node->get_friendly_name() << std::endl;
+        std::cout << ss.str();
+
+        const auto inputs = node->output(0).get_target_inputs();
+        for (auto& input : inputs) {
+            //std::cout << "input_node: " << input.get_node()->get_friendly_name() << std::endl;
+            deque<std::shared_ptr<Node>> nodes_to_run_for_input;
+            auto childNode = input.get_node()->shared_from_this();
+            while (true) {
+                if (is_type<opset1::Add>(childNode)) {
+                    const auto secondBranch = childNode->get_input_node_ptr(1);
+                    if (!is_type<opset1::Constant>(secondBranch)) {
+                        break;
+                    }
+                }
+                nodes_to_run_for_input.push_back(childNode);
+                auto outputs = childNode->outputs();
+                auto children = outputs[0].get_target_inputs();
+                //assert(children.size() == 1ul);
+                childNode = children.begin()->get_node()->shared_from_this();
+                //std::cout << childNode->get_friendly_name() << std::endl;
+            }
+
+            //{
+            //    // TODO: print: debug only
+            //    std::cout << "nodes_to_run_for_input:" << std::endl;
+            //    auto nodes = nodes_to_run_for_input;
+            //    while (!nodes.empty()) {
+            //        auto nodeToPrint = nodes.front();
+            //        nodes.pop_front();
+            //        std::cout << nodeToPrint->get_friendly_name() << std::endl;
+            //    }
+            //}
+
+            g.run([this, f, nodes_to_run_for_input](){
+                auto deque_node = nodes_to_run_for_input.front();
+                std::stringstream ss;
+                ss << "thread was started (" <<
+                    "thread: " << std::this_thread::get_id() << ", " <<
+                    "nodes: " << nodes_to_run_for_input.size() << "): " <<
+                    deque_node->get_friendly_name() <<
+                    std::endl;
+                std::cout << ss.str();
+
+                this->apply_matcher_passes(f, nodes_to_run_for_input);
+            });
+        }
+        g.wait();
+        std::cout << "threads completed" << std::endl << std::endl;
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.after.svg").run_on_function(f);
+    }
+
+    return rewritten;
 }
 
 bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes(shared_ptr<Function> f, deque<std::shared_ptr<Node>> nodes_to_run) {
@@ -155,6 +235,24 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes(sha
                 }
             }
         } else {
+            if (node->inputs().size() != 0) {
+                auto parent = node->get_input_node_shared_ptr(0);
+                if ((parent->outputs().size() > 1ul) || (parent->output(0).get_target_inputs().size() > 1ul)) {
+                    if (parent->get_friendly_name() == "bottleneck2_0/dim_red/conv/fq_input_0") {
+                        std::cout <<
+                            parent->get_friendly_name() << " (" << parent->get_type_name() << ") -> " <<
+                            node->get_friendly_name() << " (" << node->get_type_name() << "): " << parent->outputs().size() <<
+                            std::endl;
+                        rewritten = rewritten | apply_matcher_passes_in_thread(f, nodes_to_run, parent);
+                    }
+                }
+            }
+
+            const auto& threadAttribute = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(node);
+            if (threadAttribute != nullptr) {
+                threadAttribute->get().handled_thread_id = std::this_thread::get_id();
+            }
+
             // Otherwise we use default algorithm that iterates over all registered matcher passes
             for (auto& m_pass : m_matchers) {
                 // Skip passes that are disabled

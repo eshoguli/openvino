@@ -59,10 +59,10 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
         if (as_type_ptr<opset1::Parameter>(node)) {
             thread_id++;
             auto& rt = node->get_rt_info();
-            rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(thread_id);
+            rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(ThreadAttribute(thread_id));
         }
 
-        if (node->get_friendly_name() == "bottleneck1_1/add/fq_input_0") {
+        if (node->get_friendly_name() == "bottleneck2_0/dim_red/conv/fq_input_0") {
             std::cout << "" << std::endl;
         }
         //std::cout << node->get_type_name() << ": " << node->get_friendly_name() << std::endl;
@@ -86,16 +86,20 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
                 if (consumer_node_attribute != nullptr) {
                     // node has been handled before
                     if (consumer_node_attribute->get().input_thread_ids.size() == 1ul) {
-                        // second thread is entering the node: update thread id
+                        // second thread is entering the node: update existing thread id
                         ++thread_id;
                         consumer_node_attribute->get().thread_id = thread_id;
+                        attribute->get().output_thread_ids.insert(thread_id);
                     }
                     consumer_node_attribute->get().input_thread_ids.insert(current_thread_id);
                     continue;
                 }
 
                 auto& rt = consumer_node->get_rt_info();
-                rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(current_thread_id);
+                rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(ThreadAttribute(
+                    current_thread_id,
+                    attribute->get().thread_id));
+                attribute->get().output_thread_ids.insert(current_thread_id);
             }
         }
     }

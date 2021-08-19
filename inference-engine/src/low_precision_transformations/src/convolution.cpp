@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <thread>
+#include <unistd.h>
 
 #include <ngraph/pattern/op/wrap_type.hpp>
 #include <ngraph/pattern/op/or.hpp>
@@ -53,6 +55,7 @@ bool ConvolutionTransformation::isQuantizedStatic(const std::shared_ptr<const No
 
 bool ConvolutionTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     auto convolution = m.get_match_root();
+    //std::cout << "ConvolutionTransformation::transform (" << std::this_thread::get_id() << "): " << convolution->get_friendly_name() << std::endl;
 
     if (!canConvolutionBeTransformed(context, convolution)) {
         auto weightInput = convolution->get_input_node_shared_ptr(1);

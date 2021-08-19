@@ -26,7 +26,13 @@ public:
     NGRAPH_RTTI_DECLARATION;
     bool run_on_function(std::shared_ptr<ngraph::Function> f) override;
 
-protected:
+public:
     bool apply_matcher_passes(std::shared_ptr<Function> f, std::deque<std::shared_ptr<Node>> nodes_to_run);
+
+private:
+    bool apply_matcher_passes_in_thread(
+        std::shared_ptr<Function> f,
+        std::deque<std::shared_ptr<Node>> nodes_to_run,
+        std::shared_ptr<Node>& node);
 };
 

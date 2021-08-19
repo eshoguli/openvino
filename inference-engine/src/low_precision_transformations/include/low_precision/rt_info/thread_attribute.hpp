@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <unordered_set>
+#include <thread>
 
 #include <ngraph/node.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
@@ -20,9 +21,13 @@ namespace ngraph {
 
 class LP_TRANSFORMATIONS_API ThreadAttribute {
 public:
-    ThreadAttribute(const size_t thread_id);
+    explicit ThreadAttribute(const size_t thread_id);
+    ThreadAttribute(const size_t thread_id, const size_t input_thread_id);
     std::unordered_set<size_t> input_thread_ids;
+    std::unordered_set<size_t> output_thread_ids;
     size_t thread_id;
+    bool handled;
+    std::__thread_id handled_thread_id;
 };
 
 extern template class LP_TRANSFORMATIONS_API ngraph::VariantImpl<ThreadAttribute>;

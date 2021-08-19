@@ -5,6 +5,9 @@
 #include "low_precision/max_pool.hpp"
 
 #include <memory>
+#include <unistd.h>
+#include <thread>
+
 #include <ngraph/ngraph.hpp>
 #include <ngraph/opsets/opset1.hpp>
 
@@ -52,6 +55,7 @@ bool MaxPoolTransformation::canBeTransformed(const TransformationContext& contex
 }
 
 bool MaxPoolTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
+    //std::cout << "MaxPoolTransformation::transform (" << ::std::this_thread::get_id() << "): " << m.get_match_root()->get_friendly_name() << std::endl;
     if (!canBeTransformed(context, m.get_match_root())) {
         return false;
     }

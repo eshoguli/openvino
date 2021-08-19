@@ -252,6 +252,10 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
 
 bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     auto layer = as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
+    //if (layer->get_friendly_name() == "bottleneck2_0/dim_red/conv/fq_input_0") {
+    //    std::cout << "" << std::endl;
+    //}
+
     if (!NetworkHelper::isQuantizeSupported(layer)) {
         return false;
     }
