@@ -412,6 +412,7 @@ void ngraph::pass::MatcherPass::register_matcher(const std::shared_ptr<ngraph::p
     set_property(property, true);
     m_matcher = m;
     m_handler = [m, callback](const std::shared_ptr<Node>& node) -> bool {
+        std::lock_guard<std::mutex> lock(*m->mutex);
         if (m->match(node->output(0)))
         {
             NGRAPH_DEBUG << "Matcher " << m->get_name() << " matched " << node;

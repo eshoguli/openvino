@@ -187,7 +187,7 @@ bool ngraph::pass::low_precision::MarkupOptimizations::run_on_function(std::shar
     markup.register_pass<low_precision::MarkupThreads>();
     markup.run_passes(f);
 
-    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.markup.svg").run_on_function(f);
+    //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.markup.svg").run_on_function(f);
     return false;
 }
 

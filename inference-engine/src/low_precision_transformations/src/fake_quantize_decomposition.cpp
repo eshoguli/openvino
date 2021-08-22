@@ -5,6 +5,7 @@
 #include "low_precision/fake_quantize_decomposition.hpp"
 
 #include <memory>
+#include <thread>
 #include <ngraph/opsets/opset1.hpp>
 #include <ngraph/pattern/op/wrap_type.hpp>
 
@@ -252,8 +253,10 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
 
 bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     auto layer = as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
-    //if (layer->get_friendly_name() == "bottleneck2_0/dim_red/conv/fq_input_0") {
-    //    std::cout << "" << std::endl;
+
+    //bottleneck2_0/dim_red/conv/fq_input_0
+    //if (layer->get_friendly_name() == "bottleneck3_0/dim_red/conv/fq_input_0") {
+    //    std::cout << "FakeQuantizeDecompositionTransformation::transform (" << std::this_thread::get_id() << "): " << layer->get_friendly_name() << std::endl;
     //}
 
     if (!NetworkHelper::isQuantizeSupported(layer)) {

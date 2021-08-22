@@ -5,11 +5,22 @@
 #include "low_precision/rt_info/thread_attribute.hpp"
 
 #include <vector>
+#include <mutex>
 
 #include <ngraph/opsets/opset1.hpp>
 #include "low_precision/network_helper.hpp"
 
 using namespace ngraph;
+
+CompletionCounter::CompletionCounter(const size_t count) : count(count) {
+}
+
+bool CompletionCounter::complete() {
+    const std::lock_guard<std::mutex> lock(mutex);
+    assert(count != 0);
+    count--;
+    return count == 0;
+}
 
 ThreadAttribute::ThreadAttribute(const size_t thread_id) : thread_id(thread_id) {
 }
@@ -50,7 +61,7 @@ std::string VariantWrapper<ThreadAttribute>::to_string() {
     ss << "thread_id: " << m_value.thread_id <<
         ", in: " << thread_attribute::to_string(m_value.input_thread_ids) <<
         ", out: " << thread_attribute::to_string(m_value.output_thread_ids) <<
-        ", handled: " << m_value.handled <<
+        ", handled: " << (m_value.handled ? "true" : "false") <<
         ", handled_thread_id: " << m_value.handled_thread_id;
     return ss.str();
 }

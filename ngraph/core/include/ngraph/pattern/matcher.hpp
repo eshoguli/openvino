@@ -177,7 +177,7 @@ namespace ngraph
             PatternValueMap m_pattern_map;
             PatternValueMaps m_pattern_value_maps;
             OutputVector m_matched_list;
-
+            std::shared_ptr<std::mutex> mutex = std::make_shared<std::mutex>();
         protected:
             bool match_permutation(const OutputVector& pattern_args, const OutputVector& args);
 

@@ -28,6 +28,8 @@ namespace ngraph {
 namespace pass {
 namespace low_precision {
 
+std::mutex NetworkHelper::separateInStandaloneBranchMutex;
+
 // Return true if `type` can be castable to at least one of `type`
 bool NetworkHelper::is_castable_to_one_of(NodeTypeInfo type, const std::unordered_set<NodeTypeInfo>& types) {
     for (auto another : types) {
@@ -576,6 +578,8 @@ FakeQuantizeDequantization NetworkHelper::foldDequantization(const std::shared_p
 }
 
 std::shared_ptr<ngraph::Node> NetworkHelper::separateInStandaloneBranch(std::shared_ptr<ngraph::Node> node) {
+    std::lock_guard<std::mutex> guard(separateInStandaloneBranchMutex);
+
     FakeQuantizeDequantization dequantization = NetworkHelper::getDequantization(node);
     if (dequantization.isShared()) {
         Output<Node> parent = dequantization.data;
@@ -1850,6 +1854,20 @@ bool isDisabled(const std::shared_ptr<Node>& node) {
     }
     return false;
 }
+
+bool isBranchConcatenation(const std::shared_ptr<Node>& node) {
+    // FIXME: rework
+    if (is_type<opset1::Concat>(node)) {
+        return true;
+    }
+    if (is_type<opset1::Add>(node) || is_type<opset1::Multiply>(node)) {
+        if (!is_type<opset1::Constant>(node->get_input_node_ptr(1))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace low_precision
 } // namespace pass
 } // namespace ngraph

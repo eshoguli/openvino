@@ -36,7 +36,8 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
             auto output = node->output(output_index);
             auto consumer_inputs = output.get_target_inputs();
             for (auto& consumer_input : consumer_inputs) {
-                if (ngraph::is_type<opset1::Result>(consumer_input.get_node())) {
+                auto consumer_node = consumer_input.get_node()->shared_from_this();
+                if (ngraph::is_type<opset1::Result>(consumer_node) || ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
                     continue;
                 }
 
@@ -62,9 +63,12 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
             rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(ThreadAttribute(thread_id));
         }
 
-        if (node->get_friendly_name() == "bottleneck2_0/dim_red/conv/fq_input_0") {
-            std::cout << "" << std::endl;
-        }
+        //if (node->get_friendly_name() == "bottleneck2_0/dim_red/conv/fq_input_0") {
+        //    std::cout << "" << std::endl;
+        //}
+        //if (node->get_friendly_name() == "bottleneck2_0/add") {
+        //    std::cout << "" << std::endl;
+        //}
         //std::cout << node->get_type_name() << ": " << node->get_friendly_name() << std::endl;
 
         auto attribute = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(node);
@@ -72,6 +76,10 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
             continue;
         }
         const bool several_consumers = are_several_consumers(node);
+
+        //if (node->get_friendly_name() == "bottleneck2_1/add/fq_input_1") {
+        //    std::cout << "" << std::endl;
+        //}
 
         for (auto output : node->outputs()) {
             auto consumer_inputs = output.get_target_inputs();
@@ -84,22 +92,27 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
 
                 auto consumer_node_attribute = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(consumer_node);
                 if (consumer_node_attribute != nullptr) {
-                    // node has been handled before
-                    if (consumer_node_attribute->get().input_thread_ids.size() == 1ul) {
-                        // second thread is entering the node: update existing thread id
-                        ++thread_id;
-                        consumer_node_attribute->get().thread_id = thread_id;
-                        attribute->get().output_thread_ids.insert(thread_id);
-                    }
+                    //// node has been handled before
+                    //if (consumer_node_attribute->get().input_thread_ids.size() == 1ul) {
+                    //    // second thread is entering the node: update existing thread id
+                    //    ++thread_id;
+                    //    consumer_node_attribute->get().thread_id = thread_id;
+                    //    attribute->get().output_thread_ids.insert(thread_id);
+                    //}
                     consumer_node_attribute->get().input_thread_ids.insert(current_thread_id);
                     continue;
                 }
 
-                auto& rt = consumer_node->get_rt_info();
-                rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(ThreadAttribute(
+                auto new_consumer_node_attribute = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(ThreadAttribute(
                     current_thread_id,
                     attribute->get().thread_id));
+                auto& rt = consumer_node->get_rt_info();
+                rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = new_consumer_node_attribute;
                 attribute->get().output_thread_ids.insert(current_thread_id);
+
+                if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
+                    new_consumer_node_attribute->get().completion_counter = std::make_shared<CompletionCounter>(consumer_node->get_input_size());
+                }
             }
         }
     }

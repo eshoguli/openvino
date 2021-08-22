@@ -19,6 +19,16 @@
 
 namespace ngraph {
 
+class LP_TRANSFORMATIONS_API CompletionCounter {
+public:
+    explicit CompletionCounter(const size_t count);
+    bool complete();
+
+private:
+    size_t count;
+    std::mutex mutex;
+};
+
 class LP_TRANSFORMATIONS_API ThreadAttribute {
 public:
     explicit ThreadAttribute(const size_t thread_id);
@@ -28,6 +38,7 @@ public:
     size_t thread_id;
     bool handled;
     std::__thread_id handled_thread_id;
+    std::shared_ptr<CompletionCounter> completion_counter;
 };
 
 extern template class LP_TRANSFORMATIONS_API ngraph::VariantImpl<ThreadAttribute>;

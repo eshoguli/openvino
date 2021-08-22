@@ -55,7 +55,14 @@ bool ConvolutionTransformation::isQuantizedStatic(const std::shared_ptr<const No
 
 bool ConvolutionTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     auto convolution = m.get_match_root();
-    //std::cout << "ConvolutionTransformation::transform (" << std::this_thread::get_id() << "): " << convolution->get_friendly_name() << std::endl;
+
+    //std::stringstream ss;
+    //ss << "\tConvolutionTransformation::transform (" << std::this_thread::get_id() << "): " << convolution->get_friendly_name() << std::endl;
+    //std::cout << ss.str();
+
+    //if (convolution->get_friendly_name() == "bottleneck3_7/dim_red/conv") {
+    //    std::cout << "ConvolutionTransformation::transform: " << convolution->get_friendly_name() << std::endl;
+    //}
 
     if (!canConvolutionBeTransformed(context, convolution)) {
         auto weightInput = convolution->get_input_node_shared_ptr(1);
@@ -315,6 +322,7 @@ bool ConvolutionTransformation::transform(TransformationContext &context, ngraph
     std::shared_ptr<ngraph::opset1::Multiply> finalDequantization = NetworkHelper::optimizeMultipliesAfter(
         convolution->output(0).get_target_inputs().begin()->get_node()->shared_from_this());
     ngraph::copy_runtime_info({ convolution, finalDequantization }, finalDequantization);
+    finalDequantization->set_friendly_name(convolution->get_friendly_name() + "/Multiply");
     updateOutput(context, finalDequantization, convolution);
 
     // [C, 1, 1] -> [1, C, 1, 1]

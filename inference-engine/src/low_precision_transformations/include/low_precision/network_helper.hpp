@@ -198,6 +198,8 @@ public:
 
     static FakeQuantizeDequantization foldDequantization(const std::shared_ptr<Node>& node, const size_t branchIndex, const bool inPlace = false);
 
+    // TODO: move to instance
+    static std::mutex separateInStandaloneBranchMutex;
     static std::shared_ptr<ngraph::Node> separateInStandaloneBranch(std::shared_ptr<ngraph::Node> node);
 
     static std::shared_ptr<opset1::FakeQuantize> fuseConvert(const std::shared_ptr<opset1::FakeQuantize>& fakeQuantize);
@@ -451,6 +453,8 @@ std::shared_ptr<ngraph::VariantWrapper<T>> getAttributeFromOutput(const Output<N
 }
 
 bool isDisabled(const std::shared_ptr<Node>& node);
+
+bool isBranchConcatenation(const std::shared_ptr<Node>& node);
 
 template <typename T, typename ... Args>
 std::shared_ptr<T> make_shared_attribute(Args&& ... args) {

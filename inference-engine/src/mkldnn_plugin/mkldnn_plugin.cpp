@@ -320,10 +320,10 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
 
     manager.run_passes(nGraphFunc);
 
-    ngraph::pass::Serialize(
-        "/Users/eshoguli/projects/temp/poc/cpu.common.xml",
-        "/Users/eshoguli/projects/temp/poc/cpu.common.bin").run_on_function(nGraphFunc);
-    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.common.svg").run_on_function(nGraphFunc);
+    //ngraph::pass::Serialize(
+    //    "/Users/eshoguli/projects/tasks/poc_load_time/branch/cpu.common.xml",
+    //    "/Users/eshoguli/projects/tasks/poc_load_time/branch/cpu.common.bin").run_on_function(nGraphFunc);
+    //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/tasks/poc_load_time/branch/cpu.common.svg").run_on_function(nGraphFunc);
 
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
@@ -369,10 +369,10 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
         });
         lptManager.run_passes(nGraphFunc);
 
-        ngraph::pass::Serialize(
-            "/Users/eshoguli/projects/temp/poc/cpu.transformed.xml",
-            "/Users/eshoguli/projects/temp/poc/cpu.transformed.bin").run_on_function(nGraphFunc);
-        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.transformed.svg").run_on_function(nGraphFunc);
+        //ngraph::pass::Serialize(
+        //    "/Users/eshoguli/projects/tasks/poc_load_time/branch/cpu.transformed.xml",
+        //    "/Users/eshoguli/projects/tasks/poc_load_time/branch/cpu.transformed.bin").run_on_function(nGraphFunc);
+        //ngraph::pass::VisualizeTree("/Users/eshoguli/projects/tasks/poc_load_time/branch/cpu.transformed.svg").run_on_function(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;

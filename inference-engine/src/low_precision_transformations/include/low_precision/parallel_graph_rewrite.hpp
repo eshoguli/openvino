@@ -30,9 +30,11 @@ public:
     bool apply_matcher_passes(std::shared_ptr<Function> f, std::deque<std::shared_ptr<Node>> nodes_to_run);
 
 private:
+    std::shared_ptr<Node> fill_ordered_ops_for_thread_execution(const std::shared_ptr<Node>& node, std::deque<std::shared_ptr<Node>>& nodes_to_run);
+    std::shared_ptr<Node> fill_ordered_ops_for_main_execution(const std::shared_ptr<Node>& node, std::deque<std::shared_ptr<Node>>& nodes_to_run);
+
     bool apply_matcher_passes_in_thread(
         std::shared_ptr<Function> f,
-        std::deque<std::shared_ptr<Node>> nodes_to_run,
         std::shared_ptr<Node>& node);
 };
 

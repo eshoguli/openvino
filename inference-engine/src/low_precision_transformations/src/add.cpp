@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <thread>
 
 #include <ngraph/pattern/op/wrap_type.hpp>
 #include "ngraph_ops/type_relaxed.hpp"
@@ -108,6 +109,14 @@ AddTransformation::AddTransformation(const Params& params) : EltwiseBaseTransfor
 
 bool AddTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<opset1::Add> op = as_type_ptr<opset1::Add>(m.get_match_root());
+
+    //std::stringstream ss;
+    //ss << "\tAddTransformation::transform (" << std::this_thread::get_id() << "): " << op->get_friendly_name() << std::endl;
+    //std::cout << ss.str();
+
+    //if (op->get_friendly_name() == "bottleneck2_8/add") {
+    //    std::cout << "AddTransformation::transform (" << std::this_thread::get_id() << "): " << op->get_friendly_name() << std::endl;
+    //}
     if ((op == nullptr) || (!canBeTransformed(context, op))) {
         return false;
     }

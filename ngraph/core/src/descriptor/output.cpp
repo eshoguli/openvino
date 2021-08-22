@@ -21,6 +21,20 @@ descriptor::Output::Output(Node* node, size_t index, const shared_ptr<Tensor>& t
 // Add an input to the vector of inputs that use this output.
 void descriptor::Output::add_input(Input* input)
 {
+    //try
+    //{
+    //    const auto node = input->get_node();
+    //    if (node != nullptr) {
+    //        if (node->get_friendly_name() == "bottleneck2_0/dim_inc/conv/Multiply") {
+    //            std::cout << "Output::add_input: " << node->get_friendly_name() << " (" << node->get_type_name() << ")" << std::endl;
+    //        }
+    //    }
+    //}
+    //catch (...)
+    //{
+    //    //
+    //}
+
     // Keep the inputs in insertion order to keep sorts deterministic
     if (find(m_inputs.begin(), m_inputs.end(), input) == m_inputs.end())
     {
