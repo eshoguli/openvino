@@ -18,6 +18,7 @@ public:
     TransformationContext();
     explicit TransformationContext(std::shared_ptr<Function> function);
     std::shared_ptr<Function> function;
+    GraphRewriteContext* graphRewriteContext;
 
     // Used to store handled FakeQuantize operations.
     // ConcatTransformation and FakeQuantizeTransformation handle FakeQuantize operations. ConcatTransformation handles FakeQuantize operation first.

@@ -36,5 +36,7 @@ private:
     bool apply_matcher_passes_in_thread(
         std::shared_ptr<Function> f,
         std::shared_ptr<Node>& node);
+
+    std::unordered_set<std::string> handled;
 };
 

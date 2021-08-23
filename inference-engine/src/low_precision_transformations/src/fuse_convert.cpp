@@ -27,15 +27,16 @@ FuseConvertTransformation::FuseConvertTransformation(const Params& params) : Lay
         std::make_shared<pattern::op::Or>(OutputVector{ multiply, subtract,  add }),
         "FuseConvertTransformation");
 
-    ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
+    ngraph::graph_rewrite_callback_ex callback = [this](pattern::Matcher& m, GraphRewriteContext* graphRewriteContext) {
         auto op = m.get_match_root();
         if (transformation_callback(op)) {
             return false;
         }
+        context->graphRewriteContext = graphRewriteContext;
         return transform(*context, m);
     };
 
-    this->register_matcher(matcher, callback);
+    this->register_matcher_ex(matcher, callback);
 }
 
 std::shared_ptr<Node> removeConvertIfPossibleForSubtract(
@@ -96,7 +97,7 @@ bool FuseConvertTransformation::transform(TransformationContext& context, ngraph
 
         ngraph::copy_runtime_info({ convert, op }, newOp);
         newOp->set_friendly_name(op->get_friendly_name());
-        register_new_node(newOp);
+        register_new_node(newOp, context.graphRewriteContext);
     }
 
     return true;

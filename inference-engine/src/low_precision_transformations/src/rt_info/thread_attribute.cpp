@@ -12,14 +12,28 @@
 
 using namespace ngraph;
 
-CompletionCounter::CompletionCounter(const size_t count) : count(count) {
+CompletionCounter::CompletionCounter(const size_t count) : totalCount(count), notCompletedCount(count) {
 }
 
 bool CompletionCounter::complete() {
     const std::lock_guard<std::mutex> lock(mutex);
-    assert(count != 0);
-    count--;
-    return count == 0;
+    assert(notCompletedCount != 0);
+    notCompletedCount--;
+    return notCompletedCount == 0;
+}
+
+bool CompletionCounter::isCompleted() noexcept {
+    const std::lock_guard<std::mutex> lock(mutex);
+    return notCompletedCount == 0;
+}
+
+size_t CompletionCounter::getTotalCount() noexcept {
+    const std::lock_guard<std::mutex> lock(mutex);
+    return totalCount;
+}
+size_t CompletionCounter::getNotCompletedCount() noexcept {
+    const std::lock_guard<std::mutex> lock(mutex);
+    return notCompletedCount;
 }
 
 ThreadAttribute::ThreadAttribute(const size_t thread_id) : thread_id(thread_id) {
@@ -28,8 +42,7 @@ ThreadAttribute::ThreadAttribute(const size_t thread_id) : thread_id(thread_id) 
 ThreadAttribute::ThreadAttribute(const size_t thread_id, const size_t input_thread_id) :
     thread_id(thread_id),
     input_thread_ids({input_thread_id}),
-    handled(false),
-    handled_thread_id() {
+    handled(false) {
 }
 
 template class ngraph::VariantImpl<ThreadAttribute>;
@@ -57,11 +70,22 @@ std::string to_string(const std::unordered_set<size_t>& thread_ids) {
 } // namespace thread_attribute
 
 std::string VariantWrapper<ThreadAttribute>::to_string() {
+    std::stringstream ss2;
+    if (m_value.completion_counter == nullptr) {
+        ss2 << "{}";
+    } else {
+        ss2 << "{completed=" << (m_value.completion_counter->isCompleted() ? "true" : "false") <<
+            ", count=" << m_value.completion_counter->getNotCompletedCount() << "/" << m_value.completion_counter->getTotalCount() << "}";
+    }
     std::stringstream ss;
     ss << "thread_id: " << m_value.thread_id <<
         ", in: " << thread_attribute::to_string(m_value.input_thread_ids) <<
         ", out: " << thread_attribute::to_string(m_value.output_thread_ids) <<
         ", handled: " << (m_value.handled ? "true" : "false") <<
-        ", handled_thread_id: " << m_value.handled_thread_id;
+        ", completion_counter: " << ss2.str();
+
+#ifdef DEBUG_THREADING
+    ss << ", handled_thread_id: " << m_value.handled_thread_id;
+#endif
     return ss.str();
 }

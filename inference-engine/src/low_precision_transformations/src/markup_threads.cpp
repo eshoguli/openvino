@@ -88,6 +88,11 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
                 if (is_type<opset1::Result>(consumer_node)) {
                     continue;
                 }
+
+                //if (consumer_node->get_friendly_name() == "bottleneck1_1/add/fq_input_0") {
+                //    std::cout << "TO DEBUG" << std::endl;
+                //}
+
                 const size_t current_thread_id = several_consumers ? ++thread_id : attribute->get().thread_id;
 
                 auto consumer_node_attribute = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(consumer_node);
@@ -110,7 +115,9 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
                 rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = new_consumer_node_attribute;
                 attribute->get().output_thread_ids.insert(current_thread_id);
 
-                if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
+                if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)
+                    //&& (new_consumer_node_attribute->get().input_thread_ids.size() > 1ul)
+                    ) {
                     new_consumer_node_attribute->get().completion_counter = std::make_shared<CompletionCounter>(consumer_node->get_input_size());
                 }
             }

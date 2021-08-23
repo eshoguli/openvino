@@ -17,15 +17,24 @@
 #include "low_precision/rt_info/attribute_parameters.hpp"
 #include "low_precision/rt_info/shared_value_attribute.hpp"
 
+//#ifndef NDEBUG
+//#define DEBUG_THREADING
+//#endif
+
 namespace ngraph {
 
 class LP_TRANSFORMATIONS_API CompletionCounter {
 public:
     explicit CompletionCounter(const size_t count);
     bool complete();
+    bool isCompleted() noexcept;
+    size_t getTotalCount() noexcept;
+    size_t getNotCompletedCount() noexcept;
 
 private:
-    size_t count;
+    size_t totalCount;
+    // to debug
+    size_t notCompletedCount;
     std::mutex mutex;
 };
 
@@ -37,7 +46,9 @@ public:
     std::unordered_set<size_t> output_thread_ids;
     size_t thread_id;
     bool handled;
+#ifdef DEBUG_THREADING
     std::__thread_id handled_thread_id;
+#endif
     std::shared_ptr<CompletionCounter> completion_counter;
 };
 

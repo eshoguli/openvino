@@ -13,11 +13,21 @@
 
 namespace ngraph
 {
+    namespace pass
+    {
+        class NGRAPH_API GraphRewriteContext {
+        public:
+            std::vector<std::shared_ptr<ngraph::Node>> new_nodes;
+        };
+    }
+
     using matcher_pass_callback = std::function<bool(ngraph::pattern::Matcher& m)>;
     using graph_rewrite_callback = std::function<bool(ngraph::pattern::Matcher& m)>;
+    using graph_rewrite_callback_ex = std::function<bool(ngraph::pattern::Matcher& m, ngraph::pass::GraphRewriteContext* context)>;
     using recurrent_graph_rewrite_callback =
         std::function<bool(ngraph::pattern::RecurrentMatcher& m)>;
     using handler_callback = std::function<bool(const std::shared_ptr<Node>& node)>;
+    using handler_callback_ex = std::function<bool(const std::shared_ptr<Node>& node, ngraph::pass::GraphRewriteContext* context)>;
     namespace pass
     {
         /// \brief MatcherPass is a basic block for pattern based transformations. It describes
@@ -67,7 +77,7 @@ namespace ngraph
                 set_property(property, true);
             }
 
-            bool apply(std::shared_ptr<ngraph::Node> node);
+            bool apply(std::shared_ptr<ngraph::Node> node, GraphRewriteContext* context = nullptr);
 
             template <typename T, class... Args>
             std::shared_ptr<T> register_new_node(Args&&... args)
@@ -78,14 +88,23 @@ namespace ngraph
             }
 
             template <typename T>
-            std::shared_ptr<T> register_new_node(const std::shared_ptr<T>& node)
+            std::shared_ptr<T> register_new_node(const std::shared_ptr<T>& node, GraphRewriteContext* context = nullptr)
             {
+                if (context != nullptr) {
+                    context->new_nodes.push_back(node);
+                    return node;
+                }
+
                 m_new_nodes.push_back(node);
                 return node;
             }
 
-            const std::vector<std::shared_ptr<ngraph::Node>>& get_new_nodes()
+            const std::vector<std::shared_ptr<ngraph::Node>>& get_new_nodes(GraphRewriteContext* context = nullptr)
             {
+                if (context != nullptr)
+                {
+                    return context->new_nodes;
+                }
                 return m_new_nodes;
             }
             void clear_new_nodes() { m_new_nodes.clear(); }
@@ -97,8 +116,14 @@ namespace ngraph
                 const ngraph::graph_rewrite_callback& callback,
                 const PassPropertyMask& property = PassProperty::CHANGE_DYNAMIC_STATE);
 
+            void register_matcher_ex(
+                    const std::shared_ptr<pattern::Matcher>& m,
+                    const ngraph::graph_rewrite_callback_ex& callback,
+                    const PassPropertyMask& property = PassProperty::CHANGE_DYNAMIC_STATE);
+
         private:
             handler_callback m_handler;
+            handler_callback_ex m_handler_ex;
             std::shared_ptr<pattern::Matcher> m_matcher;
             std::vector<std::shared_ptr<ngraph::Node>> m_new_nodes;
         };

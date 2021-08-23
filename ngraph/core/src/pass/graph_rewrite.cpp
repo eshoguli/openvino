@@ -427,11 +427,36 @@ void ngraph::pass::MatcherPass::register_matcher(const std::shared_ptr<ngraph::p
     };
 }
 
-bool ngraph::pass::MatcherPass::apply(std::shared_ptr<ngraph::Node> node)
+void ngraph::pass::MatcherPass::register_matcher_ex(
+    const std::shared_ptr<ngraph::pattern::Matcher>& m,
+    const ngraph::graph_rewrite_callback_ex& callback,
+    const PassPropertyMask& property) {
+    set_name(m->get_name());
+    set_property(property, true);
+    m_matcher = m;
+    m_handler_ex = [m, callback](const std::shared_ptr<Node>& node, GraphRewriteContext* context) -> bool {
+        std::lock_guard<std::mutex> lock(*m->mutex);
+        if (m->match(node->output(0)))
+        {
+            NGRAPH_DEBUG << "Matcher " << m->get_name() << " matched " << node;
+            NGRAPH_PASS_CALLBACK(m);
+            bool status = callback(*m.get(), context);
+            // explicitly clear Matcher state because it holds pointers to matched nodes
+            m->clear_state();
+            return status;
+        }
+        m->clear_state();
+        return false;
+    };
+ }
+
+bool ngraph::pass::MatcherPass::apply(std::shared_ptr<ngraph::Node> node, GraphRewriteContext* context)
 {
     OV_ITT_SCOPED_TASK(itt::domains::nGraph,
                        pass::internal::perf_counters_graph_rewrite()[get_type_info()]);
     m_new_nodes.clear();
+    if (m_handler_ex)
+        return m_handler_ex(node, context);
     if (m_handler)
         return m_handler(node);
     return false;

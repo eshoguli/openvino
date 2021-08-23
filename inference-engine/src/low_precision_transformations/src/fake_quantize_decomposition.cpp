@@ -25,16 +25,17 @@ NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::FakeQuantizeDecompositionTra
 FakeQuantizeDecompositionTransformation::FakeQuantizeDecompositionTransformation(const Params& params) : LayerTransformation(params) {
     auto matcher = pattern::wrap_type<opset1::FakeQuantize>();
 
-    ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
+    ngraph::graph_rewrite_callback_ex callback = [this](pattern::Matcher& m, GraphRewriteContext* graphRewriteContext) {
         auto op = m.get_match_root();
         if (transformation_callback(op)) {
             return false;
         }
+        context->graphRewriteContext = graphRewriteContext;
         return transform(*context, m);
     };
 
     auto m = std::make_shared<ngraph::pattern::Matcher>(matcher, "FakeQuantizeDecompositionTransformation");
-    this->register_matcher(m, callback);
+    this->register_matcher_ex(m, callback);
 }
 
 namespace fq_decomposition {
@@ -158,6 +159,7 @@ DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize>
 
 // TODO: LPT: refactor: use one way to decompose FakeQuantize
 std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
+    TransformationContext& context,
     MatcherPass* matcherPass,
     std::shared_ptr<opset1::FakeQuantize>& layer,
     const std::shared_ptr<IntervalsAlignmentAttribute>& intervalsAlignment,
@@ -202,7 +204,7 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
             roundf(updatedOutputLowValue),
             roundf(updatedOutputHighValue),
             false);
-        matcherPass->register_new_node(newFakeQuantizeLayer);
+        matcherPass->register_new_node(newFakeQuantizeLayer, context.graphRewriteContext);
         newFakeQuantizeLayer->set_levels(levels);
 
         auto dequantization = ngraph::pass::low_precision::NetworkHelper::makeDequantization(
@@ -242,7 +244,7 @@ std::shared_ptr<ngraph::Node> decomposeFakeQuantize(
         if (newFakeQuantize == nullptr) {
             return nullptr;
         }
-        matcherPass->register_new_node(newFakeQuantize);
+        matcherPass->register_new_node(newFakeQuantize, context.graphRewriteContext);
         dequantize = std::get<1>(QDQ);
     }
 
@@ -255,7 +257,7 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     auto layer = as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
 
     //bottleneck2_0/dim_red/conv/fq_input_0
-    //if (layer->get_friendly_name() == "bottleneck3_0/dim_red/conv/fq_input_0") {
+    //if (layer->get_friendly_name() == "bottleneck3_7/add/fq_input_0") {
     //    std::cout << "FakeQuantizeDecompositionTransformation::transform (" << std::this_thread::get_id() << "): " << layer->get_friendly_name() << std::endl;
     //}
 
@@ -396,6 +398,7 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     }
 
     std::shared_ptr<ngraph::Node> dequantize = fq_decomposition::decomposeFakeQuantize(
+        context,
         this,
         layer,
         intervalsAlignment,

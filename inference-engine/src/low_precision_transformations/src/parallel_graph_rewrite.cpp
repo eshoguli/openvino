@@ -16,8 +16,6 @@
 using namespace std;
 using namespace ngraph;
 
-//#define DEBUG_THREADING
-
 NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::ParallelGraphRewrite, "ngraph::pass::ParallelGraphRewrite", 0);
 
 bool ngraph::pass::low_precision::ParallelGraphRewrite::run_on_function(std::shared_ptr<ngraph::Function> f) {
@@ -74,6 +72,9 @@ std::shared_ptr<Node> ngraph::pass::low_precision::ParallelGraphRewrite::fill_or
 
         auto outputs = childNode->outputs();
         auto children = outputs[0].get_target_inputs();
+        if (children.empty()) {
+            return childNode;
+        }
         childNode = children.begin()->get_node()->shared_from_this();
     }
     return nullptr;
@@ -116,6 +117,21 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes_in_
         for (auto& input : inputs) {
             deque<std::shared_ptr<Node>> nodes_to_run_for_thread_execution;
             auto syncNode = fill_ordered_ops_for_thread_execution(input.get_node()->shared_from_this(), nodes_to_run_for_thread_execution);
+
+#ifdef DEBUG_THREADING
+            std::stringstream ss2;
+            ss2 << "apply_matcher_passes_in_thread (" <<
+                std::this_thread::get_id() << "): sync node=" <<
+                syncNode->get_friendly_name() << " (" << syncNode->get_type_name() << "): " <<
+                nodes_to_run_for_thread_execution.size() <<
+                std::endl;
+            std::cout << ss2.str();
+
+            //if (syncNode->get_friendly_name() == "bottleneck3_6/add") {
+            //    std::cout << "JUST TO DEBUG" << std::endl;
+            //}
+#endif
+
             if (nodes_to_run_for_thread_execution.empty()) {
                 continue;
             }
@@ -156,11 +172,13 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes_in_
                     auto attributeWrapper = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(syncNode);
                     auto& attribute = attributeWrapper->get();
                     assert(attribute.completion_counter != nullptr);
-                    if ((attribute.completion_counter != nullptr) && attribute.completion_counter->complete()) {
+                    if ((attribute.completion_counter == nullptr) ||
+                        ((attribute.completion_counter != nullptr) && attribute.completion_counter->complete())) {
 #ifdef DEBUG_THREADING
                         std::cout << "threads completed (" << std::this_thread::get_id() << ")" << std::endl << std::endl;
                         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.after.svg").run_on_function(f);
 #endif
+
                         // each thread can achieve completed node
                         deque<std::shared_ptr<Node>> nodes_to_run_for_main_execution;
                         fill_ordered_ops_for_main_execution(syncNode, nodes_to_run_for_main_execution);
@@ -242,13 +260,35 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes(sha
             return false;
         }
 
+        GraphRewriteContext context;
+
         // Apply MatcherPass. In case if it returns true no other MatcherPasses will apply
         // to this node
-        bool status = m_pass->apply(node);
+        bool status = m_pass->apply(node, &context);
+
+#ifdef DEBUG_THREADING
+        if (status) {
+            // operation double handling check
+            std::stringstream keyStream;
+            keyStream << m_pass->get_type_info().name << "/" << node->get_friendly_name() << "/" << node->get_type_name();
+            const auto key = keyStream.str();
+            assert(handled.find(key) == handled.end());
+            handled.insert(key);
+        }
+#endif
+
+        //if (status) {
+        //    std::stringstream ss;
+        //    ss << "\tapply_matcher_passes (" << std::this_thread::get_id() << "): " <<
+        //        m_pass->get_type_info().name << ": " <<
+        //        node->get_friendly_name() << " (" << node->get_type_name() << ")" <<
+        //        std::endl;
+        //    std::cout << ss.str();
+        //}
 
         // In case if MatcherPass registered nodes they will be added to the beginning of execution
         // queue
-        const auto& new_nodes = m_pass->get_new_nodes();
+        const auto& new_nodes = m_pass->get_new_nodes(&context);
         if (!new_nodes.empty()) {
             // Need to push nodes in reverse order as we expect that nodes in new_nodes
             // vector are in topological order
@@ -319,7 +359,7 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes(sha
                 auto target_inputs = parent->output(0).get_target_inputs();
 
                 //if (parent->get_friendly_name() == "bottleneck3_7/add/fq_input_0") {
-                //    std::cout << "" << std::endl;
+                //    std::cout << "TO DEBUG" << std::endl;
                 //}
 
 #ifdef DEBUG_THREADING
@@ -328,7 +368,7 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes(sha
                     //"bottleneck2_0/dim_red/conv/fq_input_0",
                     // parallelization section #2
                     //"bottleneck3_0/dim_red/conv/fq_input_0/Multiply",
-                    "bottleneck3_7/add/fq_input_0"
+                    //"bottleneck3_7/add/fq_input_0"
                 };
 
                 if (toDebug.find(node->get_friendly_name()) != toDebug.end()) {
@@ -359,7 +399,6 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes(sha
 
                 if (multiplyWithDifferentConsumers &&
                     ((parent->outputs().size() > 1ul) || (target_inputs.size() > 1ul))) {
-                    //if (parent->get_friendly_name() == "bottleneck2_0/dim_red/conv/fq_input_0") {
                     auto attribute = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(parent);
                     if (attribute == nullptr) {
                         ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.absent.svg").run_on_function(f);
@@ -372,7 +411,7 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes(sha
 #ifdef DEBUG_THREADING
                         std::stringstream  ss;
                         ss << "apply_matcher_passes_in_thread (thread: " <<
-                            std::this_thread::get_id() << ") :" <<
+                            std::this_thread::get_id() << "): " <<
                             parent->get_friendly_name() << " (" << parent->get_type_name() << ")" << std::endl;
                         std::cout << ss.str();
 #endif
