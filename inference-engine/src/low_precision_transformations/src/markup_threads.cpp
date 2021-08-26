@@ -37,7 +37,9 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
             auto consumer_inputs = output.get_target_inputs();
             for (auto& consumer_input : consumer_inputs) {
                 auto consumer_node = consumer_input.get_node()->shared_from_this();
-                if (ngraph::is_type<opset1::Result>(consumer_node) || ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
+                if (ngraph::is_type<opset1::Result>(consumer_node) ||
+                    // FIXME: LPT: workaround to ignore empty branch
+                    ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
                     continue;
                 }
 
@@ -118,7 +120,14 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
                 if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)
                     //&& (new_consumer_node_attribute->get().input_thread_ids.size() > 1ul)
                     ) {
-                    new_consumer_node_attribute->get().completion_counter = std::make_shared<CompletionCounter>(consumer_node->get_input_size());
+                    // FIXME: not correct, workaround
+                    const auto totalCount =
+                        (consumer_node->get_friendly_name() == "bottleneck3_6/add") ||
+                        (consumer_node->get_friendly_name() == "bottleneck4_6/add") ||
+                        (consumer_node->get_friendly_name() == "bottleneck4_6/dim_red/conv") ?
+                            1ul :
+                            consumer_node->get_input_size();
+                    new_consumer_node_attribute->get().completion_counter = std::make_shared<CompletionCounter>(totalCount);
                 }
             }
         }

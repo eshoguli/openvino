@@ -52,11 +52,27 @@ std::shared_ptr<Node> ngraph::pass::low_precision::ParallelGraphRewrite::fill_or
     return nullptr;
 }
 
+// TODO: up to down traversal with assumption:
+//   1) stop if branch is splitted: splitted branch will be handled separated threads
+//   2) based on thread markup attribute output threads
 std::shared_ptr<Node> ngraph::pass::low_precision::ParallelGraphRewrite::fill_ordered_ops_for_main_execution(
     const std::shared_ptr<Node>& node,
     std::deque<std::shared_ptr<Node>>& nodes_to_run) {
+    auto getChild = [](std::set<Input<Node>> children) -> std::shared_ptr<Node> {
+        std::shared_ptr<Node> selectedChild;
+        for (const auto child : children) {
+            auto childNode = child.get_node()->shared_from_this();
+            if (!ngraph::pass::low_precision::isBranchConcatenation(childNode)) {
+                assert(selectedChild == nullptr);
+                selectedChild = childNode;
+            }
+        }
+        return selectedChild;
+    };
+
     auto childNode = node->shared_from_this();
     while (true) {
+        // FIXME: LPT: there is issue here: operations can be skipped
         nodes_to_run.push_back(childNode);
 
         if ((childNode->get_output_size() >= 1ul) &&
@@ -75,14 +91,21 @@ std::shared_ptr<Node> ngraph::pass::low_precision::ParallelGraphRewrite::fill_or
         if (children.empty()) {
             return childNode;
         }
-        childNode = children.begin()->get_node()->shared_from_this();
+        if (children.size() == 1ul) {
+            childNode = children.begin()->get_node()->shared_from_this();
+        } else {
+            childNode = getChild(children);
+        }
+        if (childNode == nullptr) {
+            return nullptr;
+        }
     }
     return nullptr;
 }
 
-void print(deque<std::shared_ptr<Node>> nodes_to_run) {
+void print(deque<std::shared_ptr<Node>> nodes_to_run, const std::string& title) {
     std::stringstream  ss;
-    ss << "nodes_to_run (" << std::this_thread::get_id() << "): " << nodes_to_run.size() << ":" << std::endl;
+    ss << title << ", nodes_to_run (" << std::this_thread::get_id() << "): " << nodes_to_run.size() << ":" << std::endl;
     //auto nodes = nodes_to_run;
     //while (!nodes.empty()) {
     for (auto it : nodes_to_run) {
@@ -117,6 +140,9 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes_in_
         for (auto& input : inputs) {
             deque<std::shared_ptr<Node>> nodes_to_run_for_thread_execution;
             auto syncNode = fill_ordered_ops_for_thread_execution(input.get_node()->shared_from_this(), nodes_to_run_for_thread_execution);
+            //if (is_type<op::v0::Result>(syncNode)) {
+            //    continue;
+            //}
 
 #ifdef DEBUG_THREADING
             std::stringstream ss2;
@@ -170,24 +196,26 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes_in_
 #endif
                 } else {
                     auto attributeWrapper = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(syncNode);
-                    auto& attribute = attributeWrapper->get();
-                    assert(attribute.completion_counter != nullptr);
-                    if ((attribute.completion_counter == nullptr) ||
-                        ((attribute.completion_counter != nullptr) && attribute.completion_counter->complete())) {
+                    assert(is_type<op::v0::Result>(syncNode) || (!is_type<op::v0::Result>(syncNode) && (attributeWrapper != nullptr)));
+                    if (attributeWrapper != nullptr) {
+                        auto& attribute = attributeWrapper->get();
+                        assert(is_type<op::v0::Result>(syncNode) || (!is_type<op::v0::Result>(syncNode) && (attribute.completion_counter != nullptr)));
+                        if ((attribute.completion_counter != nullptr) && attribute.completion_counter->complete()) {
 #ifdef DEBUG_THREADING
-                        std::cout << "threads completed (" << std::this_thread::get_id() << ")" << std::endl << std::endl;
-                        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.after.svg").run_on_function(f);
+                            std::cout << "threads completed (" << std::this_thread::get_id() << ")" << std::endl << std::endl;
+                            ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/poc/cpu.after.svg").run_on_function(f);
 #endif
 
-                        // each thread can achieve completed node
-                        deque<std::shared_ptr<Node>> nodes_to_run_for_main_execution;
-                        fill_ordered_ops_for_main_execution(syncNode, nodes_to_run_for_main_execution);
+                            // each thread can achieve completed node
+                            deque<std::shared_ptr<Node>> nodes_to_run_for_main_execution;
+                            fill_ordered_ops_for_main_execution(syncNode, nodes_to_run_for_main_execution);
 
 #ifdef DEBUG_THREADING
-                        print(nodes_to_run_for_main_execution);
+                            print(nodes_to_run_for_main_execution, "main execution");
 #endif
 
-                        this->apply_matcher_passes(f, nodes_to_run_for_main_execution);
+                            this->apply_matcher_passes(f, nodes_to_run_for_main_execution);
+                        }
                     }
                 }
             });
