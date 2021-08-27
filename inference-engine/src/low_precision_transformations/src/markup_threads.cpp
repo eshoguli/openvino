@@ -4,6 +4,7 @@
 
 #include "low_precision/markup_threads.hpp"
 
+#include <chrono>
 #include <memory>
 
 #include <ngraph/opsets/opset1.hpp>
@@ -16,6 +17,8 @@ NGRAPH_RTTI_DEFINITION(ngraph::pass::low_precision::MarkupThreads, "MarkupThread
 
 // markup consumers
 bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr<ngraph::Function> f) {
+    //const auto start = std::chrono::high_resolution_clock::now();
+
     //auto get_current_thread = [](const std::shared_ptr<Node>& node) -> size_t {
     //    auto& rt = node->get_rt_info();
     //    auto it = rt.find(ngraph::VariantWrapper<ThreadAttribute>::type_info.name);
@@ -106,7 +109,9 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
                     //    consumer_node_attribute->get().thread_id = thread_id;
                     //    attribute->get().output_thread_ids.insert(thread_id);
                     //}
+#ifdef DEBUG_THREADING
                     consumer_node_attribute->get().input_thread_ids.insert(current_thread_id);
+#endif
                     continue;
                 }
 
@@ -132,5 +137,10 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
             }
         }
     }
-    return true;
+
+    //const auto stop = std::chrono::high_resolution_clock::now();
+    //std::chrono::duration<double, std::milli> duration = stop - start;
+    //std::cout << "[ INFO ] MarkupThreads::run_on_function: " << duration.count() << " ms" << std::endl;
+
+    return false;
 }

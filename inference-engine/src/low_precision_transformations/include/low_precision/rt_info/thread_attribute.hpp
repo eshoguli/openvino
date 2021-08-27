@@ -42,7 +42,9 @@ class LP_TRANSFORMATIONS_API ThreadAttribute {
 public:
     explicit ThreadAttribute(const size_t thread_id);
     ThreadAttribute(const size_t thread_id, const size_t input_thread_id);
+#ifdef DEBUG_THREADING
     std::unordered_set<size_t> input_thread_ids;
+#endif
     std::unordered_set<size_t> output_thread_ids;
     size_t thread_id;
     bool handled;

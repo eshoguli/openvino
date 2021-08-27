@@ -41,7 +41,9 @@ ThreadAttribute::ThreadAttribute(const size_t thread_id) : thread_id(thread_id) 
 
 ThreadAttribute::ThreadAttribute(const size_t thread_id, const size_t input_thread_id) :
     thread_id(thread_id),
+#ifdef c
     input_thread_ids({input_thread_id}),
+#endif
     handled(false) {
 }
 
@@ -79,7 +81,9 @@ std::string VariantWrapper<ThreadAttribute>::to_string() {
     }
     std::stringstream ss;
     ss << "thread_id: " << m_value.thread_id <<
+#ifdef DEBUG_THREADING
         ", in: " << thread_attribute::to_string(m_value.input_thread_ids) <<
+#endif
         ", out: " << thread_attribute::to_string(m_value.output_thread_ids) <<
         ", handled: " << (m_value.handled ? "true" : "false") <<
         ", completion_counter: " << ss2.str();
