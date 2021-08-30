@@ -40,11 +40,16 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
             auto consumer_inputs = output.get_target_inputs();
             for (auto& consumer_input : consumer_inputs) {
                 auto consumer_node = consumer_input.get_node()->shared_from_this();
-                if (ngraph::is_type<opset1::Result>(consumer_node) ||
-                    // FIXME: LPT: workaround to ignore empty branch
-                    ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
+                if (ngraph::is_type<opset1::Result>(consumer_node)) {
                     continue;
                 }
+
+#ifndef THREAD_BY_BRANCH
+                // FIXME: LPT: workaround to ignore empty branch
+                if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
+                    continue;
+                }
+#endif
 
                 if ((output_index != 0) || (input_index != 0)) {
                     return true;
@@ -86,10 +91,60 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
         //    std::cout << "" << std::endl;
         //}
 
+//        auto initConsumerNode = [](
+//            const bool several_consumers,
+//            std::shared_ptr<ngraph::VariantWrapper<ThreadAttribute>>& attribute,
+//            size_t& thread_id,
+//            std::shared_ptr<Node> consumer_node) {
+//            if (is_type<opset1::Result>(consumer_node)) {
+//                return;
+//            }
+//
+//            //if (consumer_node->get_friendly_name() == "bottleneck1_1/add/fq_input_0") {
+//            //    std::cout << "TO DEBUG" << std::endl;
+//            //}
+//
+//            const size_t current_thread_id = several_consumers ? ++thread_id : attribute->get().thread_id;
+//
+//            auto consumer_node_attribute = ngraph::pass::low_precision::getAttribute<ThreadAttribute>(consumer_node);
+//            if (consumer_node_attribute != nullptr) {
+//                //// node has been handled before
+//                //if (consumer_node_attribute->get().input_thread_ids.size() == 1ul) {
+//                //    // second thread is entering the node: update existing thread id
+//                //    ++thread_id;
+//                //    consumer_node_attribute->get().thread_id = thread_id;
+//                //    attribute->get().output_thread_ids.insert(thread_id);
+//                //}
+//#ifdef DEBUG_THREADING
+//                consumer_node_attribute->get().input_thread_ids.insert(current_thread_id);
+//#endif
+//                return;
+//            }
+//
+//            auto new_consumer_node_attribute = std::make_shared<ngraph::VariantWrapper<ThreadAttribute>>(ThreadAttribute(
+//                current_thread_id,
+//                attribute->get().thread_id));
+//            auto& rt = consumer_node->get_rt_info();
+//            rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = new_consumer_node_attribute;
+//            attribute->get().output_thread_ids.insert(current_thread_id);
+//
+//            if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
+//                // FIXME: not correct, workaround
+//                const auto totalCount =
+//                        (consumer_node->get_friendly_name() == "bottleneck3_6/add") ||
+//                        (consumer_node->get_friendly_name() == "bottleneck4_6/add") ||
+//                        (consumer_node->get_friendly_name() == "bottleneck4_6/dim_red/conv") ?
+//                        1ul :
+//                        consumer_node->get_input_size();
+//                new_consumer_node_attribute->get().completion_counter = std::make_shared<CompletionCounter>(totalCount);
+//            }
+//        };
+
         for (auto output : node->outputs()) {
             auto consumer_inputs = output.get_target_inputs();
             for (auto& consumer_input : consumer_inputs) {
                 auto consumer_node = consumer_input.get_node()->shared_from_this();
+                //initConsumerNode(several_consumers, attribute, thread_id, consumer_node);
                 if (is_type<opset1::Result>(consumer_node)) {
                     continue;
                 }
@@ -122,16 +177,25 @@ bool ngraph::pass::low_precision::MarkupThreads::run_on_function(std::shared_ptr
                 rt[ngraph::VariantWrapper<ThreadAttribute>::type_info.name] = new_consumer_node_attribute;
                 attribute->get().output_thread_ids.insert(current_thread_id);
 
-                if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)
-                    //&& (new_consumer_node_attribute->get().input_thread_ids.size() > 1ul)
-                    ) {
-                    // FIXME: not correct, workaround
+                if (ngraph::pass::low_precision::isBranchConcatenation(consumer_node)) {
+#ifdef THREAD_BY_BRANCH
+                    const auto totalCount = consumer_node->get_input_size();
+#else
+                    // FIXME: not correct, workaround for person-detection-raisinghand-recognition-0001.xml
                     const auto totalCount =
                         (consumer_node->get_friendly_name() == "bottleneck3_6/add") ||
                         (consumer_node->get_friendly_name() == "bottleneck4_6/add") ||
                         (consumer_node->get_friendly_name() == "bottleneck4_6/dim_red/conv") ?
                             1ul :
                             consumer_node->get_input_size();
+#endif
+                    //// FIXME: not completed: calculate input threads
+                    //size_t totalCount = 0;
+                    //for (auto input : consumer_node->inputs()) {
+                    //    auto inputNode = input.get_node();
+                    //    if (inputNode->)
+                    //
+                    //}
                     new_consumer_node_attribute->get().completion_counter = std::make_shared<CompletionCounter>(totalCount);
                 }
             }

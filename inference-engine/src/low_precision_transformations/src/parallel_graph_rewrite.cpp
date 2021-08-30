@@ -106,13 +106,11 @@ std::shared_ptr<Node> ngraph::pass::low_precision::ParallelGraphRewrite::fill_or
 void print(deque<std::shared_ptr<Node>> nodes_to_run, const std::string& title) {
     std::stringstream  ss;
     ss << title << ", nodes_to_run (" << std::this_thread::get_id() << "): " << nodes_to_run.size() << ":" << std::endl;
-    //auto nodes = nodes_to_run;
-    //while (!nodes.empty()) {
+    size_t number = 1ul;
     for (auto it : nodes_to_run) {
-        //auto nodeToPrint = nodes_to_run.front();
-        //nodes_to_run.pop_front();
         auto& nodeToPrint = *it;
-        ss << nodeToPrint.get_friendly_name() << " (" << nodeToPrint.get_type_name() << ")" << std::endl;
+        ss << "\t" << number << ": " << nodeToPrint.get_friendly_name() << " (" << nodeToPrint.get_type_name() << ")" << std::endl;
+        number++;
     }
     std::cout << ss.str();
 }
@@ -158,26 +156,38 @@ bool ngraph::pass::low_precision::ParallelGraphRewrite::apply_matcher_passes_in_
             //}
 #endif
 
+#ifndef THREAD_BY_BRANCH
             if (nodes_to_run_for_thread_execution.empty()) {
                 continue;
             }
-
+#endif
             g.run([this, f, nodes_to_run_for_thread_execution, syncNode]() {
+#ifndef THREAD_BY_BRANCH
                 assert(!nodes_to_run_for_thread_execution.empty());
+#endif
+                if (nodes_to_run_for_thread_execution.empty()) {
 #ifdef DEBUG_THREADING
-                auto deque_node = nodes_to_run_for_thread_execution.front();
-                std::stringstream ss;
-                ss << "thread was started (" <<
-                    std::this_thread::get_id() << ", " <<
-                    "nodes: " << nodes_to_run_for_thread_execution.size() << "): " <<
-                    deque_node->get_friendly_name() << " (" << deque_node->get_type_name() << ")" << std::endl;
-                std::cout << ss.str();
+                    std::stringstream ss;
+                    ss << "thread was started (" <<
+                        std::this_thread::get_id() << ", " <<
+                        "nodes: " << nodes_to_run_for_thread_execution.size() << ")" << std::endl;
+                    std::cout << ss.str();
+#endif
+                } else {
+#ifdef DEBUG_THREADING
+                    auto deque_node = nodes_to_run_for_thread_execution.front();
+                    std::stringstream ss;
+                    ss << "thread was started (" <<
+                        std::this_thread::get_id() << ", " <<
+                        "nodes: " << nodes_to_run_for_thread_execution.size() << "): " <<
+                        deque_node->get_friendly_name() << " (" << deque_node->get_type_name() << ")" << std::endl;
+                    std::cout << ss.str();
 #endif
 
-                // TODO: debug only
-                //print(nodes_to_run_for_thread_execution);
-                this->apply_matcher_passes(f, nodes_to_run_for_thread_execution);
-
+                    // TODO: debug only
+                    //print(nodes_to_run_for_thread_execution);
+                    this->apply_matcher_passes(f, nodes_to_run_for_thread_execution);
+                }
 #ifdef DEBUG_THREADING
                 std::stringstream ss2;
                     ss2 << "thread was completed (" <<

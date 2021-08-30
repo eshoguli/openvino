@@ -21,6 +21,8 @@
 //#define DEBUG_THREADING
 //#endif
 
+//#define THREAD_BY_BRANCH
+
 namespace ngraph {
 
 class LP_TRANSFORMATIONS_API CompletionCounter {
