@@ -127,13 +127,13 @@ const std::vector<DisableConvertOnConstPathTransformationValues> testValues = {
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                { {128.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { {128.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {128.f}, element::f32, {}, false, 1ul, element::i8, true },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {128.f}, element::f32, {}, 1ul, element::i8, true },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 1.f }, ngraph::element::f32},
             { 255ul, Shape({ 1, 1, 1, 1 }), { -1.28f }, { 1.27f }, { -128.f }, { 127.f }, element::i8 },
@@ -145,13 +145,13 @@ const std::vector<DisableConvertOnConstPathTransformationValues> testValues = {
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                { {128.f}, element::f32, {}, false, 1ul, element::u8, true, {}, { "DISABLED_CONSTANT_FOLDING" } },
-                { {0.02f}, element::f32, {}, false }
+                { {128.f}, element::f32, {}, 1ul, element::u8, true, {}, { "DISABLED_CONSTANT_FOLDING" } },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {128.f}, element::f32, {}, false, 1ul, element::i8, true, {}, { "DISABLED_CONSTANT_FOLDING" } },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {128.f}, element::f32, {}, 1ul, element::i8, true, {}, { "DISABLED_CONSTANT_FOLDING" } },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 1.f }, ngraph::element::f32},
             { 255ul, Shape({ 1, 1, 1, 1 }), { -1.28f }, { 1.27f }, { -128.f }, { 127.f }, element::i8 },

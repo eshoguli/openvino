@@ -149,7 +149,7 @@ const std::vector<ConvolutionTransformationTestValues> testValues = {
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{}, { { 128.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false }, {}},
+            {{}, { { 128.f }, ngraph::element::f32, { 1, 3, 1, 1 } }, {}},
             op::Constant::create(ngraph::element::i8, ngraph::Shape{}, std::vector<float>{ -125.f }),
             {},
             ngraph::element::f32,
@@ -189,7 +189,7 @@ const std::vector<ConvolutionTransformationTestValues> testValues = {
         // ExpectedValues
         {
             ngraph::element::f32,
-            {{}, { { 128.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false }, {}},
+            {{}, { { 128.f }, ngraph::element::f32, { 1, 3, 1, 1 } }, {}},
             op::Constant::create(ngraph::element::f32, ngraph::Shape{}, std::vector<float>{ -125.f }),
             {},
             ngraph::element::f32,
@@ -269,7 +269,7 @@ const std::vector<ConvolutionTransformationTestValues> testValues = {
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{}, { { 128.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false }, {}},
+            {{}, { { 128.f }, ngraph::element::f32, { 1, 3, 1, 1 } }, {}},
             op::Constant::create(ngraph::element::i8, ngraph::Shape{}, std::vector<float>{ -125.f }),
             {},
             ngraph::element::f32,

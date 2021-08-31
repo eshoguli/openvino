@@ -196,13 +196,13 @@ const std::vector<PullTransposeThroughDequantizationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             { std::vector<float>{ 2.f }, ngraph::element::i8, {3, 3, 960, 1}},
             {
-                { ngraph::element::f32, false },
+                { ngraph::element::f32 },
                 { {127.f}, element::f32, {/* from parameter */}, false },
                 { {0.03f}, element::f32, {/* from parameter */}, false }
             },
@@ -217,13 +217,13 @@ const std::vector<PullTransposeThroughDequantizationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             { std::vector<float>{ 2.f }, ngraph::element::i8, {960, 1, 3, 3}},
             {
-                { ngraph::element::f32, false },
+                { ngraph::element::f32 },
                 { {127.f}, element::f32, {/* from parameter */}, false },
                 { {0.03f}, element::f32, {/* from parameter */}, false }
             },

@@ -306,13 +306,13 @@ const std::vector<AddTransformationTestValues> testValuesWithoutConstantBranches
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                { {7.f}, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true },
+                { {7.f}, ngraph::element::f32, {}, 1, ngraph::element::u8, true },
                 { 10.f }
             },
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                { {3.f}, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true },
+                { {3.f}, ngraph::element::f32, {}, 1, ngraph::element::u8, true },
                 { 5.f }
             },
             {}
@@ -653,7 +653,7 @@ const std::vector<AddTransformationTestValues> testValuesWithFirstConstantBranch
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                { {7.f}, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true },
+                { {7.f}, ngraph::element::f32, {}, 1, ngraph::element::u8, true },
                 { 10.f }
             },
             ngraph::element::u8,
@@ -736,7 +736,7 @@ const std::vector<AddTransformationTestValues> testValuesWithSecondConstantBranc
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                { {3.f}, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true },
+                { {3.f}, ngraph::element::f32, {}, 1, ngraph::element::u8, true },
                 { 5.f }
             },
             {10.f}
@@ -845,14 +845,14 @@ const std::vector<AddTransformationTestValues> specialTestValues = {
         LayerTransformation::createParamsU8I8(),
         {
             ngraph::element::u8,
-            { {ngraph::element::f32},  { }, { {1.f, 2.f, 3.f, 4.f}, ngraph::element::f32, {4, 1}, true, 0ul }},
+            { {ngraph::element::f32},  { }, { {1.f, 2.f, 3.f, 4.f}, ngraph::element::f32, {4, 1}, 0ul }},
             ngraph::element::f32,
             {},
             { 5.f, 6.f, 7.f, 8.f }
         },
         {
             ngraph::element::u8,
-            { {ngraph::element::f32},  { }, { {1.f, 2.f, 3.f, 4.f}, ngraph::element::f32, {4, 1}, true, 0ul }},
+            { {ngraph::element::f32},  { }, { {1.f, 2.f, 3.f, 4.f}, ngraph::element::f32, {4, 1}, 0ul }},
             ngraph::element::f32,
             { {},  {}, {} },
             { {},  {}, {} },

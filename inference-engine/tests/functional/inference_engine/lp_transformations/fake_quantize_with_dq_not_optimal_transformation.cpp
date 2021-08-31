@@ -177,16 +177,16 @@ const std::vector<FakeQuantizeWithNotOptimalTransformationTestValues> fakeQuanti
             { 256ul, {{ 1, 1, 1, 1 }}, { 0.f }, { 2.55f }, { -128.f }, { 127.f }, ngraph::element::i8 },
             { ngraph::element::i8, false },
             {
-                { ngraph::element::f32, false },
-                { {-128.f}, ngraph::element::f32, {}, false, 1ul, ngraph::element::i8, true },
-                { {0.01f}, ngraph::element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {-128.f}, ngraph::element::f32, {}, 1ul, ngraph::element::i8, true },
+                { {0.01f}, ngraph::element::f32, {} }
             },
             {{5.f}, ngraph::element::i8},
             {},
             {
-                { ngraph::element::f32, false },
-                { {127.f}, ngraph::element::f32, {}, false, 1ul, ngraph::element::i8, true },
-                { {0.03f}, ngraph::element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, ngraph::element::f32, {}, 1ul, ngraph::element::i8, true },
+                { {0.03f}, ngraph::element::f32, {} }
             },
             {}
         },

@@ -115,10 +115,6 @@ ngraph::builder::subgraph::DequantizationOperations LayerTransformation::toDequa
 
     ngraph::builder::subgraph::DequantizationOperations::Subtract subtract;
     {
-        const bool addDequantizationAttribute = dequantization.subtract != nullptr ?
-            dequantization.subtract->get_rt_info().count("DEQUANTIZATION") != 0 :
-            true;
-
         const size_t constantIndex = dequantization.subtractConstant && dequantization.subtract ?
             ngraph::pass::low_precision::NetworkHelper::getChildInputIndex(
                 dequantization.subtractConvert ? std::dynamic_pointer_cast<ngraph::Node>(dequantization.subtractConvert) : dequantization.subtractConstant,
@@ -130,7 +126,6 @@ ngraph::builder::subgraph::DequantizationOperations LayerTransformation::toDequa
                 dequantization.subtractConstant->cast_vector<float>(),
                 dequantization.subtract->output(0).get_element_type(),
                 dequantization.subtractConstant->output(0).get_shape(),
-                addDequantizationAttribute,
                 constantIndex,
                 dequantization.subtractConstant->output(0).get_element_type(),
                 dequantization.subtractConvert != nullptr) :
@@ -148,7 +143,6 @@ ngraph::builder::subgraph::DequantizationOperations LayerTransformation::toDequa
                 dequantization.multiplyConstant->cast_vector<float>(),
                 dequantization.multiplyConstant->output(0).get_element_type(),
                 dequantization.multiplyConstant->output(0).get_shape(),
-                false,
                 constantIndex) :
             ngraph::builder::subgraph::DequantizationOperations::Multiply();
     }

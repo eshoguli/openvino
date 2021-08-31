@@ -149,13 +149,13 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::i8, true },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::i8, true },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 1.f }, ngraph::element::f32},
             { 255ul, Shape({ 1, 1, 1, 1 }), { -1.28f }, { 1.27f }, { -128.f }, { 127.f }, element::i8 },
@@ -167,7 +167,7 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
             ngraph::element::u8,
             {
                 {},
-                { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false },
+                { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 } },
                 {}
             },
             {
@@ -215,7 +215,7 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         // ActualValues
         {
             ngraph::element::u8,
-            {{ngraph::element::f32}, { {127.f}, element::f32, {}, false, 1ul, element::u8, true }, { 0.02f }},
+            {{ngraph::element::f32}, { {127.f}, element::f32, {}, 1ul, element::u8, true }, { 0.02f }},
             {},
             { std::vector<float>{ 2.f }, ngraph::element::f32},
             { 255ul, Shape({ 1, 1, 1, 1 }), { 0.f }, { 254.f }, { -1.27f }, { 1.27f } },
@@ -225,7 +225,7 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{}, { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false }, {}},
+            {{}, { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 } }, {}},
             {},
             { std::vector<float>{ -125.f }, ngraph::element::i8},
             {},
@@ -270,8 +270,8 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         // ActualValues
         {
             ngraph::element::u8,
-            {{ngraph::element::f32}, { {127.f}, element::f32, {}, false, 1ul, element::u8, true }, { 0.02f }},
-            {{ngraph::element::f32}, { {127.f}, element::f32, {}, false, 1ul, element::i8, true }, { 0.03f }},
+            {{ngraph::element::f32}, { {127.f}, element::f32, {}, 1ul, element::u8, true }, { 0.02f }},
+            {{ngraph::element::f32}, { {127.f}, element::f32, {}, 1ul, element::i8, true }, { 0.03f }},
             { std::vector<float>{ 2.f }, ngraph::element::f32},
             {},
             ngraph::element::f32,
@@ -280,7 +280,7 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{ngraph::element::f32}, { {127.f}, element::f32, {}, false, 1ul, element::u8, true }, { 0.02f }},
+            {{ngraph::element::f32}, { {127.f}, element::f32, {}, 1ul, element::u8, true }, { 0.02f }},
             {},
             { std::vector<float>{ -3.75f }, ngraph::element::f32},
             {},
@@ -323,14 +323,14 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::i8, true },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::i8, true },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 2.f }, ngraph::element::i8},
             {},
@@ -342,7 +342,7 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
             ngraph::element::u8,
             {
                 {},
-                { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false },
+                { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 } },
                 {}
             },
             {
@@ -391,14 +391,14 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {} },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 2.f }, ngraph::element::i8},
             {},
@@ -410,7 +410,7 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
             ngraph::element::u8,
             {
                 {},
-                { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false },
+                { { 127.f }, ngraph::element::f32, { 1, 3, 1, 1 } },
                 {}
             },
             {
@@ -431,14 +431,14 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {1000.f}, element::f32, {}, false },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {1000.f}, element::f32, {} },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {} },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 2.f }, ngraph::element::i8},
             {},
@@ -449,9 +449,9 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {1000.f}, element::f32, {}, false },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {1000.f}, element::f32, {} },
+                { {0.02f}, element::f32, {} }
             },
             {},
             { std::vector<float>{ -3.75f }, ngraph::element::f32},
@@ -467,14 +467,14 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {1000.f}, element::f32, {}, false },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {1000.f}, element::f32, {} },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 2.f }, ngraph::element::i8},
             {},
@@ -485,9 +485,9 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {},
             { std::vector<float>{ -29.94f }, ngraph::element::f32},
@@ -520,14 +520,14 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::i8, true },
-                { {0.03f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::i8, true },
+                { {0.03f}, element::f32, {} }
             },
             { std::vector<float>{ 2.f }, ngraph::element::i8},
             {},
@@ -538,9 +538,9 @@ const std::vector<ConvolutionQDqTransformationTestValues> testValues = {
         {
             ngraph::element::u8,
             {
-                { ngraph::element::f32, false },
-                { {127.f}, element::f32, {}, false, 1ul, element::u8, true },
-                { {0.02f}, element::f32, {}, false }
+                { ngraph::element::f32 },
+                { {127.f}, element::f32, {}, 1ul, element::u8, true },
+                { {0.02f}, element::f32, {} }
             },
             {},
             { std::vector<float>{ -3.75 }, ngraph::element::f32},

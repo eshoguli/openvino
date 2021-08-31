@@ -129,7 +129,7 @@ const std::vector<MoveDequantizationAfterTransformationParams> testValues = {
             { {ngraph::element::f32},  { 7.f }, { 10.f } },
         },
         {
-            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {}, false }, {} },
+            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {} }, {} },
             ngraph::element::f32,
             { {},  {}, { 10.f } },
         },
@@ -159,7 +159,7 @@ const std::vector<MoveDequantizationAfterTransformationParams> testValues = {
             { {ngraph::element::f32},  { 7.f }, { 10.f } },
         },
         {
-            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {}, false }, {} },
+            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {} }, {} },
             ngraph::element::f32,
             { {},  {}, { 10.f } },
         },
@@ -189,7 +189,7 @@ const std::vector<MoveDequantizationAfterTransformationParams> testValues = {
             { {ngraph::element::f32},  { 7.f }, { 10.f } },
         },
         {
-            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {}, false }, {} },
+            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {} }, {} },
             ngraph::element::f32,
             { {},  {}, { 10.f } },
         },
@@ -219,7 +219,7 @@ const std::vector<MoveDequantizationAfterTransformationParams> testValues = {
             { {ngraph::element::f32},  { 7.f }, { 10.f } },
         },
         {
-            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {}, false }, {} },
+            { {ngraph::element::f32},  { { 7.f }, ngraph::element::f32, {} }, {} },
             ngraph::element::f32,
             { {},  {}, { 10.f } },
         },
@@ -234,7 +234,7 @@ const std::vector<MoveDequantizationAfterTransformationParams> testValues = {
             { {ngraph::element::f32},  { { 7.f, 7.f, 7.f } }, { { 10.f, 10.f, 10.f } } },
         },
         {
-            { {ngraph::element::f32},  { { 7.f, 7.f, 7.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false }, {} },
+            { {ngraph::element::f32},  { { 7.f, 7.f, 7.f }, ngraph::element::f32, { 1, 3, 1, 1 } }, {} },
             ngraph::element::f32,
             { {},  {}, { { 10.f, 10.f, 10.f } } },
         },
@@ -249,7 +249,7 @@ const std::vector<MoveDequantizationAfterTransformationParams> testValues = {
             { {ngraph::element::f32},  { { 7.f, 8.f, 9.f } }, { { 10.f, 12.f, 16.f } } },
         },
         {
-            { {ngraph::element::f32},  { { 7.f, 8.f, 9.f }, ngraph::element::f32, { 1, 3, 1, 1 }, false }, {} },
+            { {ngraph::element::f32},  { { 7.f, 8.f, 9.f }, ngraph::element::f32, { 1, 3, 1, 1 } }, {} },
             ngraph::element::f32,
             { {},  {}, { { 10.f, 12.f, 16.f } } },
         },

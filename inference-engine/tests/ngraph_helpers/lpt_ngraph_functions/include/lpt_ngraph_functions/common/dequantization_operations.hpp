@@ -16,7 +16,7 @@ public:
     class Convert {
     public:
         Convert();
-        Convert(const ngraph::element::Type outPrecision, const bool toRemove = true);
+        Convert(const ngraph::element::Type outPrecision);
         bool empty() const noexcept;
         bool equal(const DequantizationOperations::Convert& value) const noexcept;
         bool operator==(const Convert& value) const noexcept {
@@ -32,14 +32,13 @@ public:
     class Subtract {
     public:
         Subtract();
-        Subtract(const float value, const bool toRemove = true);
+        Subtract(const float value);
         Subtract(const std::vector<float>& values);
         Subtract(const std::vector<float>& values, const ngraph::element::Type outPrecision);
         Subtract(
             const std::vector<float>& values,
             const ngraph::element::Type outPrecision,
             const ngraph::Shape& constantShape,
-            const bool toRemove = false,
             const size_t constantIndex = 1ul,
             const ngraph::element::Type constantPrecision = ngraph::element::undefined,
             const bool addConvert = false,
@@ -79,7 +78,6 @@ public:
             const std::vector<float>& values,
             const ngraph::element::Type outPrecision,
             const ngraph::Shape& constantShape,
-            const bool toRemove = false,
             const size_t constantIndex = 1ul,
             const ngraph::element::Type constantPrecision = ngraph::element::undefined);
         bool empty() const noexcept;

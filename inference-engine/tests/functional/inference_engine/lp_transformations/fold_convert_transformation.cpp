@@ -124,12 +124,12 @@ const std::vector<FoldConvertTransformationTestValues> testValues = {
         ngraph::element::f32,
         {
             {ngraph::element::f32},
-            { {7.f}, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true },
+            { {7.f}, ngraph::element::f32, {}, 1, ngraph::element::u8, true },
             { 10.f }
         },
         {
             {ngraph::element::f32},
-            { {7.f}, ngraph::element::f32, {}, false, 1 },
+            { {7.f}, ngraph::element::f32, {}, 1 },
             { 10.f }
         }
     },
@@ -164,12 +164,12 @@ const std::vector<FoldConvertTransformationTestValues> testValues = {
         ngraph::element::f32,
         {
             {ngraph::element::f32},
-            { {7.f}, ngraph::element::f32, {}, false, 0, ngraph::element::u8, true },
+            { {7.f}, ngraph::element::f32, {}, 0, ngraph::element::u8, true },
             { 10.f }
         },
         {
             {ngraph::element::f32},
-            { {7.f}, ngraph::element::f32, {}, false, 0 },
+            { {7.f}, ngraph::element::f32, {}, 0 },
             { 10.f }
         }
     }

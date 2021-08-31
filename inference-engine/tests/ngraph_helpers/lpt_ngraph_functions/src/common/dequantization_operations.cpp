@@ -14,7 +14,7 @@ DequantizationOperations::Convert::Convert() :
     outPrecision(ngraph::element::undefined)
 {}
 
-DequantizationOperations::Convert::Convert(const ngraph::element::Type outPrecision, const bool toRemove) :
+DequantizationOperations::Convert::Convert(const ngraph::element::Type outPrecision) :
     isEmpty(false),
     outPrecision(outPrecision)
 {}
@@ -33,7 +33,7 @@ DequantizationOperations::Subtract::Subtract() :
     constantShapeIsDefined(false)
 {}
 
-DequantizationOperations::Subtract::Subtract(const float value, const bool toRemove) :
+DequantizationOperations::Subtract::Subtract(const float value) :
     isEmpty(false),
     values({ value }),
     outPrecision(ngraph::element::undefined),
@@ -60,7 +60,6 @@ DequantizationOperations::Subtract::Subtract(
     const std::vector<float>& values,
     const ngraph::element::Type outPrecision,
     const ngraph::Shape& constantShape,
-    const bool toRemove,
     const size_t constantIndex,
     const ngraph::element::Type constantPrecision,
     const bool addConvert,
@@ -127,7 +126,6 @@ DequantizationOperations::Multiply::Multiply(
     const std::vector<float>& values,
     const ngraph::element::Type outPrecision,
     const ngraph::Shape& constantShape,
-    const bool toRemove,
     const size_t constantIndex,
     ngraph::element::Type constantPrecision) :
     isEmpty(false),

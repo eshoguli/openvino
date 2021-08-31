@@ -113,7 +113,7 @@ const std::vector<GetDequantizationBelowTestValues> testValues = {
         { 256ul, {}, { 0.f }, { 2.55f }, { 0.f }, { 2.55f }, ngraph::element::u8 },
         {
             ngraph::element::f32,
-            {{ 127.f }, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true},
+            {{ 127.f }, ngraph::element::f32, {}, 1, ngraph::element::u8, true},
             { 0.01f }
         }
     }

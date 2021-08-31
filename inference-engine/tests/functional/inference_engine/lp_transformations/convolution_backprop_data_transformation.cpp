@@ -221,7 +221,7 @@ const std::vector<ConvolutionBackpropDataTransformationTestValues> testValues = 
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{}, { { 128.f }, ngraph::element::f32, {}, false }, {}},
+            {{}, { { 128.f }, ngraph::element::f32, {} }, {}},
             {},
             {{}, {}, {{ 0.0002f }, ngraph::element::f32, {}}},
             op::Constant::create(ngraph::element::i8, ngraph::Shape{}, std::vector<float>{ -125.f }),
@@ -241,7 +241,7 @@ const std::vector<ConvolutionBackpropDataTransformationTestValues> testValues = 
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{}, { { 128.f }, ngraph::element::f32, {}, false }, {}},
+            {{}, { { 128.f }, ngraph::element::f32, {} }, {}},
             {},
             {{}, {}, {{ 0.0002f }, ngraph::element::f32, {}}},
             op::Constant::create(ngraph::element::i8, ngraph::Shape{}, std::vector<float>{ -125.f }),
@@ -261,7 +261,7 @@ const std::vector<ConvolutionBackpropDataTransformationTestValues> testValues = 
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{}, { { 128.f }, ngraph::element::f32, {}, false }, {}},
+            {{}, { { 128.f }, ngraph::element::f32, {} }, {}},
             {},
             {{}, {}, {{ 0.0002f }, ngraph::element::f32, {}}},
             op::Constant::create(ngraph::element::f32, ngraph::Shape{}, std::vector<float>{ -125.f }),
@@ -281,7 +281,7 @@ const std::vector<ConvolutionBackpropDataTransformationTestValues> testValues = 
         // ExpectedValues
         {
             ngraph::element::u8,
-            {{}, { { 128.f }, ngraph::element::f32, {}, false }, {}},
+            {{}, { { 128.f }, ngraph::element::f32, {} }, {}},
             {{}, { { 2.f }, ngraph::element::f32, {1, 2, 1, 1}, true, 1ul, element::i8, false, { "DISABLED_CONSTANT_FOLDING" }  }, {}},
             {{}, {}, {{ 0.0002f }, ngraph::element::f32, {}}},
             op::Constant::create(ngraph::element::i8, ngraph::Shape{}, std::vector<float>{ 2.f }),

@@ -27,9 +27,9 @@ const std::vector<PullReshapeThroughDequantizationTestValues> params = {
         {},
         { std::vector<float>{ 2.f }, ngraph::element::i8, {9, 16}},
         {
-            { ngraph::element::f32, false },
+            { ngraph::element::f32 },
             {},
-            { {0.03f}, ngraph::element::f32, {/* from parameter */}, false }
+            { {0.03f}, ngraph::element::f32, {/* from parameter */} }
         },
         { {3, 3, 16, 1} },
         { {2}, ngraph::element::f32, {1, 1, 16, 1}, false },
@@ -46,9 +46,9 @@ const std::vector<PullReshapeThroughDequantizationTestValues> params = {
         {},
         { std::vector<float>{ 2.f }, ngraph::element::i8, {9, 16}},
         {
-            { ngraph::element::f32, false },
-            { {127.0f}, ngraph::element::f32, {/* from parameter */}, false},
-            { {0.03f}, ngraph::element::f32, {/* from parameter */}, false }
+            { ngraph::element::f32 },
+            { {127.0f}, ngraph::element::f32, {/* from parameter */} },
+            { {0.03f}, ngraph::element::f32, {/* from parameter */} }
         },
         { {3, 3, 16, 1} },
         { {2}, ngraph::element::f32, {1, 1, 16, 1}, false },

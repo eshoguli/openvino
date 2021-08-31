@@ -136,7 +136,7 @@ const std::vector<DepthToSpaceTransformationTestValues> testValues = {
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                {{0.32f}, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true},
+                {{0.32f}, ngraph::element::f32, {}, 1, ngraph::element::u8, true},
                 {0.45f}
             }
         },
@@ -146,7 +146,7 @@ const std::vector<DepthToSpaceTransformationTestValues> testValues = {
             ngraph::element::u8,
             {
                 {ngraph::element::f32},
-                {{0.32f}, ngraph::element::f32, {}, false, 1, ngraph::element::u8, true},
+                {{0.32f}, ngraph::element::f32, {}, 1, ngraph::element::u8, true},
                 {0.45f}
             }
         }

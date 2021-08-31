@@ -25,76 +25,76 @@ const std::vector<LayerTransformation::Params> trasformationParamValues = {
 const std::vector<FakeQuantizeWithNotOptimalTransformationTestValues> fakeQuantizeOnDataValues = {
     {
         { 256ul, {{ 1, 1, 1, 1 }}, { 0.f }, { 25.5f }, { -128.f }, { 127.f }, ngraph::element::f32 },
-        { ngraph::element::i8, false },
+        { ngraph::element::i8 },
         {
-            { ngraph::element::f32, false },
-            { {-128.f}, ngraph::element::f32, {}, false, 1ul, ngraph::element::i8, true },
-            { {0.1f}, ngraph::element::f32, {}, false }
+            { ngraph::element::f32 },
+            { {-128.f}, ngraph::element::f32, {}, 1ul, ngraph::element::i8, true },
+            { {0.1f}, ngraph::element::f32, {} }
         },
         {{5.f}, ngraph::element::i8},
         {},
         {},
         {
-            { ngraph::element::f32, false },
-            { {127.f}, ngraph::element::f32, {}, false, 1ul, ngraph::element::i8, true },
-            { {0.3f}, ngraph::element::f32, {}, false }
+            { ngraph::element::f32 },
+            { {127.f}, ngraph::element::f32, {}, 1ul, ngraph::element::i8, true },
+            { {0.3f}, ngraph::element::f32, {} }
         },
         {},
         "FP32"
     },
     {
         { 256ul, {{ 1, 1, 1, 1 }}, { 0.f }, { 25.5f }, { -128.f }, { 127.f }, ngraph::element::f32 },
-        { ngraph::element::i8, false },
+        { ngraph::element::i8 },
         {
-            { ngraph::element::f32, false },
+            { ngraph::element::f32 },
             {},
-            { {0.1f}, ngraph::element::f32, {}, false }
+            { {0.1f}, ngraph::element::f32, {} }
         },
         {{5.f}, ngraph::element::i8},
         {},
         {},
         {
-            { ngraph::element::f32, false },
+            { ngraph::element::f32 },
             {},
-            { {0.3f}, ngraph::element::f32, {}, false }
+            { {0.3f}, ngraph::element::f32, {} }
         },
         {},
         "U8"
     },
     {
         { 256ul, {{ 1, 1, 1, 1 }}, { 0.f }, { 25.5f }, { -128.f }, { 127.f }, ngraph::element::f32 },
-        { ngraph::element::i8, false },
+        { ngraph::element::i8 },
         {
-            { ngraph::element::f32, false },
+            { ngraph::element::f32 },
             { },
-            { {0.1f}, ngraph::element::f32, {}, false }
+            { {0.1f}, ngraph::element::f32, {} }
         },
         {{5.f}, ngraph::element::i8},
         {},
         {},
         {
-            { ngraph::element::f32, false },
-            { {127.f}, ngraph::element::f32, {}, false, 1ul, ngraph::element::i8, true },
-            { {0.3f}, ngraph::element::f32, {}, false }
+            { ngraph::element::f32 },
+            { {127.f}, ngraph::element::f32, {}, 1ul, ngraph::element::i8, true },
+            { {0.3f}, ngraph::element::f32, {} }
         },
         {},
         "FP32"
     },
     {
         { 256ul, {{ 1, 1, 1, 1 }}, { 0.f }, { 25.5f }, { -128.f }, { 127.f }, ngraph::element::f32 },
-        { ngraph::element::i8, false },
+        { ngraph::element::i8 },
         {
-            { ngraph::element::f32, false },
-            { {-128.f}, ngraph::element::f32, {}, false, 1ul, ngraph::element::i8, true },
-            { {0.1f}, ngraph::element::f32, {}, false }
+            { ngraph::element::f32 },
+            { {-128.f}, ngraph::element::f32, {}, 1ul, ngraph::element::i8, true },
+            { {0.1f}, ngraph::element::f32, {} }
         },
         {{5.f}, ngraph::element::i8},
         {},
         {},
         {
-            { ngraph::element::f32, false },
+            { ngraph::element::f32 },
             { },
-            { {0.3f}, ngraph::element::f32, {}, false }
+            { {0.3f}, ngraph::element::f32, {} }
         },
         {},
         "U8"
