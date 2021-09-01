@@ -9,14 +9,14 @@
    4.1. [FakeQuantize operation](#fakequantize-operation)  
    4.2. [Quantize and dequantization operations](#quantize-and-dequantization-operations)  
 5. [Low precision transformations pipeline](#low-precision-transformations-pipeline)  
-      [Step #1: branch specific transformations](#step-1-branch-specific-transformations)  
-      [Step #2: decomposition](#step-2-decomposition)  
-      [Step #3: dequantization operations handling](#step-3-dequantization-operations-handling)  
-      [Step #4: cleanup result model](#step-4-cleanup-result-model)  
+      5.1. [Step #1. Prerequisites](#step-1-prerequisites)  
+      5.2. [Step #2. Markup](#step-2-markup)  
+      5.3. [Step #3. Main transformations: FakeQuantize decomposition and dequantization operations handling](#step-3-main-transformations-fakequantize-decomposition-and-dequantization-operations-handling)  
+      5.4. [Step #4. Cleanup result model](#step-4-cleanup-result-model)  
 6. [Low precision transformations in plugin transformation pipeline](#low-precision-transformations-in-plugin-transformation-pipeline)  
-      [Step #1: common optimizations](#step-1-common-optimizations)  
-      [Step #2: low precision transformations execution](#step-2-low-precision-transformations-execution)  
-      [Step #3: plugin specific transformations](#step-3-plugin-specific-transformations)
+      [Step #1. Common optimizations](#step-1-common-optimizations)  
+      [Step #2. Low precision transformations execution](#step-2-low-precision-transformations-execution)  
+      [Step #3. Plugin specific transformations](#step-3-plugin-specific-transformations)
 7. [Result model overview](#result-model-overview)
 8. [Mixed precision](#mixed-precision)
 9. [Customization](#customization)
@@ -41,37 +41,37 @@ How quantize a model in details you can explore in [Low precision tools](#low-pr
 
 LPT transformations decompose `FakeQuantize` operations if `level` parameter is set to 255 or 256. LPT transformations propagate dequantization operations through follow operations:
 
-| Operation        | Operation set version |
-|------------------|-----------------------|
-| Add              | any                   |
-| Avg              | any                   |
-| Clamp            | any                   |
-| Concat           | any                   |
-| Convolution      | any                   |
-| DepthToSpace     | any                   |
-| FakeQuantize     | any                   |
-| GroupConvolution | any                   |
-| Interpolate      | any                   |
-| MatMul           | any                   |
-| MaxPool          | any                   |
-| Multiply         | any                   |
-| MVN              | any                   |
-| NormalizeL2      | any                   |
-| PRelu            | any                   |
-| Relu             | any                   |
-| Reshape          | any                   |
-| Split            | any                   |
-| Squeeze          | any                   |
-| StridedSlice     | any                   |
-| Transpose        | any                   |
-| Unsqueeze        | any                   |
-| VariadicSplit    | any                   |
+| Operation        |
+|------------------|
+| Add              |
+| Avg              |
+| Clamp            |
+| Concat           |
+| Convolution      |
+| DepthToSpace     |
+| FakeQuantize     |
+| GroupConvolution |
+| Interpolate      |
+| MatMul           |
+| MaxPool          |
+| Multiply         |
+| MVN              |
+| NormalizeL2      |
+| PRelu            |
+| Relu             |
+| Reshape          |
+| Split            |
+| Squeeze          |
+| StridedSlice     |
+| Transpose        |
+| Unsqueeze        |
+| VariadicSplit    |
 
 If operation is not supported by LPT then dequantization operation will be not propagated, input tensor precisions will be not changed to low precision and operation will be executed in original precision. 
 
 For example, if you would like to infer `Convolution` operation in low precision then your model can look as on picture below:
 
-![Quantized Convolution](img/fq_and_convolution.common.png)
+![Quantized Convolution](convolution/img/convolution.actual.png)
 
 > There are several supported quantization approaches on activations and on weights. All supported approaches are described in [Quantization approaches](#quantization-approaches) section below. In demonstrated model [Quantization approaches: FakeQuantize operation](#fakequantize-operation) approach is used.
 
@@ -106,30 +106,125 @@ In this case `FakeQuantize` operation and `Convert` are used as quantize operati
 LPT result model:  
 ![](img/qdq_and_convolution.transformed.png)
 
-### Low precision transformations pipeline
-There are several LPT transformation groups. You can explore details in [Transformations](#transformations) section below. For each transformation inside one group pattern matcher is unique per transformation, but each operation can be assigned to several transformations.
 
-Inside each group LPT transformations handle input model operation by operation, applying transformation matching pattern for each transformation from the group to an operation, and execute transformation if pattern is matched. Decomposition transformation decomposes `FakeQuantize` to quantize and dequantization operations. Dequantization operations from previous transformation result is used for the current one and so on, until the end of the model is achieved.
+
+
+### Low precision transformations pipeline
+LPT transformation pipeline has several steps. You can explore details in [Transformations](#transformations) section below. For each transformation inside one step pattern matcher is unique per transformation, but each operation can be assigned to several transformations.
+
+<details>
+<summary>Click to explore all transformations by group in one picture</summary>
+
+![](img/low_precision_transformation_pipeline.png)
+</details>
+
+<details>
+<summary>Click to explore all transformations by group in one table</summary>
+
+| Step #1: Prerequisites             | Step #2: Markup transformations | Step #3: Main transformations           | Step #4: Cleanup transformations            |
+|------------------------------------|---------------------------------|-----------------------------------------|---------------------------------------------|
+| PullReshapeThroughDequantization   | MarkupCanBeQuantized            | AddTransformation                       | FoldConvertTransformation                   |
+| PullTransposeThroughDequantization | MarkupPrecisions                | AvgPoolTransformation                   | FuseConvertTransformation                   |
+| ngraph::pass::LinOpSequenceFusion  | MarkupPerTensorQuantization     | ClampTransformation                     | FuseSubtractToFakeQuantizeTransformation    |
+|                                    | MarkupAvgPoolPrecisionPreserved | ConcatTransformation                    | FuseMultiplyToFakeQuantizeTransformation    |
+|                                    | PropagatePrecisions             | ConvolutionTransformation               | MultiplyToGroupConvolutionTransformation    |
+|                                    | AlignQuantizationInttervals     | ConvolutionBackpropDataTransformation   | SubtractMultiplyToMultiplyAddTransformation |
+|                                    | AlignQuantizationParamters      | DepthToSpaceTransformation              | FoldFakeQuantizeTransformation              |
+|                                    |                                 | FakeQuantizeDecompositionTransformation |                                             |
+|                                    |                                 | FakeQuantizeTransformation              |                                             |
+|                                    |                                 | InterpolateTransformation               |                                             |
+|                                    |                                 | GroupConvolutionTransformation          |                                             |
+|                                    |                                 | MatMulTransformation                    |                                             |
+|                                    |                                 | MaxPoolTransformation                   |                                             |
+|                                    |                                 | MultiplyTransformation                  |                                             |
+|                                    |                                 | MVNTransformation                       |                                             |
+|                                    |                                 | NormalizeL2Transformation               |                                             |
+|                                    |                                 | PReluTransformation                     |                                             |
+|                                    |                                 | ReduceMaxTransformation                 |                                             |
+|                                    |                                 | ReduceMeanTransformation                |                                             |
+|                                    |                                 | ReduceMinTransformation                 |                                             |
+|                                    |                                 | ReduceSumTransformation                 |                                             |
+|                                    |                                 | ReluTransformation                      |                                             |
+|                                    |                                 | ReshapeTransformation                   |                                             |
+|                                    |                                 | SqueezeTransformation                   |                                             |
+|                                    |                                 | ShuffleChannelsTransformation           |                                             |
+|                                    |                                 | SplitTransformation                     |                                             |
+|                                    |                                 | StridedSliceTransformation              |                                             |
+|                                    |                                 | TransposeTransformation                 |                                             |
+|                                    |                                 | UnsqueezeTransformation                 |                                             |
+|                                    |                                 | VariadicSplitTransformation             |                                             |
+
+</details>
+
+Inside each step LPT transformations handle input model operation by operation, applying transformation matching pattern for each transformation from the group to an operation, and execute transformation if pattern is matched. Decomposition transformation decomposes `FakeQuantize` to quantize and dequantization operations. Dequantization operations from previous transformation result is used for the current one and so on, until the end of the model is achieved.
 
 As result, usually all operations are inferred by plugin in low precision. If plugin doesn't support an operation inference in low precision, then corresponding LPT transformation can be disabled, and input tensor precisions for the operation will be not changed. In this case the operation is inferred in the original precision. 
 
 Low precision transformations pipeline includes four common steps:
-* Step #1: `FakeQuantize` operations decomposition and dequantization operations handling for multi branch operations (branch specific transformations).
-* Step #2: Decomposition.
-* Step #3: Dequantization operations handling (main transformations).
-* Step #4: Cleanup result model (clean up transformations).
+* Step #1: Prerequisites.
+* Step #2: Markup transformations.
+* Step #3: Main transformations: `FakeQuantize` decomposition and dequantization operations handling.
+* Step #4: Cleanup transformations: cleanup result model.
 
-### Step #1: Branch specific transformations
-This step has only two transformations only. The key feature of branch specific transformations is handling several operations from different branches in one time. This transformations update several `FakeQuantize` operations and doesn't need their composition before. As result branch specific transformations have to be executed in the pipeline beginning. This step is implemented in [branch specific transformations](#branch-specific-transformations).
+### Step #1. Prerequisites
+This step fuses and propagates some operations in the model before run the next step. The step is require for OpenVINO plugins. Transformations:
+* PullReshapeThroughDequantization
+* PullTransposeThroughDequantization
+* ngraph::pass::LinOpSequenceFusion
 
-For example, original model with `FakeQuantize` and `Concat` operations:
-![TODO: FakeQuantize and Concat before LPT](movement/img/fq_and_concat.multi_channel.common.png)
+The model on this step is changed.  
 
-The result model contains decomposed `FakeQuantize` operations and dequantization operations are moved after `Concat`. As result `Concat` operation inputs and output precisions are changed to INT8:   
-![TODO: FakeQuantize and Concat after LPT](movement/img/fq_and_concat.multi_channel.transformed.png)
+### Step #2. Markup
+This step create runtime attributes for operations. Attributes will be used in next step. Transformations:
+* MarkupCanBeQuantized
+* MarkupPrecisions
+* MarkupPerTensorQuantization
+* MarkupAvgPoolPrecisionPreserved
+* PropagatePrecisions
+* AlignQuantizationInttervals
+* AlignQuantizationParamters
 
-### Step #2: Decomposition
-This step has only one transformation and operates with one `FakeQuantize` operation only. Decomposition transformations decompose `FakeQuantize` operation to quantize (`FakeQuantize` with low precision output) and dequantization operations (revers operations to quantize, with low precision input and original precision output). For dequantization operations LPT uses three operations: `Convert`, `Subtract` and `Multiply`. Element-wise operations `Subtract` and `Multiply` have constants on the second branches. Decomposition transformations have to be executed before other transformations (except branch specific). After decomposition transformations all other transformations in pipeline work with dequantization operations. If dequantization operations are not handled at the end of LPT pipeline, then they will be fused back to the `FakeQuantize`. This step is implemented in [decomposition transformations](#decomposition-transformations).
+The model on this step is changed: only new attributes are added to some operations.
+
+
+
+### Step #3. Main transformations, FakeQuantize decomposition and dequantization operations handling
+This step has the most transformations. Transformations:
+* AddTransformation
+* AvgPoolTransformation
+* ClampTransformation
+* ConcatTransformation
+* ConvolutionTransformation
+* ConvolutionBackpropDataTransformation
+* DepthToSpaceTransformation
+* FakeQuantizeDecompositionTransformation
+* FakeQuantizeTransformation
+* InterpolateTransformation
+* GroupConvolutionTransformation
+* MatMulTransformation
+* MaxPoolTransformation
+* MultiplyTransformation
+* MVNTransformation
+* NormalizeL2Transformation
+* PReluTransformation
+* ReduceMaxTransformation
+* ReduceMeanTransformation
+* ReduceMinTransformation
+* ReduceSumTransformation
+* ReluTransformation
+* ReshapeTransformation
+* SqueezeTransformation
+* ShuffleChannelsTransformation
+* SplitTransformation
+* StridedSliceTransformation
+* TransposeTransformation
+* UnsqueezeTransformation
+* VariadicSplitTransformation
+
+Transformations from this step can be separated in two groups: decompostion transformation and dequantization operations handling.
+
+#### Decomposition transformations
+Decomposition transformations decompose `FakeQuantize` operation to quantize (`FakeQuantize` with low precision output) and dequantization operations (revers operations to quantize, with low precision input and original precision output). For dequantization operations LPT uses three operations: `Convert`, `Subtract` and `Multiply`. Element-wise operations `Subtract` and `Multiply` have constants on the second branches. Decomposition transformations have to be executed before other transformations (except branch specific). After decomposition transformations all other transformations in pipeline work with dequantization operations. If dequantization operations are not handled at the end of LPT pipeline, then they will be fused back to the `FakeQuantize`.
 
 
 Original `FakeQuantize`:  
@@ -138,8 +233,12 @@ Original `FakeQuantize`:
 `FakeQuantize` after decomposition to quantize and dequantization operations:   
 ![TODO: FakeQuantize operation after LPT](quantization/img/q_and_dq.transformed.png)
 
-### Step #3: Dequantization operations handling
-This step has the most transformations. In this step LPT transformations move dequantization operations through existing model operations as more as possible. This step is implemented in [main transformations](#main-transformations).
+
+
+
+#### Dequantization operation handling transformations
+
+In this step LPT transformations fuse or move dequantization operations through existing model operations as more as possible.
 
 Original `Convolution` operation with dequantization operations before:  
 ![TODO: Convolution operation before LPT](img/qdq_and_convolution.common.png)
@@ -158,17 +257,15 @@ LPT cleanup transformations is final stage in LPT pipeline. In this step LPT tra
 
 ## Low precision transformations in plugin transformation pipeline
 Typical transformation pipeline described below.
-### Step #1: common optimizations
+### Step #1. Common optimizations
 This step is optional for LPT but typically is presented in OpenVINO™ plugins. The step doesn't use any LPT transformation. Firstly, the step disables dequantization operations constant folding on constant subgraph on weights to prevent the lost of dequantization info on the next plugin transformations. After that, it optimizes nGraph function and convert operations to operation set 1. Typically, usage of this step is the simplest way to meet LPT requirements for the input quantized model. If plugin can guarantee that LPT input requirements are met, then this step can be skipped.
 ```cpp
-ngraph::pass::Manager manager;
 const bool useLpt =
     (conf.lpTransformsMode == Config::LPTransformsMode::On) &&
-    ngraph::pass::low_precision::LowPrecisionTransformer::isFunctionQuantized(nGraphFunc);
+    ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(nGraphFunc);
 if (useLpt) {
-    // disables dequantization operations constant folding
     manager.register_pass<ngraph::pass::DisableConvertConstantFoldingOnConstPath>(
-        std::vector<ngraph::element::Type>{ ngraph::element::i8, ngraph::element::u8 });
+        std::vector<ngraph::element::Type>{ ngraph::element::i8, ngraph::element::u8, ngraph::element::i4, ngraph::element::u4 });
 }
 
 // common transformations
@@ -179,49 +276,68 @@ manager.register_pass<ngraph::pass::ConvertOpSet3ToOpSet2>();
 manager.register_pass<ngraph::pass::ConvertOpSet2ToOpSet1>();
 ...
 if (useLpt) {
-        pass_config->set_callback<ngraph::pass::ConvertQuantizeDequantize>([](const_node_ptr &node) -> bool {
-            return ngraph::pass::low_precision::NetworkHelper::areQuantizeAndDequantizeSupportedForMultiply(node);
-        });
+    manager.register_pass<ngraph::pass::low_precision::ConvertSubtractConstant>(
+        std::vector<ngraph::element::Type>{ ngraph::element::i8, ngraph::element::u8, ngraph::element::i4, ngraph::element::u4 });
+}
+...
+if (useLpt) {
+    pass_config->set_callback<ngraph::pass::ConvertQuantizeDequantize>([](const_node_ptr &node) -> bool {
+        return ngraph::pass::low_precision::NetworkHelper::areQuantizeAndDequantizeSupportedForMultiply(node);
+    });
 
-        pass_config->set_callback<ngraph::pass::ConvertSubtract>([](const_node_ptr &node) -> bool {
-            return ngraph::pass::low_precision::NetworkHelper::areQuantizeAndDequantizeSupportedForSubtract(node);
-        });
-    }
+    pass_config->set_callback<ngraph::pass::ConvertSubtract>([](const_node_ptr &node) -> bool {
+        return ngraph::pass::low_precision::NetworkHelper::areQuantizeAndDequantizeSupportedForSubtract(node);
+    });
+}
 manager.run_passes(nGraphFunc);
 ```
-### Step #2: low precision transformations execution  
+### Step #2. Low precision transformations execution  
 This step is mandatory. The step configure and run LPT transformations.
 ```cpp
 if (useLpt) {
-    // Some LPT specific optimization transformations are ran here to satisfy LPT requirements
-    ngraph::pass::Manager manager;
-    auto lptPrerequisites = manager.register_pass<ngraph::pass::GraphRewrite>();
-    const std::vector<ngraph::element::Type> supportedTypes = { ngraph::element::i8, ngraph::element::u8 };
-    lptPrerequisites->add_matcher<PullReshapeThroughDequantization>(supportedTypes);
-    lptPrerequisites->add_matcher<PullTransposeThroughDequantization>(supportedTypes);
-    lptPrerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
-    manager.run_passes(nGraphFunc);
+    auto supportedPrecisions = std::vector<OperationPrecisionRestriction>({
+        OperationPrecisionRestriction::create<ngraph::opset1::Convolution>({
+            {0, {ngraph::element::u8}},
+            {1, {ngraph::element::i8}},
+        }),
+        OperationPrecisionRestriction::create<ngraph::opset1::ConvolutionBackpropData>({
+            {0, {ngraph::element::u8, ngraph::element::i8}},
+            {1, {ngraph::element::i8}}
+        }),
+        OperationPrecisionRestriction::create<ngraph::opset1::GroupConvolution>({
+            {0, {ngraph::element::u8}},
+            {1, {ngraph::element::i8}}
+        }),
+        OperationPrecisionRestriction::create<ngraph::opset1::Multiply>({
+            {0, {ngraph::element::u8}},
+            {1, {ngraph::element::i8}},
+        }),
+    });
 
-    // LPT configuration parameters are created here
-    auto params = LayerTransformation::Params(
-        true,
-        LayerTransformation::QuantizedTensorAlignment::UpdateLevel,
-        LayerTransformation::QuantizedTensorAlignment::None,
-        true);
+    auto perTensorQuantization = std::vector<OperationPerTensorQuantizationRestriction>({
+        OperationPerTensorQuantizationRestriction::create<ngraph::opset1::Convolution>({0}),
+        OperationPerTensorQuantizationRestriction::create<ngraph::opset1::ConvolutionBackpropData>({0})
+    });
 
-    // LPT transformation creation and customization to satisfy plugin requirements
-    LowPrecisionTransformer transformer(LowPrecisionTransformer::getAllTransformations(params)
-        .add<ConvolutionTransformation, ngraph::opset1::Convolution>(LayerTransformation::Params(params).setPrecisionsOnActivations({ngraph::element::u8}).setSupportAsymmetricQuantization(true))
-        .add<GroupConvolutionTransformation, ngraph::opset1::GroupConvolution>(LayerTransformation::Params(params).setPrecisionsOnActivations({ ngraph::element::u8 }).setSupportAsymmetricQuantization(true))
-        .addStandaloneCleanup<MultiplyToGroupConvolutionTransformation, graph::opset1::Multiply>(
-            LayerTransformation::Params(params).setPrecisionsOnActivations({ ngraph::element::u8 })));
-
-    // LPT transformation execution
-    transformer.transform(nGraphFunc);
+    ngraph::pass::Manager lptManager;
+    lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(supportedPrecisions, perTensorQuantization);
+    lptManager.get_pass_config()->set_callback<ngraph::pass::low_precision::MarkupPrecisions>([](const_node_ptr& node) -> bool {
+        if (const auto mulitply = std::dynamic_pointer_cast<const ngraph::opset1::Multiply>(node)) {
+            return !MultiplyToGroupConvolutionTransformation::canBeTransformedToGroupConvolution(mulitply);
+        }
+        return false;
+    });
+    lptManager.get_pass_config()->set_callback<ngraph::pass::low_precision::ConvolutionBackpropDataTransformation>([](const_node_ptr& node) -> bool {
+        return LayerTransformation::isAsymmetricQuantization(node) || WeightableLayerTransformation::isAsymmetricOnWeights(node);
+    });
+    lptManager.get_pass_config()->set_callback<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>([](const_node_ptr& node) -> bool {
+        return MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
+    });
+    lptManager.run_passes(nGraphFunc);
 }
 ```
 
-### Step #3: plugin specific transformations  
+### Step #3. Plugin specific transformations  
 This step is optional. The step modifies nGraph function to device specific operation set.
 ```cpp
 ngraph::pass::Manager deviceSpecificManager;
