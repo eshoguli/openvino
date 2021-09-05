@@ -127,3 +127,66 @@ deviceSpecificManager.run_passes(nGraphFunc);
 
 return 0;
 }
+
+int lpt_supported_precisions() {
+std::shared_ptr<ov::Function> nGraphFunc;
+ngraph::pass::Manager manager;
+
+using namespace ngraph::pass::low_precision;
+//! [lpt_supported_precisions]
+auto supportedPrecisions = std::vector<OperationPrecisionRestriction>({
+    OperationPrecisionRestriction::create<ngraph::opset1::Convolution>({
+        {0, {ngraph::element::u8}},
+        {1, {ngraph::element::i8}},
+    }),
+});
+
+ngraph::pass::Manager lptManager;
+lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(supportedPrecisions);
+lptManager.run_passes(nGraphFunc);
+//! [lpt_supported_precisions]
+
+ngraph::pass::Manager deviceSpecificManager;
+deviceSpecificManager.register_pass<ngraph::pass::device::ConvertOpSet1ToDeviceSpecific>();
+deviceSpecificManager.run_passes(nGraphFunc);
+
+return 0;
+}
+
+int per_tensor_quantization() {
+std::shared_ptr<ov::Function> nGraphFunc;
+//! [per_tensor_quantization]
+using namespace ngraph::pass::low_precision;
+
+const std::vector<OperationPrecisionRestriction> emptyRestrictions;
+
+auto perTensorQuantization = std::vector<OperationPerTensorQuantizationRestriction>({
+    OperationPerTensorQuantizationRestriction::create<ngraph::opset1::Convolution>({0})
+});
+
+ngraph::pass::Manager lptManager;
+lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(emptyRestrictions, perTensorQuantization);
+lptManager.run_passes(nGraphFunc);
+//! [per_tensor_quantization]
+
+return 0;
+}
+
+int asymmetric_quantization() {
+std::shared_ptr<ov::Function> nGraphFunc;
+ngraph::pass::Manager manager;
+auto pass_config = manager.get_pass_config();
+
+
+//! [asymmetric_quantization]
+using namespace ngraph::pass::low_precision;
+ngraph::pass::Manager lptManager;
+lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>();
+lptManager.get_pass_config()->set_callback<ConvolutionBackpropDataTransformation>([](const std::shared_ptr<const ngraph::Node>& node) -> bool {
+    return LayerTransformation::isAsymmetricQuantization(node) || WeightableLayerTransformation::isAsymmetricOnWeights(node);
+});
+lptManager.run_passes(nGraphFunc);
+//! [asymmetric_quantization]
+
+return 0;
+}

@@ -262,6 +262,7 @@ This step is mandatory. The step configure and run LPT transformations.
 
 ### Step #3. Plugin specific transformations  
 This step is optional. The step modifies nGraph function to device specific operation set.
+
 @snippet snippets/lpt_mkldnn_plugin.cpp lpt_device
 
 ## Result model overview
@@ -287,13 +288,35 @@ As result all operations (except not quantized `SoftMax` at the end of the model
 If LPT input model operation output has `fp16` precision then dequantization computations still occurs in `fp32` precision. This approach is used to avoid accuracy loss in `fp16` arithmetic computations. Note, the latest dequantization operation output has `fp16` precision.
 
 ## Customization
-Low Precision Transformations can be customizable. [TODO: not completed]:
-* Operation precision restrictions
-* Operation per tensor quantization restrictions
-* Update precisions. Transformation member name is `updatePrecisions`. Boolean value is supported: `true` or `false`. All transformations are affected. If `true` then low precision transformations update precisions to low precision and doesn't if `false`. Typically this option is used for plugin debugging.
-* Dequantization precision. Transformation member name is `deqPrecision`.
-* [TODO: Backup]
-* Support asymmetric quantization. Transformation member name is `supportAsymmetricQuantization`. Used in `ConvolutionTransformation` and `GroupConvolution` transformations for weights only. Operation with zero point on weights will be not handled if value is `false`.  
-* Precisions on activations. Transformation member name is `precisionsOnActivations`. Array of precisions which define result input precisions for transformed operation.
-* Precisions on weights. Transformation member name is `precisionsOnWeights`. Array of precisions which define result input precisions for transformed operation.
-* Dequantization precision. Transformation member name is `deqPrecision`.
+Low Precision Transformations can be customizable. Build-in customization options:
+* operation precision restrictions,
+* operation per tensor quantization restrictions,
+* update precisions,
+* dequantization precision.
+
+
+### Operation precision restrictions
+This option defines precisions which allowed for the operation input ports. The option value is passed as input argument for `LowPrecision` constructor. For example:
+
+@snippet snippets/lpt_mkldnn_plugin.cpp lpt_supported_precisions
+
+In provided example in result model `Convolution` operation inputs have to have specific precisions: `u8` (unsigned int8) precision on input 0 (on activations) and `i8` (signed int8) precision on input 1 (on weights).
+
+### Operation per tensor quantization restrictions
+This option defines if operation supports per-tensor quantization only. The option value is passed as input argument for `LowPrecision` constructor. For example:
+
+@snippet snippets/lpt_mkldnn_plugin.cpp per_tensor_quantization
+
+In provided example in result model `Convolution` operation has to have per-tensor quantization on input 0 (on acivations).
+
+### Update precisions
+Transformation member name is `updatePrecisions`. Boolean value is supported: `true` or `false`. All transformations are affected. If `true` then low precision transformations update precisions to low precision and doesn't if `false`. Typically this option is used for plugin debugging.
+
+### Dequantization precision
+Transformation member name is `deqPrecision`. It is passed as input argument for a transformation constructor. Default value is `f32`.
+
+### Typical customization use cases
+
+Plugin specific customization can be implemented via nGraph transformation callbacks. For exmample: asymmetric quantization support can be easilly customizable via `LayerTransformation::isAsymmetricQuantization` and `WeightableLayerTransformation::isAsymmetricOnWeights` methods usage in callbacks. For example:
+
+@snippet snippets/lpt_mkldnn_plugin.cpp asymmetric_quantization
