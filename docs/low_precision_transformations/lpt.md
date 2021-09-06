@@ -23,7 +23,7 @@
 
 ## Introduction
 The goal of `Low Precision Transformations` (LPT transformations) is transform quantized model from original precisions (FP16 or FP32) to low precision (INT8: `signed int8` or `unsigned int8`) model to prepare model for low precision inference in OpenVINO™ plugin. It achieved by two main principles:
-1. `FakeQuantize` operation decomposition to two parts (you can explore details below in [Low precision transformations pipeline, step #2: decomposition](#step-2-decomposition) section):  
+1. `FakeQuantize` operation decomposition to two parts:  
     - part #1: quantize operation - new `FakeQuantize` operation with output quantization intervals in low precision range (signed int8: [-128, 127] or [-127, 127], unsigned int8: [0, 255] or [0, 256]) and with low precision output (`signed int8` or `unsigned int8`), 
     - part #2: dequantization operations with low precision input and original precision output.
 2. Dequantization operation propagation through original models operations to avoid dequantization operations before original model operations, thus the quantize operations with low precision output remains before original model operations. 
@@ -35,40 +35,42 @@ How quantize a model in details you can explore in [Low precision tools](#low-pr
 ## Input model requirements
 
 LPT transformations decompose `FakeQuantize` operations if `level` parameter is set to 255 or 256. LPT transformations propagate dequantization operations through follow operations:
-
-| Operation        |
-|------------------|
-| Add              |
-| Avg              |
-| Clamp            |
-| Concat           |
-| Convolution      |
-| DepthToSpace     |
-| FakeQuantize     |
-| GroupConvolution |
-| Interpolate      |
-| MatMul           |
-| MaxPool          |
-| Multiply         |
-| MVN              |
-| NormalizeL2      |
-| PRelu            |
-| Relu             |
-| Reshape          |
-| Split            |
-| Squeeze          |
-| StridedSlice     |
-| Transpose        |
-| Unsqueeze        |
-| VariadicSplit    |
+* Add
+* Avg
+* Clamp
+* Concat
+* Convolution
+* ConvolutionBackpropData
+* DepthToSpace
+* FakeQuantize
+* GroupConvolution
+* Interpolate
+* MatMul
+* MaxPool
+* Multiply
+* MVN
+* NormalizeL2
+* PRelu
+* ReduceMax
+* ReduceMean
+* ReduceMin
+* ReduceSum
+* Relu
+* Reshape
+* Split
+* Squeeze
+* StridedSlice
+* Transpose
+* Unsqueeze
+* VariadicSplit
 
 If operation is not supported by LPT then dequantization operation will be not propagated, input tensor precisions will be not changed to low precision and operation will be executed in original precision. 
 
 For example, if you would like to infer `Convolution` operation in low precision then your model can look as on picture below:
 
-![Quantized Convolution](convolution/img/convolution.actual.png)
+![Quantized Convolution](img/fq_and_convolution.common.svg)
 
-> There are several supported quantization approaches on activations and on weights. All supported approaches are described in [Quantization approaches](#quantization-approaches) section below. In demonstrated model [Quantization approaches: FakeQuantize operation](#fakequantize-operation) approach is used.
+> There are several supported quantization approaches on activations and on weights. All supported approaches are described in [Quantization approaches](#quantization-approaches) section below. In demonstrated model [FakeQuantize operation quantization](#fakequantize-operation) approach is used.
 
 ### Low precision tools
 There are two tools to quantize a model:
@@ -110,7 +112,7 @@ LPT transformation pipeline has several steps. You can explore details in [Trans
 ![](img/low_precision_transformation_pipeline.svg)
 
 <details>
-<summary>Click to explore all transformations by steps in one table</summary>
+<summary>Click to explore all LPT transformations by steps in one table</summary>
 
 | Step #1: Prerequisites             | Step #2: Markup transformations | Step #3: Main transformations           | Step #4: Cleanup transformations            |
 |------------------------------------|---------------------------------|-----------------------------------------|---------------------------------------------|
@@ -266,21 +268,54 @@ This step is optional. The step modifies nGraph function to device specific oper
 @snippet snippets/lpt_mkldnn_plugin.cpp lpt_device
 
 ## Result model overview
+
+Let's explore quantized [TensorFlow* implementation of ResNet-50](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public/resnet-50-tf) model. Use [Model Downloader](@ref omz_tools_downloader) tool to download the `fp16` model from [OpenVINO™ Toolkit - Open Model Zoo repository](https://github.com/openvinotoolkit/open_model_zoo):
+```sh
+./downloader.py --name resnet-50-tf --precisions FP16-INT8
+```
+After that you should quantize model by the [Model Quantizer](@ref omz_tools_downloader) tool.
+```sh
+./quantizer.py --model_dir public/resnet-50-tf --dataset_dir <DATASET_DIR> --precisions=FP16-INT8
+```
+
+### Inference
+
+The simplest way to infer the model and collect performance counters is [C++ Benchmark Application](../../inference-engine/samples/benchmark_app/README.md). 
+```sh
+./benchmark_app -m resnet-50-tf.xml -d CPU -niter 1 -api sync -report_type average_counters  -report_folder pc_report_dir
+```
+If you infer the model with the OpenVINO™ CPU plugin and collect performance counters, all operations (except last not quantized SoftMax) are executed in INT8 precision.  
+
+### Results analysis
+
 Result model depends on different factors:
 * The original model quantization possibility and quantization quality. For some models, some operations are not possible to be quantized by POT and NNCF tools. In this case `FakeQuantize` operations are absent before these operations and they will be inferred in original precision.
 * LPT customization and plugin supported operations. If plugin doesn't support INT8 inference for some operation then corresponding LPT transformation should be disabled and the operation will be inferred in original precision.
 
-Let explore quantized [TensorFlow* implementation of ResNet-50](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public/resnet-50-tf) model. Use [Model Downloader](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/downloader) tool to download the model from [OpenVINO™ Toolkit - Open Model Zoo repository](https://github.com/openvinotoolkit/open_model_zoo) :
-```sh
-./downloader.py --name resnet-50-tf --precisions FP16-INT8
-```
-If you infer the model in OpenVINO™ CPU plugin, then LPT result model key features are:
-* All `FakeQuantize` operations are decomposed and have INT8 output.
-* All dequantization operations were handled, moved thought `MaxPool`, `Convolution` and fused with next `FakeQuantize`. As result all input tensor precisions, except one not quantized `SoftMax` operation at the end of the model, were changed to INT8.
-> Note, please:
-> - LPT transformation for `Add` operation keeps one input branch in FP32. 
-> - `Add` operation with one constant branch after `Convolution` is, as expected, still in FP32. It's implementation bias values adding and indivisible part of CPU plugin convolution operation implementation.
-> - `FakeQuantize` is quantization operation and has FP32 input as expected.
+
+Information about layer precision is stored in the performance counters that are
+available from the Inference Engine API. For example, the part of performance counters table for quantized [TensorFlow* implementation of ResNet-50](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public/resnet-50-tf) model inference on [CPU Plugin](supported_plugins/CPU.md) looks as follows:
+
+
+| layerName                                                 | execStatus | layerType    | execType             | realTime (ms) | cpuTime (ms) |
+| --------------------------------------------------------- | ---------- | ------------ | -------------------- | ------------- | ------------ |
+| resnet\_model/batch\_normalization\_15/FusedBatchNorm/Add | EXECUTED   | Convolution  | jit\_avx512\_1x1\_I8 | 0.377         | 0.377        |
+| resnet\_model/conv2d\_16/Conv2D/fq\_input\_0              | NOT\_RUN   | FakeQuantize | undef                | 0             | 0            |
+| resnet\_model/batch\_normalization\_16/FusedBatchNorm/Add | EXECUTED   | Convolution  | jit\_avx512\_I8      | 0.499         | 0.499        |
+| resnet\_model/conv2d\_17/Conv2D/fq\_input\_0              | NOT\_RUN   | FakeQuantize | undef                | 0             | 0            |
+| resnet\_model/batch\_normalization\_17/FusedBatchNorm/Add | EXECUTED   | Convolution  | jit\_avx512\_1x1\_I8 | 0.399         | 0.399        |
+| resnet\_model/add\_4/fq\_input\_0                         | NOT\_RUN   | FakeQuantize | undef                | 0             | 0            |
+| resnet\_model/add\_4                                      | NOT\_RUN   | Eltwise      | undef                | 0             | 0            |
+| resnet\_model/add\_5/fq\_input\_1                         | NOT\_RUN   | FakeQuantize | undef                | 0             | 0            |
+
+
+> The `exeStatus` column of the table includes possible values:
+> - `EXECUTED` - layer was executed by standalone primitive,
+> - `NOT_RUN` - layer was not executed by standalone primitive or was fused with another operation and executed in another layer primitive.  
+>
+> The `execType` column of the table includes inference primitives with specific suffixes. The layers have the following marks:
+> * Suffix `I8` for layers that had 8-bit data type input and were computed in 8-bit precision
+> * Suffix `FP32` for layers computed in 32-bit precision 
 
 As result all operations (except not quantized `SoftMax` at the end of the model) in OpenVINO™ CPU plugin are inferred in low precision. Note, please, in the result model there are `FakeQuantize` operations in FP32 but the plugin responsibility is fuse these operations with previous operations. OpenVINO™ CPU plugin achieves maximum optimized inference for all operations by fusing INT8 `Convolution` with FP32 output with `FakeQuantize` operation with FP32 input and INT8 output. In this case OpenVINO™ CPU plugin uses INT8 and FP32 vectorized instructions but reports about one INT8 kernel usage for inference, which is the most optimized for this case.
 
