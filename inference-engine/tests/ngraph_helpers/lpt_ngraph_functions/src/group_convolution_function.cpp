@@ -141,10 +141,22 @@ std::shared_ptr<ngraph::Function> GroupConvolutionFunction::getOriginal(
     if (!fakeQuantizeOnData.empty()) {
         parent = std::make_shared<ngraph::opset1::FakeQuantize>(
             input,
-            std::make_shared<Constant>(precision, Shape{ 1, fakeQuantizeOnData.inputLowValues.size(), 1, 1 }, fakeQuantizeOnData.inputLowValues),
-            std::make_shared<Constant>(precision, Shape{ 1, fakeQuantizeOnData.inputHighValues.size(), 1, 1 }, fakeQuantizeOnData.inputHighValues),
-            std::make_shared<Constant>(precision, Shape{ 1, fakeQuantizeOnData.outputLowValues.size(), 1, 1 }, fakeQuantizeOnData.outputLowValues),
-            std::make_shared<Constant>(precision, Shape{ 1, fakeQuantizeOnData.outputHighValues.size(), 1, 1 }, fakeQuantizeOnData.outputHighValues),
+            std::make_shared<ngraph::opset1::Constant>(
+                precision,
+                Shape{ 1, fakeQuantizeOnData.inputLowValues.size(), 1, 1 },
+                fakeQuantizeOnData.inputLowValues),
+            std::make_shared<ngraph::opset1::Constant>(
+                precision,
+                Shape{ 1, fakeQuantizeOnData.inputHighValues.size(), 1, 1 },
+                fakeQuantizeOnData.inputHighValues),
+            std::make_shared<ngraph::opset1::Constant>(
+                precision,
+                Shape{ 1, fakeQuantizeOnData.outputLowValues.size(), 1, 1 },
+                fakeQuantizeOnData.outputLowValues),
+            std::make_shared<ngraph::opset1::Constant>(
+                precision,
+                Shape{ 1, fakeQuantizeOnData.outputHighValues.size(), 1, 1 },
+                fakeQuantizeOnData.outputHighValues),
             fakeQuantizeOnData.quantizationLevel);
     }
 
