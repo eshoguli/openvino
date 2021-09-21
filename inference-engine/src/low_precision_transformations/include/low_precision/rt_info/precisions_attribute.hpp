@@ -22,6 +22,10 @@ namespace ngraph {
 
 class PrecisionsAttribute;
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief PrecisionsSharedValue is used by PrecisionsAttribute as attribute shared value.
+ */
 class LP_TRANSFORMATIONS_API PrecisionsSharedValue : public SharedValue<PrecisionsAttribute> {
 public:
     std::vector<ngraph::element::Type> precisions;
@@ -29,6 +33,10 @@ public:
 
 using PrecisionsAttributePtr = std::shared_ptr<PrecisionsAttribute>;
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief PrecisionsAttribute defines precision which is required for input/output port or an operation.
+ */
 class LP_TRANSFORMATIONS_API PrecisionsAttribute : public SharedValueAttribute<PrecisionsSharedValue> {
 public:
     static const std::vector<ngraph::element::Type> defaultPrecisions;

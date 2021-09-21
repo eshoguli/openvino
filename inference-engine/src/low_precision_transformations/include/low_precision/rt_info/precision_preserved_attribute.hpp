@@ -16,6 +16,10 @@ namespace ngraph {
 
 class LP_TRANSFORMATIONS_API PrecisionPreservedAttribute;
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief PrecisionPreservedSharedValue is used by PrecisionPreservedAttribute as attribute shared value.
+ */
 class LP_TRANSFORMATIONS_API PrecisionPreservedSharedValue : public SharedValue<PrecisionPreservedAttribute> {
 public:
     PrecisionPreservedSharedValue() = default;
@@ -23,6 +27,11 @@ public:
     bool value;
 };
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief PrecisionPreservedAttribute defines precision preserved operation. If attribute is absent then an operation is
+ * not precision preserved.
+ */
 class LP_TRANSFORMATIONS_API PrecisionPreservedAttribute : public SharedValueAttribute<PrecisionPreservedSharedValue> {
 public:
     PrecisionPreservedAttribute() = default;

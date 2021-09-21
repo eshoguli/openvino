@@ -17,6 +17,11 @@
 template <class SharedAttributeType>
 class LP_TRANSFORMATIONS_API SharedValue;
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief SharedValueAttribute base type for shared value attributes.
+ * The attribute used for attribute SharedValue value backward propagation.
+ */
 template <class SharedValueType>
 class LP_TRANSFORMATIONS_API SharedValueAttribute {
 public:

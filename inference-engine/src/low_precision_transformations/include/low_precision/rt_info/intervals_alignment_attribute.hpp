@@ -17,6 +17,10 @@
 namespace ngraph {
 class IntervalsAlignmentAttribute;
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief IntervalsAlignmentSharedValue is used by IntervalsAlignmentAttribute as attribute shared value.
+ */
 class LP_TRANSFORMATIONS_API IntervalsAlignmentSharedValue : public SharedValue<IntervalsAlignmentAttribute> {
 public:
     class Interval {
@@ -47,6 +51,11 @@ public:
 #endif
 };
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief IntervalsAlignmentAttribute defines subgraph with the same quantization intervals alignment.
+ * FakeQuantize operations are included. The attribute is used by quantization operations.
+ */
 class LP_TRANSFORMATIONS_API IntervalsAlignmentAttribute : public SharedValueAttribute<IntervalsAlignmentSharedValue> {
 public:
     IntervalsAlignmentAttribute() = default;

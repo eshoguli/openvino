@@ -20,12 +20,21 @@
 namespace ngraph {
 class QuantizationAlignmentAttribute;
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief QuantizationAlignmentSharedValue is used by QuantizationAlignmentAttribute as attribute shared value.
+ */
 class LP_TRANSFORMATIONS_API QuantizationAlignmentSharedValue : public SharedValue<QuantizationAlignmentAttribute> {
 public:
     QuantizationAlignmentSharedValue(const bool value = false) : value(value) {}
     bool value;
 };
 
+/**
+ * @ingroup ie_transformation_common_api
+ * @brief QuantizationAlignmentAttribute defines subgraph with the same quantization alignment.
+ * FakeQuantize operations are not included. The attribute is used by quantization operations.
+ */
 class LP_TRANSFORMATIONS_API QuantizationAlignmentAttribute : public SharedValueAttribute<QuantizationAlignmentSharedValue>{
 public:
     QuantizationAlignmentAttribute(const bool value = false);
