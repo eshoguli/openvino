@@ -1,4 +1,4 @@
-# OpenVINO™ Low Precision Transformations {#openvino_docs_IE_DG_lpt}
+# OpenVINO™ Low Precision Transformations {#openvino_docs_IE_UG_lpt}
 
 ## Introduction
 `Low precision transformations` (known as `LPT`) are a set of nGraph transformations, which are combined in one library. The library is mandatory part of OpenVINO to infer quantized model in low precision with the maximum performance on Intel CPU, GPU and ARM platforms. The library includes more than 45 transformations and supports more then 30 operations. Some transformations are mandatory, some of them are optional and developed for specific device.

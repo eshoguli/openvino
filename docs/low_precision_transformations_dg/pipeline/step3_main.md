@@ -31,19 +31,3 @@ Main transformations are the most part of low precision transformations. Transfo
 * [TransposeTransformation](@ref openvino_docs_IE_DG_lpt_TransposeTransformation)
 * [UnsqueezeTransformation](@ref openvino_docs_IE_DG_lpt_UnsqueezeTransformation)
 * [VariadicSplitTransformation](@ref openvino_docs_IE_DG_lpt_VariadicSplitTransformation)
-
-Let's explore some main transformations on example model. Original model:
-
-![Original model](img/step3_original.png)
-
-Result model after main transformations:
-
-![Original model](img/step3_transformed.png)
-
-Changes in example model after main transformation:
-* All `FakeQuantize` operations (`fakeQuantize1`, `fakeQuantize2` and `fakeQuantize3`) were decomposed:
-   - original `FakeQuantize` operations were replaced with new operations with other output intervals and output port precision,
-   - dequantization operations.
-* Dequantization operations were 'moved' via precision preserved (`concat1` and `concat2`) and quantized operations (`convolution2`) 
-
-> Note, left branch (branch #1) doesn't required per-tensor quantization. As result, `fakeQuantize1` output interval is [0, 255]. But quantized `convolution2` required per-tensor quantization on the right branch (branch #2). As result, all connected `FakeQuantize` interval operations (`fakeQuantize1` and `fakeQuantize2`) are aligned to have per-tensor quantization after concatenation (`concat2`) operation. 

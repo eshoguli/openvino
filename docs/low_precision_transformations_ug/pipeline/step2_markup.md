@@ -1,4 +1,4 @@
-# OpenVINO™ LPT: step #2. Markup transformations {#openvino_docs_IE_DG_lpt_step2_markup}
+# OpenVINO™ LPT: step #2. Markup transformations {#openvino_docs_IE_UG_lpt_step2_markup}
 
 This step defines the most optimal `FakeQuantize` decomposition precisions for the best inference performance via operations markup with runtime attribute instances. Attributes are created for input & output ports and operations. Operation output port precisions are not changed in these transformations. Transformations order is important. A model markup low precision logic is decomposed and implemented into following common markup transformations (in usage order, order is important):
 1. [MarkupCanBeQuantized](@ref openvino_docs_IE_DG_lpt_MarkupCanBeQuantized)

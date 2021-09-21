@@ -308,7 +308,13 @@ limitations under the License.
                 </tab>
                 <tab type="usergroup" title="Using Low-Precision 8-bit Integer Inference" url="@ref openvino_docs_IE_DG_Int8Inference">
                 </tab>
-                <tab type="usergroup" title="Low Precision Transformations" url="@ref openvino_docs_IE_DG_lpt">
+                <tab type="usergroup" title="Low Precision Transformations [TODO: remove: User Guide]" url="@ref openvino_docs_IE_UG_lpt">
+                    <tab type="user" title="Step #1. Prerequisites transformations" url="@ref openvino_docs_IE_UG_lpt_step1_prerequisites"/>
+                    <tab type="user" title="Step #2. Markup transformations" url="@ref openvino_docs_IE_UG_lpt_step2_markup"/>
+                    <tab type="user" title="Step #3. Main transformations" url="@ref openvino_docs_IE_UG_lpt_step3_main"/>
+                    <tab type="user" title="Step #4. Cleanup transformations" url="@ref openvino_docs_IE_UG_lpt_step4_cleanup"/>
+                </tab>
+                <tab type="usergroup" title="Low Precision Transformations [TODO: remove: Developer Guide]" url="@ref openvino_docs_IE_DG_lpt">
                     <tab type="user" title="Attributes" url="@ref openvino_docs_IE_DG_lpt_attributes">
                         <tab type="user" title="AvgPoolPrecisionPreserved" url="@ref openvino_docs_IE_DG_lpt_AvgPoolPrecisionPreserved"/>
                         <tab type="user" title="IntervalsAlignment" url="@ref openvino_docs_IE_DG_lpt_IntervalsAlignment"/>
@@ -316,6 +322,7 @@ limitations under the License.
                         <tab type="user" title="PrecisionPreserved" url="@ref openvino_docs_IE_DG_lpt_PrecisionPreserved"/>
                         <tab type="user" title="Precisions" url="@ref openvino_docs_IE_DG_lpt_Precisions"/>
                         <tab type="user" title="QuantizationAlignment" url="@ref openvino_docs_IE_DG_lpt_QuantizationAlignment"/>
+                        <tab type="user" title="SharedValueAttribute" url="@ref openvino_docs_IE_DG_lpt_SharedValueAttribute"/>
                     </tab>
                     <tab type="user" title="Step #1. Prerequisites transformations" url="@ref openvino_docs_IE_DG_lpt_step1_prerequisites">
                         <tab type="user" title="LinOpSequenceFusion" url="@ref openvino_docs_IE_DG_lpt_LinOpSequenceFusion"/>
