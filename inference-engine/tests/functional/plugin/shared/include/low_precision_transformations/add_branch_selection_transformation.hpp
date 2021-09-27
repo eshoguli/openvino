@@ -19,6 +19,7 @@ public:
         ngraph::builder::subgraph::FakeQuantizeOnData fakeQuantizeBefore;
         ngraph::builder::subgraph::Convolution convolution;
         ngraph::builder::subgraph::FakeQuantizeOnData fakeQuantizeAfter;
+        ngraph::builder::subgraph::FakeQuantizeOnData fakeQuantizeAfterOutside;
     };
 
     Branch branch1;
@@ -42,6 +43,7 @@ public:
 
 protected:
     void SetUp() override;
+    void Run() override;
 };
 
 }  // namespace LayerTestsDefinitions

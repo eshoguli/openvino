@@ -58,16 +58,18 @@ void AddBranchSelectionTransformation::SetUp() {
         param.branch1.fakeQuantizeBefore,
         param.branch1.convolution,
         param.branch1.fakeQuantizeAfter,
+        param.branch1.fakeQuantizeAfterOutside,
         param.branch2.fakeQuantizeBefore,
         param.branch2.convolution,
         param.branch2.fakeQuantizeAfter,
+        param.branch2.fakeQuantizeAfterOutside,
         param.fakeQuantizeAfter);
 
     ngraph::pass::InitNodeInfo().run_on_function(function);
 }
 
-TEST_P(AddBranchSelectionTransformation, CompareWithRefImpl) {
-    Run();
+void AddBranchSelectionTransformation::Run() {
+    LayerTestsCommon::Run();
 
     const auto params = std::get<3>(GetParam());
     std::vector<std::pair<std::string, std::string>> expectedReorders = params.expectedReorders;
@@ -99,6 +101,10 @@ TEST_P(AddBranchSelectionTransformation, CompareWithRefImpl) {
     }
 
     ASSERT_TRUE(expectedReorders.empty()) << "Some Reorder operations were not found in execution graph";
+}
+
+TEST_P(AddBranchSelectionTransformation, CompareWithRefImpl) {
+    Run();
 };
 
 }  // namespace LayerTestsDefinitions

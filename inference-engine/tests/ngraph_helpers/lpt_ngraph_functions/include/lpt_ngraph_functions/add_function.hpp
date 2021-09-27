@@ -85,9 +85,11 @@ public:
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataBefore1,
         const ngraph::builder::subgraph::Convolution& convolution1,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter1,
+        const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter1Outside,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataBefore2,
         const ngraph::builder::subgraph::Convolution& convolution2,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter2,
+        const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter2Outside,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter);
 
     static std::shared_ptr<ngraph::Function> getReference(

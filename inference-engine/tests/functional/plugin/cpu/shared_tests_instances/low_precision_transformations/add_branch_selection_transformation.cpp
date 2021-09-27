@@ -16,6 +16,36 @@ const std::vector<ngraph::element::Type> netPrecisions = {
 };
 
 const std::vector<LayerTestsDefinitions::AddBranchSelectionTestValues> params = {
+//    {
+//        {
+//            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            {
+//                {},
+//                { std::vector<float>(9, 1.f), ngraph::element::i8, {3, 3, 1, 1} },
+//                { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
+//            },
+//            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            {}
+//        },
+//        {
+//            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            {
+//                {},
+//                { std::vector<float>(9, 1.f), ngraph::element::i8, {3, 3, 1, 1} },
+//                { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
+//            },
+//            {},
+//            {}
+//        },
+//        { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//        {
+//            {"Constant", "convolution1"},
+//            {"Constant", "convolution2"},
+//            {"fakeQuantizeBefore1", "convolution1"},
+//            {"fakeQuantizeBefore2", "convolution2"},
+//            {"maxPool", "result"}
+//        }
+//    },
     {
         {
             { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
@@ -25,6 +55,7 @@ const std::vector<LayerTestsDefinitions::AddBranchSelectionTestValues> params = 
                 { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
             },
             { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
         },
         {
             { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
@@ -33,6 +64,7 @@ const std::vector<LayerTestsDefinitions::AddBranchSelectionTestValues> params = 
                 { std::vector<float>(9, 1.f), ngraph::element::i8, {3, 3, 1, 1} },
                 { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
             },
+            {},
             {}
         },
         { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
@@ -44,34 +76,36 @@ const std::vector<LayerTestsDefinitions::AddBranchSelectionTestValues> params = 
             {"maxPool", "result"}
         }
     },
-    {
-        {
-            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
-            {
-                {},
-                { std::vector<float>(9, 1.f), ngraph::element::i8, {3, 3, 1, 1} },
-                { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
-            },
-            {}
-        },
-        {
-            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
-            {
-                {},
-                { std::vector<float>(9, 1.f), ngraph::element::i8, {3, 3, 1, 1} },
-                { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
-            },
-            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
-        },
-        { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
-        {
-            {"Constant", "convolution1"},
-            {"Constant", "convolution2"},
-            {"fakeQuantizeBefore1", "convolution1"},
-            {"fakeQuantizeBefore2", "convolution2"},
-            {"maxPool", "result"}
-        }
-    }
+//    {
+//        {
+//            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            {
+//                {},
+//                { std::vector<float>(9, 1.f), ngraph::element::i8, {3, 3, 1, 1} },
+//                { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
+//            },
+//            {},
+//            {}
+//        },
+//        {
+//            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            {
+//                {},
+//                { std::vector<float>(9, 1.f), ngraph::element::i8, {3, 3, 1, 1} },
+//                { {ngraph::element::f32}, {}, {std::vector<float>(3, 1.f), ngraph::element::f32, {3, 1, 1, 1}} }
+//            },
+//            { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//            {}
+//        },
+//        { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
+//        {
+//            {"Constant", "convolution1"},
+//            {"Constant", "convolution2"},
+//            {"fakeQuantizeBefore1", "convolution1"},
+//            {"fakeQuantizeBefore2", "convolution2"},
+//            {"maxPool", "result"}
+//        }
+//    }
 };
 
 INSTANTIATE_TEST_SUITE_P(smoke_LPT, AddBranchSelectionTransformation,

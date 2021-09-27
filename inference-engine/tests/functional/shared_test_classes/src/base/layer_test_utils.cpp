@@ -485,6 +485,8 @@ std::string LayerTestsCommon::getRuntimePrecisionByType(const std::string& layer
 
 std::map<std::string, ngraph::Node::RTMap> LayerTestsCommon::getRuntimeInfo() {
     const auto execGraph = executableNetwork.GetExecGraphInfo();
+    execGraph.serialize("/Users/eshoguli/projects/temp/exec_graph.xml");
+
     const auto function = execGraph.getFunction();
     std::map<std::string, ngraph::Node::RTMap> runtimeInfo;
     for (const auto& op : function->get_ops()) {

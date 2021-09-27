@@ -1071,6 +1071,9 @@ void MKLDNNGraphOptimizer::FuseConvolutionSumAndConvolutionSumActivation(MKLDNNG
             peerNode = isSuitableParent1 ? parent2 : parent1;
         }
 
+        mergedConv = parent2;
+        peerNode = parent1;
+
         if (isSuitableParent1 && isSuitableParent2) {
             if ((peerNode->getType() == Convolution || peerNode->getType() == BinaryConvolution) &&
                 mergedConv->getChildEdges().size() != 1) {

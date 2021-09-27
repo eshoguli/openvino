@@ -341,6 +341,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     manager.run_passes(nGraphFunc);
 
+    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.common.svg").run_on_function(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         OV_ITT_SCOPE(FIRST_INFERENCE, MKLDNNPlugin::itt::domains::MKLDNN_LT, "LowPrecisionTransformations");
@@ -401,6 +403,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             return MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
         });
         lptManager.run_passes(nGraphFunc);
+
+        ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/cpu.transformed.svg").run_on_function(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;

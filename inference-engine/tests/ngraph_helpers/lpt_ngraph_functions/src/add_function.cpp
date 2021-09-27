@@ -205,6 +205,18 @@ std::shared_ptr<ngraph::opset1::FakeQuantize> makeFakeQuantizeWithNames(
     return fq;
 }
 
+class MakeBranchResult {
+public:
+    MakeBranchResult(
+        const std::shared_ptr<ngraph::opset1::Parameter>& input,
+        const std::shared_ptr<ngraph::Node>& parent,
+        const std::shared_ptr<ngraph::Node>& result) : input(input), parent(parent), result(result) {
+    }
+    std::shared_ptr<ngraph::opset1::Parameter> input;
+    std::shared_ptr<ngraph::Node> parent;
+    std::shared_ptr<ngraph::Node> result;
+};
+
 } // namespace
 
 std::shared_ptr<ngraph::Function> AddFunction::getOriginalSubgraphWithConvolutions(
@@ -214,9 +226,11 @@ std::shared_ptr<ngraph::Function> AddFunction::getOriginalSubgraphWithConvolutio
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataBefore1,
         const ngraph::builder::subgraph::Convolution& convolution1,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter1,
+        const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter1Outside,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataBefore2,
         const ngraph::builder::subgraph::Convolution& convolution2,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter2,
+        const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter2Outside,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter) {
     ngraph::PartialShape inputShape2 = inputShape;
 
@@ -231,8 +245,8 @@ std::shared_ptr<ngraph::Function> AddFunction::getOriginalSubgraphWithConvolutio
         const size_t index,
         const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataBefore,
         const ngraph::builder::subgraph::Convolution& convolution,
-        const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter) ->
-            std::pair<std::shared_ptr<ngraph::opset1::Parameter>, std::shared_ptr<ngraph::Node>> {
+        const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfter,
+        const ngraph::builder::subgraph::FakeQuantizeOnData& fqOnDataAfterOutside) -> MakeBranchResult {
         const auto input = std::make_shared<ngraph::opset1::Parameter>(precision, inputShape);
         input->set_friendly_name("input" + std::to_string(index));
         std::shared_ptr<ngraph::Node> parent = input;
@@ -250,13 +264,28 @@ std::shared_ptr<ngraph::Function> AddFunction::getOriginalSubgraphWithConvolutio
             parent = makeFakeQuantizeWithNames(parent, precision, fqOnDataAfter, "fakeQuantizeAfter" + std::to_string(index));
         }
 
-        return std::make_pair(input, parent);
+        std::shared_ptr<ngraph::Node> result;
+        if (!fqOnDataAfterOutside.empty()) {
+            //result = makeFakeQuantizeWithNames(parent, precision, fqOnDataAfterOutside, "fakeQuantizeAfterOutside" + std::to_string(index));
+
+            // we need a some operation to move dequantization operations away from FakeQuantize to avoid cleanup fuse
+            result = std::make_shared<ngraph::opset1::MaxPool>(
+                    parent,
+                    Strides{ 1, 1 },
+                    Shape{ 1, 1 },
+                    Shape{ 0, 0 },
+                    Shape{ 2, 2 },
+                    op::RoundingType::FLOOR);
+            result->set_friendly_name("maxPoolAfterOutside" + std::to_string(index));
+        }
+
+        return MakeBranchResult(input, parent, result);
     };
 
-    const auto branch1 = makeBranch(precision, inputShape, 1, fqOnDataBefore1, convolution1, fqOnDataAfter1);
-    const auto branch2 = makeBranch(precision, inputShape, 2, fqOnDataBefore2, convolution2, fqOnDataAfter2);
+    const auto branch1 = makeBranch(precision, inputShape, 1, fqOnDataBefore1, convolution1, fqOnDataAfter1, fqOnDataAfter1Outside);
+    const auto branch2 = makeBranch(precision, inputShape, 2, fqOnDataBefore2, convolution2, fqOnDataAfter2, fqOnDataAfter2Outside);
 
-    std::shared_ptr<ngraph::Node> result = std::make_shared<ngraph::opset1::Add>(branch1.second, branch2.second);
+    std::shared_ptr<ngraph::Node> result = std::make_shared<ngraph::opset1::Add>(branch1.parent, branch2.parent);
     result->set_friendly_name("add");
 
     if (!fqOnDataAfter.empty()) {
@@ -277,7 +306,17 @@ std::shared_ptr<ngraph::Function> AddFunction::getOriginalSubgraphWithConvolutio
     result->set_friendly_name("result");
 
     ngraph::ResultVector results{ std::dynamic_pointer_cast<ngraph::opset1::Result>(result) };
-    return std::make_shared<ngraph::Function>(results, ngraph::ParameterVector{ branch1.first, branch2.first }, "AddTransformation");
+    if (branch1.result != nullptr) {
+        results.push_back(std::make_shared<ngraph::opset1::Result>(branch1.result));
+    }
+    if (branch2.result != nullptr) {
+        results.push_back(std::make_shared<ngraph::opset1::Result>(branch2.result));
+    }
+
+    return std::make_shared<ngraph::Function>(
+        results,
+        ngraph::ParameterVector{ branch1.input, branch2.input },
+        "AddTransformation");
 }
 
 std::shared_ptr<ngraph::Function> AddFunction::getReference(
