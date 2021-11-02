@@ -14,6 +14,10 @@ namespace ov {
 namespace test {
 
 using InputShape = std::pair<ov::PartialShape, std::vector<ov::Shape>>;
+
+std::ostream& operator <<(std::ostream& os, const std::vector<ov::Shape>& shapes);
+std::ostream& operator <<(std::ostream& os, const std::pair<ov::PartialShape, std::vector<ov::Shape>>& inputShape);
+
 using ElementType = ov::element::Type_t;
 using Config = std::map<std::string, std::string>;
 using TargetDevice = std::string;

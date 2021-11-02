@@ -25,6 +25,24 @@
 namespace ov {
 namespace test {
 
+std::ostream& operator <<(std::ostream& os, const std::vector<ov::Shape>& shapes) {
+    os << "{";
+    for (auto i = 0; i < shapes.size(); ++i) {
+        const auto& shape = shapes[i];
+        os << shape;
+        if (i < (shapes.size() - 1ul)) {
+            os << ", ";
+        }
+    }
+    os << "}";
+    return os;
+}
+
+std::ostream& operator <<(std::ostream& os, const std::pair<ov::PartialShape, std::vector<ov::Shape>>& inputShape) {
+    os << inputShape.first << ": " << inputShape.second;
+    return os;
+}
+
 void SubgraphBaseTest::run() {
     auto crashHandler = [](int errCode) {
         auto &s = LayerTestsUtils::Summary::getInstance();
