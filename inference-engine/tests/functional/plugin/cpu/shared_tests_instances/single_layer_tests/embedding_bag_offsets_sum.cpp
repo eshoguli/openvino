@@ -24,11 +24,28 @@ const std::vector<ov::test::ElementType> indPrecisions = {
 };
 
 const std::vector<ov::test::InputShape> input_shapes = {
-        {{ov::Dimension::dynamic(), ov::Dimension::dynamic()}, {{5, 6}, {10, 35}}},
-        {{{5, 10}, {6, 35}, {4, 8}}, {{5, 6, 4}, {10, 35, 8}, {5, 6, 4}}},
+        // dynamic input shapes
+        {
+            // input model dynamic shapes
+            {ov::Dimension::dynamic(), ov::Dimension::dynamic()},
+            // input tensor shapes
+            {{5, 6}, {10, 35}}
+        },
+        {
+            // input model dynamic shapes
+            {ov::Dimension::dynamic(), ov::Dimension::dynamic(), ov::Dimension::dynamic()},
+            // input tensor shapes
+            {{5, 4, 16}, {10, 12, 8}}
+        },
+        {
+            // input model dynamic shapes with limits
+            {{5, 10}, {6, 35}, {4, 8}},
+            // input tensor shapes
+            {{5, 6, 4}, {10, 35, 8}, {5, 6, 4}}
+        },
+        // static shapes
         {{5, 6}, {{5, 6}}},
         {{10, 35}, {{10, 35}}},
-        {{ov::Dimension::dynamic(), ov::Dimension::dynamic(), ov::Dimension::dynamic()}, {{5, 4, 16}, {10, 12, 8}}},
         {{5, 4, 16}, {{5, 4, 16}}},
 };
 
