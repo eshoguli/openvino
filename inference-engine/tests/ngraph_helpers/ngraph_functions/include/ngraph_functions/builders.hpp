@@ -369,6 +369,17 @@ std::shared_ptr<ngraph::Node> makeEmbeddingBagOffsetsSum(
         bool with_weights,
         bool with_default_index);
 
+std::shared_ptr<ngraph::Node> makeEmbeddingBagOffsetsSum(
+        const element::Type& dataType,
+        const element::Type& indicesType,
+        const ngraph::Output<Node>& embTableNode,
+        const ngraph::Output<Node>& indicesNode,
+        const ngraph::Output<Node>& offsetsNode,
+        const ngraph::Output<Node>& weightsNode,
+        size_t default_index,
+        bool with_weights,
+        bool with_default_index);
+
 std::shared_ptr<ngraph::Node> makeEmbeddingBagPackedSum(
         const element::Type &dataType,
         const element::Type &indicesType,

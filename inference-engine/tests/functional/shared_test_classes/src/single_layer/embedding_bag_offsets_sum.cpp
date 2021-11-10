@@ -49,12 +49,19 @@ void EmbeddingBagOffsetsSumLayerTest::SetUp() {
     init_input_shapes({ inputShapes });
 
     auto emb_table_node = std::make_shared<ngraph::opset1::Parameter>(netPrecision, inputShapes.first);
-    ngraph::ParameterVector params = {emb_table_node};
+    auto indices_node = std::make_shared<ngraph::opset1::Parameter>(netPrecision, inputShapes.first);
+    auto offsets_node = std::make_shared<ngraph::opset1::Parameter>(netPrecision, inputShapes.first);
+    auto weights_node = withWeights ?
+        std::make_shared<ngraph::opset1::Parameter>(netPrecision, inputShapes.first) :
+        nullptr;
+    ngraph::ParameterVector params = {emb_table_node, indices_node, offsets_node};
 
     auto embBag = std::dynamic_pointer_cast<ngraph::opset3::EmbeddingBagOffsetsSum>(
             ngraph::builder::makeEmbeddingBagOffsetsSum(
-                netPrecision, indPrecision, emb_table_node, indices, offsets, defaultIndex, withWeights, withDefIndex));
+            netPrecision, indPrecision, emb_table_node, indices_node, offsets_node, weights_node, defaultIndex, withWeights, withDefIndex));
     ngraph::ResultVector results{std::make_shared<ngraph::opset1::Result>(embBag)};
     function = std::make_shared<ngraph::Function>(results, params, "embeddingBagOffsetsSum");
+
+    ngraph::pass::VisualizeTree("/Users/eshoguli/projects/temp/test.actual.svg").run_on_function(function);
 }
 }  // namespace LayerTestsDefinitions

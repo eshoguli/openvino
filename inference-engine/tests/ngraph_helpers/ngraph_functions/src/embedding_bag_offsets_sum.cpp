@@ -44,5 +44,33 @@ std::shared_ptr<Node> makeEmbeddingBagOffsetsSum(
     return embBag;
 }
 
+std::shared_ptr<Node> makeEmbeddingBagOffsetsSum(
+        const element::Type& dataType,
+        const element::Type& indicesType,
+        const ngraph::Output<Node>& embTableNode,
+        const ngraph::Output<Node>& indicesNode,
+        const ngraph::Output<Node>& offsetsNode,
+        const ngraph::Output<Node>& weightsNode,
+        size_t default_index,
+        bool with_weights,
+        bool with_default_index) {
+    std::shared_ptr<Node> embBag;
+    if (with_default_index) {
+        std::vector<size_t> d_shape = {};
+        auto defIdxNode = std::make_shared<ngraph::opset1::Constant>(indicesType, d_shape, default_index);
+        if (weightsNode.get_node() != nullptr) {
+            embBag = std::make_shared<opset3::EmbeddingBagOffsetsSum>(
+                    embTableNode, indicesNode, offsetsNode, defIdxNode, weightsNode);
+        } else {
+            embBag = std::make_shared<opset3::EmbeddingBagOffsetsSum>(
+                    embTableNode, indicesNode, offsetsNode, defIdxNode);
+        }
+    } else {
+        embBag = std::make_shared<opset3::EmbeddingBagOffsetsSum>(
+                embTableNode, indicesNode, offsetsNode);
+    }
+    return embBag;
+}
+
 }  // namespace builder
 }  // namespace ngraph
