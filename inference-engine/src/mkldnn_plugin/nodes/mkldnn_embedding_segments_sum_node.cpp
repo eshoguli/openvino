@@ -40,13 +40,13 @@ MKLDNNEmbeddingSegmentsSumNode::MKLDNNEmbeddingSegmentsSumNode(const std::shared
     }
 
     std::string errPrefix = std::string("EmbeddingSegmentsSum layer with name '") + _layerName + "' ";
-    if (op->get_input_partial_shape(INDICES_IDX).size() != 1)
+    if (getInputShapeAtPort(INDICES_IDX).getRank() != 1ul)
         IE_THROW() << errPrefix << "has indices data with invalid shape: "
-                   << op->get_input_partial_shape(INDICES_IDX).size();
+                   << getInputShapeAtPort(INDICES_IDX).getRank();
 
-    if (op->get_input_partial_shape(SEGMENT_ID_IDX).size() != 1)
+    if (getInputShapeAtPort(SEGMENT_ID_IDX).getRank() != 1ul)
         IE_THROW() << errPrefix << "has invalid segmentID data shape: "
-                   << op->get_input_partial_shape(SEGMENT_ID_IDX).size();
+                   << getInputShapeAtPort(SEGMENT_ID_IDX).getRank();
 }
 
 void MKLDNNEmbeddingSegmentsSumNode::initSupportedPrimitiveDescriptors() {

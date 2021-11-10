@@ -31,10 +31,10 @@ MKLDNNEmbeddingBagOffsetSumNode::MKLDNNEmbeddingBagOffsetSumNode(const std::shar
         IE_THROW(NotImplemented) << errorMessage;
     }
 
-    if (op->get_input_partial_shape(INDICES_IDX).size() != 1)
+    if (getInputShapeAtPort(INDICES_IDX).getRank() != 1ul)
         IE_THROW() << "'" << _layerName << "' layer has indices data with invalid shape.";
 
-    if (op->get_input_partial_shape(OFFSETS_IDX).size() != 1)
+    if (getInputShapeAtPort(OFFSETS_IDX).getRank() != 1ul)
         IE_THROW() << "'" << _layerName << "' layer's offsets data has invalid shape.";
 }
 

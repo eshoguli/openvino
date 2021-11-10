@@ -31,7 +31,7 @@ MKLDNNEmbeddingBagPackedSumNode::MKLDNNEmbeddingBagPackedSumNode(const std::shar
         IE_THROW(NotImplemented) << errorMessage;
     }
 
-    if (op->get_input_partial_shape(INDICES_IDX).size() != 2)
+    if (getInputShapeAtPort(INDICES_IDX).getRank() != 2ul)
         IE_THROW() << "'" << _layerName << "' layer has indices data with invalid shape.";
 }
 
