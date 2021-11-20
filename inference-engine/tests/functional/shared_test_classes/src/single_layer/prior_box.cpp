@@ -72,7 +72,7 @@ void PriorBoxLayerTest::SetUp() {
              density, fixed_ratio, fixed_size, clip,
              flip, step, offset, variance, scale_all_sizes) = specParams;
 
-    auto params = ngraph::builder::makeDynamicParams(netPrecision, {inputShapes.first, imageShapes.first});
+    auto params = ngraph::builder::makeDynamicParams(netPrecision, inputDynamicShapes);
 
     ngraph::op::PriorBoxAttrs attributes;
     attributes.min_size = min_size;

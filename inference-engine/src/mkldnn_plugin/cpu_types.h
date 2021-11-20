@@ -99,7 +99,9 @@ enum Type {
     ExtractImagePatches,
     NonMaxSuppression,
     MatrixNms,
-    MulticlassNms
+    MulticlassNms,
+    PriorBox,
+    PriorBoxClustered
 };
 
 enum Algorithm {

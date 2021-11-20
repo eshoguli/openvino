@@ -52,12 +52,14 @@ const std::vector<bool> scale_all_sizes = {
 
 const std::vector<ov::test::InputShape> inputShape = {
     {{300, 300}, {{300, 300}}},
-    {{ov::Dimension::dynamic(), ov::Dimension::dynamic()}, {{300, 300}}}
+    {{ov::Dimension::dynamic(), ov::Dimension::dynamic()}, {{300, 300}, {200, 200}}},
+    {{{200, 300}, {200, 300}}, {{300, 300}, {200, 200}}}
 };
 
 const std::vector<ov::test::InputShape> imageShape = {
     {{32, 32}, {{32, 32}}},
-    {{ov::Dimension::dynamic(), ov::Dimension::dynamic()}, {{32, 32}}}
+    {{ov::Dimension::dynamic(), ov::Dimension::dynamic()}, {{32, 32}, {16, 16}}},
+    {{{16, 32}, {16, 32}}, {{32, 32}, {16, 16}}}
 };
 
 const auto layerSpecificParams = ::testing::Combine(

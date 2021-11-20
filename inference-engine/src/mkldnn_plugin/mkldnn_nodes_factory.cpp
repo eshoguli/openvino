@@ -80,6 +80,9 @@
 #include "nodes/mkldnn_reduce_node.h"
 #include "nodes/mkldnn_if_node.h"
 #include "nodes/mkldnn_ctc_greedy_decoder_node.h"
+#include "nodes/mkldnn_priorbox_node.h"
+#include "nodes/mkldnn_priorbox_clustered_node.h"
+
 
 #define MKLDNN_NODE(__prim, __type) \
     registerNodeIfRequired(MKLDNNPlugin, __prim, __type, MKLDNNNodeImpl<__prim>)
@@ -168,4 +171,6 @@ MKLDNNPlugin::MKLDNNNode::NodesFactory::NodesFactory()
     MKLDNN_NODE(MKLDNNTopKNode, TopK);
     MKLDNN_NODE(MKLDNNStridedSliceNode, StridedSlice);
     MKLDNN_NODE(MKLDNNGRNNode, GRN);
+    MKLDNN_NODE(MKLDNNPriorBoxNode, PriorBox);
+    MKLDNN_NODE(MKLDNNPriorBoxClusteredNode, PriorBoxClustered);
 }
