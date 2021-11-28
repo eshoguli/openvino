@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+#include <ie_parallel.hpp>
 #include <mkldnn_types.h>
 #include <ngraph/ngraph.hpp>
 #include <ngraph/opsets/opset1.hpp>
@@ -122,7 +123,7 @@ void MKLDNNPriorBoxClusteredNode::execute(mkldnn::stream strm) {
     const auto& out_shape = getChildEdgeAt(0)->getMemory().GetShape().getStaticDims();
 
     size_t var_size = variances.size();
-    for (int64_t h = 0; h < layer_height; ++h) {
+    parallel_for(layer_height, [&](int64_t h) {
         for (int64_t w = 0; w < layer_width; ++w) {
             float center_x = (w + offset) * step_w;
             float center_y = (h + offset) * step_h;
@@ -167,7 +168,7 @@ void MKLDNNPriorBoxClusteredNode::execute(mkldnn::stream strm) {
                 }
             }
         }
-    }
+    });
 }
 
 bool MKLDNNPriorBoxClusteredNode::created() const {
