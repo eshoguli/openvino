@@ -53,13 +53,51 @@ const std::vector<ov::test::subgraph::ExperimentalDetectronPriorGridGeneratorTes
     }
 };
 
-const std::vector<std::pair<std::string, std::vector<ov::runtime::Tensor>>> inputTensors = {};
+std::vector<std::pair<std::string, std::vector<ov::runtime::Tensor>>> inputTensors = {
+    {
+        "test#1",
+        {
+            ExperimentalDetectronPriorGridGeneratorLayerTest::createTensor<float>(
+                    ov::element::f32,
+                    ov::Shape{3, 4},
+                    {-24.5, -12.5, 24.5, 12.5, -16.5, -16.5, 16.5, 16.5, -12.5, -24.5, 12.5, 24.5})
+        }
+    },
+    {
+        "test#2",
+        {
+            ExperimentalDetectronPriorGridGeneratorLayerTest::createTensor<float>(
+                    ov::element::f32,
+                    ov::Shape{3, 4},
+                    {-44.5, -24.5, 44.5, 24.5, -32.5, -32.5, 32.5, 32.5, -24.5, -44.5, 24.5, 44.5})
+        }
+    },
+    {
+        "test#3",
+        {
+            ExperimentalDetectronPriorGridGeneratorLayerTest::createTensor<float>(
+                    ov::element::f32,
+                    ov::Shape{3, 4},
+                    {-364.5, -184.5, 364.5, 184.5, -256.5, -256.5, 256.5, 256.5, -180.5, -360.5, 180.5, 360.5})
+        }
+    },
+    {
+        "test#4",
+        {
+            ExperimentalDetectronPriorGridGeneratorLayerTest::createTensor<float>(
+                    ov::element::f32,
+                    ov::Shape{3, 4},
+                    {-180.5, -88.5, 180.5, 88.5, -128.5, -128.5, 128.5, 128.5, -92.5, -184.5, 92.5, 184.5})
+        }
+    }
+};
 
 INSTANTIATE_TEST_SUITE_P(smoke_ExperimentalDetectronPriorGridGenerator, ExperimentalDetectronPriorGridGeneratorLayerTest,
      ::testing::Combine(
         ::testing::ValuesIn(params),
-         ::testing::Values(ov::element::Type_t::f32),
-         ::testing::Values(CommonTestUtils::DEVICE_CPU)),
+        ::testing::ValuesIn(inputTensors),
+        ::testing::Values(ov::element::Type_t::f32),
+        ::testing::Values(CommonTestUtils::DEVICE_CPU)),
      ExperimentalDetectronPriorGridGeneratorLayerTest::getTestCaseName);
 
 } // namespace
