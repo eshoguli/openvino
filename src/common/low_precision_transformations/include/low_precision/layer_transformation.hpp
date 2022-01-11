@@ -194,17 +194,17 @@ inline std::ostream &operator << (std::ostream &os, const DataPrecision& value) 
 
 // Base class for all LP transformations, holds some common data structures
 class LP_TRANSFORMATIONS_API LayerTransformation : public ngraph::pass::MatcherPass {
-    static std::vector<ngraph::element::Type> defaultPrecisions;
-    static std::mutex defaultPrecisionsMutex;
-
 public:
     class Params {
     public:
         Params(
             const bool updatePrecisions = true,
-            element::Type deqPrecision = element::f32) :
+            element::Type deqPrecision = element::f32,
+            // order defines default precision
+            std::vector<ngraph::element::Type> defaultPrecisions = { ngraph::element::u8,  ngraph::element::i8 }) :
             updatePrecisions(updatePrecisions),
-            deqPrecision(deqPrecision) {}
+            deqPrecision(deqPrecision),
+            defaultPrecisions(defaultPrecisions) {}
 
         Params& setUpdatePrecisions(const bool updatePrecisions) {
             this->updatePrecisions = updatePrecisions;
@@ -218,6 +218,7 @@ public:
 
         bool updatePrecisions;
         element::Type deqPrecision;
+        std::vector<ngraph::element::Type> defaultPrecisions;
     };
 
     class PrecisionDetails {
@@ -271,9 +272,6 @@ public:
             const QuantizationDetails& quantizationDetails,
             const std::vector<element::Type>& precisions);
 
-    static void setDefaultPrecisions(const std::vector<ngraph::element::Type>& precisions);
-    static std::vector<ngraph::element::Type> getDefaultPrecisions();
-
 protected:
 #ifdef LPT_PRINT_DEQUANTIZATION_INFO
     static void printDequantizationInfo(const std::shared_ptr<Node>& layer);
@@ -285,6 +283,7 @@ protected:
 
     bool updatePrecisions;
     element::Type deqPrecision;
+    const std::vector<ngraph::element::Type> defaultPrecisions;
 
     static constexpr char originalLayerPostfix[] = "_original";
     TransformationContext* context;

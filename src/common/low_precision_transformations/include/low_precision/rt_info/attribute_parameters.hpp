@@ -9,6 +9,9 @@
 
 class LP_TRANSFORMATIONS_API AttributeParameters {
 public:
-    AttributeParameters(const ngraph::element::Type deqPrecision = ngraph::element::f32) : deqPrecision(deqPrecision) {}
+    AttributeParameters(
+        const ngraph::element::Type deqPrecision = ngraph::element::f32,
+        const std::vector<ngraph::element::Type>& defaultPrecisions = {}) : deqPrecision(deqPrecision), defaultPrecisions(defaultPrecisions) {}
     ngraph::element::Type deqPrecision;
+    std::vector<ngraph::element::Type> defaultPrecisions;
 };

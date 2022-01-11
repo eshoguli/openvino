@@ -41,7 +41,7 @@ bool WeightableLayerTransformation::canConvolutionBeTransformed(const Transforma
 
     if (dequantization.empty()) {
         const auto fqOnWeights = getFakeQuantizeOnWeights(layer);
-        const auto dataPrecision = getDataPrecisionOnWeights(layer);
+        const auto dataPrecision = getDataPrecisionOnWeights(layer, defaultPrecisions);
         if ((dataPrecision.precision == ngraph::element::undefined) || (!NetworkHelper::checkZeroPoint(fqOnWeights, dataPrecision))) {
             return false;
         }
@@ -300,7 +300,7 @@ bool WeightableLayerTransformation::decomposeFakeQuantizeForWeightsPath(const st
     const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(fq);
     const auto precisionsAttribute = getAttributeFromOutput<PrecisionsAttribute>(fq);
     const auto precisions = precisionsAttribute.empty() ?
-        getDefaultPrecisions() :
+        defaultPrecisions :
         precisionsAttribute.as<PrecisionsAttribute>().value();
 
     const DataPrecision dataPrecision = getDataPrecision(fq, quantizationDetails, precisions);
@@ -358,7 +358,9 @@ std::shared_ptr<opset1::FakeQuantize> WeightableLayerTransformation::getFakeQuan
     return fq;
 }
 
-DataPrecision WeightableLayerTransformation::getDataPrecisionOnWeights(const std::shared_ptr<Node>& node) {
+DataPrecision WeightableLayerTransformation::getDataPrecisionOnWeights(
+    const std::shared_ptr<Node>& node,
+    const std::vector<ngraph::element::Type>& defaultPrecisions) {
     const auto fq = getFakeQuantizeOnWeights(node);
     const QuantizationDetails quantizationDetails = QuantizationDetails::getDetails(fq);
     if (quantizationDetails.empty()) {
@@ -367,13 +369,15 @@ DataPrecision WeightableLayerTransformation::getDataPrecisionOnWeights(const std
 
     const auto precisionsAttribute = getAttributeFromOutput<PrecisionsAttribute>(fq);
     const auto precisions = precisionsAttribute.empty() ?
-        getDefaultPrecisions() :
+        defaultPrecisions :
         precisionsAttribute.as<PrecisionsAttribute>().value();
 
     return getDataPrecision(fq, quantizationDetails, precisions);
 }
 
-bool WeightableLayerTransformation::isAsymmetricOnWeights(const std::shared_ptr<const Node>& node) {
+bool WeightableLayerTransformation::isAsymmetricOnWeights(
+    const std::shared_ptr<const Node>& node,
+    const std::vector<ngraph::element::Type>& defaultPrecisions) {
     const auto n = const_cast<ngraph::Node*>(node.get())->shared_from_this();
 
     const auto reshapeFromWeights = ngraph::as_type_ptr<ngraph::opset1::Reshape>(n->get_input_node_shared_ptr(1));
@@ -382,7 +386,7 @@ bool WeightableLayerTransformation::isAsymmetricOnWeights(const std::shared_ptr<
         NetworkHelper::getDequantization(reshapeFromWeights);
 
     if (dequantization.empty()) {
-        const auto dataPrecision = WeightableLayerTransformation::getDataPrecisionOnWeights(n);
+        const auto dataPrecision = WeightableLayerTransformation::getDataPrecisionOnWeights(n, defaultPrecisions);
         if (dataPrecision.empty()) {
             return false;
         }

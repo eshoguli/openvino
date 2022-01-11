@@ -35,8 +35,8 @@ protected:
 
 public:
     static std::shared_ptr<opset1::FakeQuantize> getFakeQuantizeOnWeights(const std::shared_ptr<Node>& node);
-    static DataPrecision getDataPrecisionOnWeights(const std::shared_ptr<Node>& node);
-    static bool isAsymmetricOnWeights(const std::shared_ptr<const Node>& node);
+    static DataPrecision getDataPrecisionOnWeights(const std::shared_ptr<Node>& node, const std::vector<ngraph::element::Type>& defaultPrecisions);
+    static bool isAsymmetricOnWeights(const std::shared_ptr<const Node>& node, const std::vector<ngraph::element::Type>& defaultPrecisions);
 };
 
 } // namespace low_precision

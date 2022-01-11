@@ -34,7 +34,8 @@ enum class AttributeSource {
 template <typename AttributeType, typename OperationType = ngraph::pattern::op::Label>
 class ngraph::pass::low_precision::CreateAttribute : public ngraph::pass::low_precision::BaseMatcherPass {
 public:
-    CreateAttribute(const AttributeSource source = AttributeSource::Node) {
+    CreateAttribute(const AttributeParameters& params, const AttributeSource source = AttributeSource::Node) {
+        this->params = params;
         assert((source == AttributeSource::Node) || (source == AttributeSource::OutputPort));
         auto operation = std::is_same<OperationType, pattern::op::Label>::value ?
             pattern::any_input() :

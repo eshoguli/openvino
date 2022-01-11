@@ -320,7 +320,7 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
 
     DataPrecision dataPrecision = fq_decomposition::getDataPrecisionByOutputPort(layer);
 
-    PrecisionsAttribute precisionsAttribute(getDefaultPrecisions());
+    PrecisionsAttribute precisionsAttribute(defaultPrecisions);
     {
         // TODO: LPT: return attribute (not wrapper)
         auto attributeWrapper = getAttributeFromOutput<PrecisionsAttribute>(layer->output(0));
