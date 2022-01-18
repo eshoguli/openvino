@@ -412,6 +412,10 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
             });
         }
 
+        lptPassConfig->set_callback<MultiplyToGroupConvolutionTransformation>([](const_node_ptr& node) -> bool {
+            return MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
+        });
+
         lptManager.register_pass<LowPrecision>(supportedPrecisions, perTensorQuantization);
         lptManager.run_passes(func);
     }
