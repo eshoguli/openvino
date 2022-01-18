@@ -412,6 +412,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
             });
         }
 
+        lptPassConfig->disable<MultiplyToGroupConvolutionTransformation>();
+
         lptManager.register_pass<LowPrecision>(supportedPrecisions, perTensorQuantization);
         lptManager.run_passes(func);
     }
