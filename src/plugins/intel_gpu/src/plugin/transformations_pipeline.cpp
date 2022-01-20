@@ -466,12 +466,6 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
                 }
             }
 
-            // disable MultiplyToGroupConvolution for Multiply with scalar
-
-            if (MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node)) {
-                return true;
-            }
-
             return false;
         });
 
