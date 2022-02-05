@@ -117,14 +117,7 @@ MKLDNNStridedSliceNode::MKLDNNStridedSliceNode(const std::shared_ptr<ov::Node>& 
         attrs.endMask = createMask(ss->get_end_mask(), 1, true);
         attrs.newAxisMask = createMask(ss->get_new_axis_mask());
         attrs.shrinkAxisMask = createMask(ss->get_shrink_axis_mask());
-
-        auto origEllipsisMask = ss->get_ellipsis_mask();
-        for (const auto &o : origEllipsisMask) {
-            attrs.ellipsisMask.push_back(o);
-        }
-        if (attrs.ellipsisMask.size() == 0) {
-            for (size_t i = attrs.ellipsisMask.size(); i < nDims; ++i) attrs.ellipsisMask.push_back(0);
-        }
+        attrs.ellipsisMask = createMask(ss->get_ellipsis_mask(), 0);
     } else {
         const size_t length = outputShapes[0].getRank();
         if (inputShapes.size() > AXES_ID) {
