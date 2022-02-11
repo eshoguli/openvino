@@ -147,6 +147,12 @@ void reshapeDequantizationConstant(const std::shared_ptr<opset1::Reshape>& resha
 
 bool ReshapeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     std::shared_ptr<opset1::Reshape> reshape = ov::as_type_ptr<opset1::Reshape>(m.get_match_root());
+
+    if (reshape->get_friendly_name() == "vgg16_netvlad_pca/ExpandDims_3/Transpose") {
+        std::cout << "LPT: skipped: " << reshape->get_friendly_name() << std::endl;
+        return false;
+    }
+
     if (NetworkHelper::isConstantPath(reshape)) {
         return false;
     }
