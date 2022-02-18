@@ -257,6 +257,143 @@ size_t jit_divide_emitter::aux_vecs_count() const {
     return exec_prc_ == Precision::I32 ? 1 : 0;
 }
 
+/// CONVERT ///
+jit_convert_emitter::jit_convert_emitter(jit_generator *host, cpu_isa_t host_isa, const std::shared_ptr<ngraph::Node>& node, Precision exec_prc)
+: jit_emitter(host, host_isa, node, exec_prc) {}
+jit_convert_emitter::jit_convert_emitter(jit_generator* host, cpu_isa_t host_isa, Precision exec_prc)
+    : jit_emitter(host, host_isa, exec_prc) {}
+
+size_t jit_convert_emitter::get_inputs_num() const {
+    return 1;
+}
+
+void jit_convert_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs,
+                                const std::vector<size_t> &pool_vec_idxs, const std::vector<size_t> &pool_gpr_idxs,
+                                const emitter_context *emit_context) const {
+    if (host_isa_ == cpu::x64::sse41) {
+        emit_isa<cpu::x64::sse41>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == cpu::x64::avx2) {
+        emit_isa<cpu::x64::avx2>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == cpu::x64::avx512_common) {
+        emit_isa<cpu::x64::avx512_common>(in_vec_idxs, out_vec_idxs);
+    } else {
+        assert(!"unsupported isa");
+    }
+}
+
+template <mkldnn::impl::cpu::x64::cpu_isa_t isa>
+void jit_convert_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    using Vmm = typename conditional3<isa == cpu::x64::sse41, Xmm, isa == cpu::x64::avx2, Ymm, Zmm>::type;
+
+    // TODO: to debug only
+    Vmm vmm_src = Vmm(in_vec_idxs[0]);
+    Vmm vmm_dst = Vmm(out_vec_idxs[0]);
+    //h->uni_vroundps(vmm_dst, vmm_src, 1);
+
+    //h->vcvtusi2ss()
+    //CVTSI2SS
+
+    // Convert packed doubleword integers to packed single - precision floating - point values
+    //CVTPI2PS
+
+    // Convert doubleword integer to scalar single - precision floating - point value.
+    //CVTSI2SS
+
+    if (isa == cpu::x64::sse41) {
+    } else if (isa == cpu::x64::avx2) {
+        //vroundps ymm1, ymm0, 1
+        // VPEXTRB
+        //h->uni_vpextrb();
+
+        // avx2
+        // h->vperm2i128
+
+        // VCVTUDQ2PS - avx512
+        // h->vcvtudq2ps(vmm_dst, vmm_src);
+        // VPMOVZXBW
+        //
+        //
+        //
+        //Xmm xmm_src = Xmm(vmm_src.getIdx());
+        //Xmm xmm_dst = Xmm(vmm_dst.getIdx());
+        //h->pmovzxbd(xmm_dst, xmm_src);
+
+
+        h->uni_vpmovzxbd(vmm_src, vmm_src);
+
+        //h->movapd(vmm_src, xmm1);
+        //
+        //
+        //h->vpmovzxbw();
+        h->uni_vcvtdq2ps(vmm_dst, vmm_src);
+    } else if (isa == cpu::x64::avx512_common) {
+        // avx512
+        // h->vpermb
+
+        ////Broadcast an 8-bit value from a GPR to all bytes in the
+        ////128-bit destination subject to writemask k1.
+        //VPBROADCASTB xmm1 {k1}{z}, reg
+
+        ////Broadcast an 8-bit value from a GPR to all bytes in the
+        ////256-bit destination subject to writemask k1.
+        //VPBROADCASTB ymm1 {k1}{z}, reg
+
+        ////A V/V AVX512BW Broadcast an 8-bit value from a GPR to all bytes in the
+        ////512-bit destination subject to writemask k1
+        //VPBROADCASTB zmm1 {k1}{z}, reg
+
+
+        //// Convert four packed unsigned doubleword integers from xmm2/m128/m32bcst to packed single-precision
+        //// floating-point values in xmm1 with writemask k1.
+        //// VCVTUDQ2PS xmm1 {k1} {z}, xmm2/m128/m32bcst
+
+        //// Convert eight packed unsigned doubleword integers from ymm2/m256/m32bcst to packed single-precision
+        //// floating-point values in zmm1 with writemask k1
+        //// VCVTUDQ2PS ymm1 {k1} {z}, ymm2/m256/m32bcst
+
+        //// Convert sixteen packed unsigned doubleword integers from zmm2/m512/m32bcst to sixteen packed singleprecision
+        //// floating-point values in zmm1 with writemask k1 VCVTUDQ2PS zmm1 {k1}{z}, zmm2/m512/m32bcst{er}
+        //// VCVTUDQ2PS zmm1 {k1}{z}, zmm2/m512/m32bcst{er}
+
+        //512 bit (64 byte integers) === C++ cycle: extract XMM ===>
+        //XMM (128 bit, byte integer) -> ZMM
+
+
+        //for AVX 512:
+        //input: 1 vector (ZMM): 512 / 8 = 64 (byte integers)
+        //ouput : 4 vectors (ZMM): 64 values = (512 / (singleprecision floating-point values = 32)) * 4 vectors
+
+
+        // vectorized instruction usage
+        // 1. extract byte (byte integers - is the same?) from ZMM <= VPEXTRB/PEXTRB?
+        // 2. convert each byte integer to doubleword integer
+        // 3. vcvtudq2ps
+        // 4. put to result
+
+
+        // scalar instruction usage
+        // 1. extract byte (byte integers - is the same?) from ZMM  <= VPEXTRB/PEXTRB?
+        // 2. convert to singleprecision floating-point value
+        // 3. put to result
+
+
+        //Vmm vmm_src = Vmm(in_vec_idxs[0]);
+
+        //Xmm xmm0 = Xmm(0);
+        //Xmm xmm1 = Xmm(1);
+        //Xmm xmm2 = Xmm(2);
+        //Xmm xmm3 = Xmm(3);
+        //Vmm vmm_src = Vmm(vmm_dst, in_vec_idxs[0]);
+        //h->vcvtudq2ps(vmm_src)
+    } else {
+        assert(!"unsupported isa");
+    }
+}
+
+size_t jit_convert_emitter::aux_vecs_count() const {
+    return 1;
+}
+
 /// FLOOR ///
 jit_floor_emitter::jit_floor_emitter(jit_generator *host, cpu_isa_t host_isa, const std::shared_ptr<ngraph::Node>& node, Precision exec_prc)
 : jit_emitter(host, host_isa, node, exec_prc) {}

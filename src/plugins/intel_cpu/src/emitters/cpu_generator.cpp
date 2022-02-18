@@ -20,6 +20,11 @@ using namespace ngraph::snippets;
 #define CREATE_EMITTER(e_type) [this](const std::shared_ptr<ngraph::Node>& n) \
     -> std::shared_ptr<ngraph::snippets::Emitter> {return std::make_shared<e_type>(h.get(), isa, n);};
 
+#define CREATE_EMITTER_WITH_TYPES(e_type) [this, min_type, max_type]( \
+        const std::shared_ptr<ngraph::Node>& n) -> std::shared_ptr<ngraph::snippets::Emitter> { \
+            return std::make_shared<LoadEmitter>(h.get(), isa, n, min_type, max_type); \
+        };
+
 class jit_snippet : public dnnl::impl::cpu::x64::jit_generator {
 public:
     DECLARE_CPU_JIT_AUX_FUNCTIONS(jit_snippet)
@@ -33,21 +38,26 @@ public:
     }
 };
 
-MKLDNNPlugin::CPUTargetMachine::CPUTargetMachine(dnnl::impl::cpu::x64::cpu_isa_t host_isa)
-    : TargetMachine(), h(new jit_snippet()), isa(host_isa) {
+MKLDNNPlugin::CPUTargetMachine::CPUTargetMachine(
+    const dnnl::impl::cpu::x64::cpu_isa_t& host_isa,
+    const ov::element::Type& min_type,
+    const ov::element::Type& max_type) : TargetMachine(), h(new jit_snippet()), isa(host_isa) {
+    // TODO: to debug only
+    std::cout << "CPUTargetMachine::CPUTargetMachine" << std::endl;
+
     // data movement
     jitters[ngraph::opset1::Parameter::get_type_info_static()] = CREATE_EMITTER(NopEmitter);
     jitters[ngraph::snippets::op::BlockedParameter::get_type_info_static()] = CREATE_EMITTER(NopEmitter);
     jitters[ngraph::opset1::Result::get_type_info_static()] = CREATE_EMITTER(NopEmitter);
     // jitters[ngraph::opset1::Constant::get_type_info_static()] = CREATE_EMITTER(); // Not supported
 
-    jitters[ngraph::snippets::op::Load::get_type_info_static()] = CREATE_EMITTER(LoadEmitter);
-    jitters[ngraph::snippets::op::VectorLoad::get_type_info_static()] = CREATE_EMITTER(LoadEmitter);
+    jitters[ngraph::snippets::op::Load::get_type_info_static()] = CREATE_EMITTER_WITH_TYPES(LoadEmitter);
+    jitters[ngraph::snippets::op::VectorLoad::get_type_info_static()] = CREATE_EMITTER_WITH_TYPES(LoadEmitter);
     jitters[ngraph::snippets::op::ScalarLoad::get_type_info_static()] = CREATE_EMITTER(ScalarLoadEmitter);
     jitters[ngraph::snippets::op::BroadcastLoad::get_type_info_static()] = CREATE_EMITTER(BroadcastLoadEmitter);
 
-    jitters[ngraph::snippets::op::Store::get_type_info_static()] = CREATE_EMITTER(StoreEmitter);
-    jitters[ngraph::snippets::op::VectorStore::get_type_info_static()] = CREATE_EMITTER(StoreEmitter);
+    jitters[ngraph::snippets::op::Store::get_type_info_static()] = CREATE_EMITTER_WITH_TYPES(StoreEmitter);
+    jitters[ngraph::snippets::op::VectorStore::get_type_info_static()] = CREATE_EMITTER_WITH_TYPES(StoreEmitter);
     jitters[ngraph::snippets::op::ScalarStore::get_type_info_static()] = CREATE_EMITTER(ScalarStoreEmitter);
 
     jitters[ngraph::snippets::op::Scalar::get_type_info_static()] = CREATE_EMITTER(ScalarEmitter);
@@ -89,6 +99,7 @@ MKLDNNPlugin::CPUTargetMachine::CPUTargetMachine(dnnl::impl::cpu::x64::cpu_isa_t
     // jitters[ngraph::opset1::Atan::get_type_info_static()] = CREATE_EMITTER(); // not supported
     jitters[ngraph::opset1::Ceiling::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_ceiling_emitter);
     jitters[ngraph::opset1::Clamp::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_clamp_emitter);
+    jitters[ngraph::opset1::Convert::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_convert_emitter);
     // jitters[ngraph::opset1::Cos::get_type_info_static()] = CREATE_EMITTER(); // not supported
     // jitters[ngraph::opset1::Cosh::get_type_info_static()] = CREATE_EMITTER(); // not supported
     jitters[ngraph::opset1::Elu::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_elu_emitter);
@@ -126,6 +137,15 @@ size_t MKLDNNPlugin::CPUTargetMachine::get_lanes() const {
     }
 }
 
+size_t MKLDNNPlugin::CPUTargetMachine::get_vlen() const {
+    switch (isa) {
+        case dnnl::impl::cpu::x64::avx2 : return dnnl::impl::cpu::x64::cpu_isa_traits<dnnl::impl::cpu::x64::avx2>::vlen;
+        case dnnl::impl::cpu::x64::sse41 : return dnnl::impl::cpu::x64::cpu_isa_traits<dnnl::impl::cpu::x64::sse41>::vlen;
+        case dnnl::impl::cpu::x64::avx512_common : return dnnl::impl::cpu::x64::cpu_isa_traits<dnnl::impl::cpu::x64::avx512_common>::vlen;
+        default : IE_THROW() << "unknown isa " << isa;
+    }
+}
+
 bool MKLDNNPlugin::CPUTargetMachine::is_supported() const {
     return dnnl::impl::cpu::x64::mayiuse(isa);
 }
@@ -135,5 +155,8 @@ code MKLDNNPlugin::CPUTargetMachine::get_snippet() const {
     return h->jit_ker();
 }
 
-MKLDNNPlugin::CPUGenerator::CPUGenerator(dnnl::impl::cpu::x64::cpu_isa_t isa_) : Generator(std::make_shared<CPUTargetMachine>(isa_)) {
-}
+MKLDNNPlugin::CPUGenerator::CPUGenerator(
+    const dnnl::impl::cpu::x64::cpu_isa_t isa,
+    const ov::element::Type& min_precision,
+    const ov::element::Type& max_precision)
+    : Generator(std::make_shared<CPUTargetMachine>(isa, min_precision, max_precision)) {}
