@@ -41,8 +41,6 @@ public:
      */
     virtual size_t get_lanes() const = 0;
 
-    virtual size_t get_vlen() const = 0;
-
     /**
      * @brief called by generator to all the emittor for a target machine
      * @return a map by node's type info with callbacks to create an instance of emmitter for corresponding operation type
@@ -63,8 +61,14 @@ public:
         return jitters.find(type) != jitters.end();
     }
 
+    // TODO: workaround: TargetMachine constructor update is better
+    void set_input_type(const ov::element::Type& input_type) {
+        this->input_type = input_type;
+    }
+
 protected:
     std::map<const ngraph::DiscreteTypeInfo, std::function<std::shared_ptr<Emitter>(std::shared_ptr<ngraph::Node>)>> jitters;
+    ov::element::Type input_type;
 };
 
 /**
@@ -118,6 +122,11 @@ public:
      * @return pointer to generated code
      */
     code generate(std::shared_ptr<ov::Model>& m, const void* compile_params = nullptr) const;
+
+    // TODO: workaround: Generator constructor update is better
+    void set_input_type(const ov::element::Type& input_type) {
+        target->set_input_type(input_type);
+    }
 
 protected:
     std::shared_ptr<TargetMachine> target;

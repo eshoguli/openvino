@@ -9,6 +9,7 @@
 #include "snippets/op/subgraph.hpp"
 
 #include <ngraph/opsets/opset1.hpp>
+#include <ngraph/opsets/opset5.hpp>
 #include <ngraph/rt_info.hpp>
 #include <ngraph/op/loop.hpp>
 #include "transformations/utils/utils.hpp"
@@ -95,6 +96,7 @@ auto is_layout_oblivious(const std::shared_ptr<const Node> &n) -> bool {
             || ov::is_type<opset1::LogicalNot>(n)
             || ov::is_type<opset1::Negative>(n)
             || ov::is_type<opset1::Relu>(n)
+            || ov::is_type<opset5::Round>(n)
             || ov::is_type<opset1::Sigmoid>(n)
             || ov::is_type<opset1::Sqrt>(n)
             || ov::is_type<opset1::Tanh>(n)

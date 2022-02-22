@@ -13,15 +13,11 @@ namespace MKLDNNPlugin {
 
 class CPUTargetMachine : public ngraph::snippets::TargetMachine {
 public:
-    CPUTargetMachine(
-        const dnnl::impl::cpu::x64::cpu_isa_t& host_isa,
-        const ov::element::Type& min_precision,
-        const ov::element::Type& max_precision);
+    CPUTargetMachine(dnnl::impl::cpu::x64::cpu_isa_t host_isa);
 
     bool is_supported() const override;
     ngraph::snippets::code get_snippet() const override;
     size_t get_lanes() const override;
-    size_t get_vlen() const override;
 
 private:
     std::unique_ptr<dnnl::impl::cpu::x64::jit_generator> h;
@@ -30,10 +26,7 @@ private:
 
 class CPUGenerator : public ngraph::snippets::Generator {
 public:
-    CPUGenerator(
-        const dnnl::impl::cpu::x64::cpu_isa_t isa,
-        const ov::element::Type& min_precision,
-        const ov::element::Type& max_precision);
+    CPUGenerator(dnnl::impl::cpu::x64::cpu_isa_t isa);
     ~CPUGenerator() = default;
 };
 

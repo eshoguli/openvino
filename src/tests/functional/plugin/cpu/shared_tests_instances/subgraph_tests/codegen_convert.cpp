@@ -11,21 +11,23 @@ using namespace LayerTestsDefinitions;
 
 namespace {
 
-const std::vector<InferenceEngine::Precision> netPrecisions = {
-        InferenceEngine::Precision::FP32
+const std::vector<ov::element::Type> netPrecisions = {
+    ov::element::f32
 };
 
-const std::vector<ov::element::Type> inputPrecisions = {
-    ov::element::u8,
-    ov::element::i8
+const std::vector<std::pair<ov::element::Type, ov::element::Type>> convertPrecisions = {
+    {ov::element::u8, ov::element::f32},
+    {ov::element::i8, ov::element::f32},
+    // common transformations fail on TypeRelaxed type
+    //{ov::element::f32, ov::element::u8},
+    //{ov::element::f32, ov::element::i8},
 };
 
 INSTANTIATE_TEST_SUITE_P(NoReshape, CodegenConvert,
         ::testing::Combine(
-        ::testing::ValuesIn(netPrecisions),
-        ::testing::Values(InferenceEngine::SizeVector({1, 3, 1024 * 4, 1024 * 4})),
-        ::testing::ValuesIn(inputPrecisions),
-        ::testing::ValuesIn({ ov::element::f32 }),
-        ::testing::Values(CommonTestUtils::DEVICE_CPU)),
+            ::testing::ValuesIn(netPrecisions),
+            ::testing::Values(InferenceEngine::SizeVector({1, 3, 1024 * 4, 1024 * 4})),
+            ::testing::ValuesIn(convertPrecisions),
+            ::testing::Values(CommonTestUtils::DEVICE_CPU)),
         CodegenConvert::getTestCaseName);
 }  // namespace

@@ -14,16 +14,16 @@
 #include "jit_mkldnn_emitters.hpp"
 #include "jit_mkldnn_ext_emitters.hpp"
 
+#include <ngraph/opsets/opset5.hpp>
+
 using namespace std;
 using namespace ngraph::snippets;
 
 #define CREATE_EMITTER(e_type) [this](const std::shared_ptr<ngraph::Node>& n) \
     -> std::shared_ptr<ngraph::snippets::Emitter> {return std::make_shared<e_type>(h.get(), isa, n);};
 
-#define CREATE_EMITTER_WITH_TYPES(e_type) [this, min_type, max_type]( \
-        const std::shared_ptr<ngraph::Node>& n) -> std::shared_ptr<ngraph::snippets::Emitter> { \
-            return std::make_shared<e_type>(h.get(), isa, n, min_type, max_type); \
-        };
+#define CREATE_EMITTER_WITH_TYPES(e_type) [this](const std::shared_ptr<ngraph::Node>& n) \
+    -> std::shared_ptr<ngraph::snippets::Emitter> {return std::make_shared<e_type>(h.get(), isa, n, input_type);};
 
 class jit_snippet : public dnnl::impl::cpu::x64::jit_generator {
 public:
@@ -38,10 +38,8 @@ public:
     }
 };
 
-MKLDNNPlugin::CPUTargetMachine::CPUTargetMachine(
-    const dnnl::impl::cpu::x64::cpu_isa_t& host_isa,
-    const ov::element::Type& min_type,
-    const ov::element::Type& max_type) : TargetMachine(), h(new jit_snippet()), isa(host_isa) {
+MKLDNNPlugin::CPUTargetMachine::CPUTargetMachine(dnnl::impl::cpu::x64::cpu_isa_t host_isa)
+    : TargetMachine(), h(new jit_snippet()), isa(host_isa) {
     // data movement
     jitters[ngraph::opset1::Parameter::get_type_info_static()] = CREATE_EMITTER(NopEmitter);
     jitters[ngraph::snippets::op::BlockedParameter::get_type_info_static()] = CREATE_EMITTER(NopEmitter);
@@ -103,6 +101,7 @@ MKLDNNPlugin::CPUTargetMachine::CPUTargetMachine(
     jitters[ngraph::opset1::Erf::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_erf_emitter);
     jitters[ngraph::opset1::Exp::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_exp_emitter);
     jitters[ngraph::opset1::Floor::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_floor_emitter);
+    jitters[ngraph::opset5::Round::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_round_emitter);
     // jitters[ngraph::opset1::Log::get_type_info_static()] = CREATE_EMITTER(); // not supported
     jitters[ngraph::opset1::LogicalNot::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_logical_not_emitter);
     jitters[ngraph::opset1::Negative::get_type_info_static()] = CREATE_EMITTER(MKLDNNPlugin::jit_negative_emitter);
@@ -134,15 +133,6 @@ size_t MKLDNNPlugin::CPUTargetMachine::get_lanes() const {
     }
 }
 
-size_t MKLDNNPlugin::CPUTargetMachine::get_vlen() const {
-    switch (isa) {
-        case dnnl::impl::cpu::x64::avx2 : return dnnl::impl::cpu::x64::cpu_isa_traits<dnnl::impl::cpu::x64::avx2>::vlen;
-        case dnnl::impl::cpu::x64::sse41 : return dnnl::impl::cpu::x64::cpu_isa_traits<dnnl::impl::cpu::x64::sse41>::vlen;
-        case dnnl::impl::cpu::x64::avx512_common : return dnnl::impl::cpu::x64::cpu_isa_traits<dnnl::impl::cpu::x64::avx512_common>::vlen;
-        default : IE_THROW() << "unknown isa " << isa;
-    }
-}
-
 bool MKLDNNPlugin::CPUTargetMachine::is_supported() const {
     return dnnl::impl::cpu::x64::mayiuse(isa);
 }
@@ -152,8 +142,5 @@ code MKLDNNPlugin::CPUTargetMachine::get_snippet() const {
     return h->jit_ker();
 }
 
-MKLDNNPlugin::CPUGenerator::CPUGenerator(
-    const dnnl::impl::cpu::x64::cpu_isa_t isa,
-    const ov::element::Type& min_precision,
-    const ov::element::Type& max_precision)
-    : Generator(std::make_shared<CPUTargetMachine>(isa, min_precision, max_precision)) {}
+MKLDNNPlugin::CPUGenerator::CPUGenerator(dnnl::impl::cpu::x64::cpu_isa_t isa_) : Generator(std::make_shared<CPUTargetMachine>(isa_)) {
+}

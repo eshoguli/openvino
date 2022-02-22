@@ -52,23 +52,7 @@ MKLDNNSnippetNode::MKLDNNSnippetNode(const std::shared_ptr<ngraph::Node>& op, co
         snippet = std::make_shared<ngraph::snippets::op::Subgraph>(subgraph_node_inputs, new_body);
         ngraph::copy_runtime_info(tmp_snippet, snippet);
         snippet->set_friendly_name(tmp_snippet->get_friendly_name());
-
-        // get min/max size of data which is passed through all operations in snippet
-        const auto& ordered_ops = new_body->get_ordered_ops();
-        ov::element::Type min_precision = ov::element::f32;
-        ov::element::Type max_precision = ov::element::f32;
-        for (const auto& op : ordered_ops) {
-            for (const auto& output : op->outputs()) {
-                if (min_precision.bitwidth() > output.get_element_type().bitwidth()) {
-                    min_precision = output.get_element_type();
-                }
-                if (max_precision.bitwidth() < output.get_element_type().bitwidth()) {
-                    max_precision = output.get_element_type();
-                }
-            }
-        }
-
-        snippet->set_generator(std::make_shared<CPUGenerator>(host_isa, min_precision, max_precision));
+        snippet->set_generator(std::make_shared<CPUGenerator>(host_isa));
     } else {
         IE_THROW(NotImplemented) << "Node is not an instance of snippets::op::Subgraph";
     }
@@ -533,6 +517,7 @@ void MKLDNNSnippetNode::generate() {
     for (size_t i = 0; i < inputShapes.size(); i++)
         input_first_row.push_back(getParentEdgesAtPort(i)[0]);
 
+    // precisions here
     auto edgeToBlockedShape = [](const MKLDNNEdgePtr& edge) -> ngraph::snippets::op::Subgraph::BlockedShape {
         const auto blockedDesc = edge->getMemory().GetDescWithType<BlockedMemoryDesc>();
         ngraph::Shape shape(blockedDesc->getBlockDims());
@@ -543,6 +528,16 @@ void MKLDNNSnippetNode::generate() {
     ngraph::snippets::op::Subgraph::BlockedShapeVector input_blocked_shapes;
     std::transform(input_first_row.begin(), input_first_row.end(), std::back_inserter(input_blocked_shapes), edgeToBlockedShape);
 
+    ov::element::Type min_input_type = std::get<2>(input_blocked_shapes[0]);
+    for (auto i = 1ul; i < input_blocked_shapes.size(); ++i) {
+        const auto& value = std::get<2>(input_blocked_shapes[i]);
+        if (min_input_type.bitwidth() > value.bitwidth()) {
+            min_input_type = value;
+        }
+    }
+    // TODO: move it in constructor
+    snippet->get_generator()->set_input_type(min_input_type);
+
     std::vector<MKLDNNEdgePtr> output_first_row;
     for (size_t i = 0; i < outputShapes.size(); i++)
         // Can it go with difference shape or precision to different edges? I assume no.
@@ -550,6 +545,7 @@ void MKLDNNSnippetNode::generate() {
 
     ngraph::snippets::op::Subgraph::BlockedShapeVector output_blocked_shapes;
     std::transform(output_first_row.begin(), output_first_row.end(), std::back_inserter(output_blocked_shapes), edgeToBlockedShape);
+
     jit_snippets_compile_args jcp;
     jcp.output_dims = dims_out[max_rank_out_desc_idx];
     std::copy(sch_dims.begin(), sch_dims.end(), jcp.scheduler_dims);

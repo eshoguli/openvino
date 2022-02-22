@@ -50,6 +50,8 @@
 #include <low_precision/low_precision.hpp>
 #include "memory_desc/dnnl_blocked_memory_desc.h"
 
+#include "nodes/subgraph.h"
+
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
@@ -694,6 +696,10 @@ void MKLDNNGraph::Allocate() {
 
     // Allocate memory space for all edges marked with NeedAllocation
     AllocateWithReuse();
+
+    // TODO: for debug only
+    MKLDNNSnippetNode::data1 = graphEdges[0]->getMemory().GetData();
+    MKLDNNSnippetNode::data2 = graphEdges[1]->getMemory().GetData();
 
     // Resolve all other edges with status NotAllocated and in-place
     for (auto& node : graphNodes) node->resolveInPlaceEdges();

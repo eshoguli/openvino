@@ -14,9 +14,10 @@
 namespace LayerTestsDefinitions {
 
 typedef std::tuple<
-        ov::element::Type,           // Network Precision
+        InferenceEngine::Precision,  // Network Precision
         InferenceEngine::SizeVector, // Input 0 Shape
-        std::pair<ov::element::Type, ov::element::Type>, // convert input precision, convert output precision
+        ov::element::Type,           // input precision
+        ov::element::Type,           // output precision
         std::string                  // Target Device
 > inputParams;
 
