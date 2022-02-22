@@ -82,7 +82,10 @@ void CodegenConvert::SetUp() {
     std::tie(netPrecision, inputShape0, convertPrecisions, targetDevice) = this->GetParam();
 
     const auto input = std::make_shared<ngraph::opset1::Parameter>(convertPrecisions.first, ngraph::Shape{inputShape0});
+    input->set_friendly_name("input");
+
     const auto convert = std::make_shared<ngraph::opset1::Convert>(input, convertPrecisions.second);
+    convert->set_friendly_name("convert");
 
     const auto original_subtract = std::make_shared<ngraph::opset1::Subtract>(
         convert,
@@ -93,11 +96,15 @@ void CodegenConvert::SetUp() {
         original_subtract :
         // low precision (u8/i8[/u16/i16/u32/i32...- not supported by CPU]) => net precision
         std::make_shared<ngraph::op::TypeRelaxed<ngraph::opset1::Subtract>>(*original_subtract, ov::element::f32);
+    subtract->set_friendly_name("subtract");
+
     const auto multiply = std::make_shared<ngraph::opset1::Multiply>(
         subtract,
         std::make_shared<ngraph::opset1::Constant>(ov::element::f32, ov::Shape{}, std::vector<float>{2.f}));
+    multiply->set_friendly_name("multiply");
 
     const auto result = std::make_shared<ngraph::opset1::Result>(multiply);
+    result->set_friendly_name("result");
 
     function = std::make_shared<ngraph::Function>(
         ngraph::ResultVector{result},
@@ -105,6 +112,16 @@ void CodegenConvert::SetUp() {
         "CodegenConvert");
 
     //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\test.actual").run_on_model(function);
+}
+
+void CodegenConvert::Run() {
+    LayerTestsCommon::Run();
+
+    auto execGraph = getExecGraphInfoAsMap();
+    EXPECT_EQ(3, execGraph.size());
+    EXPECT_EQ("Input", execGraph.find("input")->second);
+    EXPECT_EQ("Subgraph", execGraph.find("multiply")->second);
+    EXPECT_EQ("Output", execGraph.find("result")->second);
 }
 
 TEST_P(CodegenConvert, CompareWithRefImpl) {

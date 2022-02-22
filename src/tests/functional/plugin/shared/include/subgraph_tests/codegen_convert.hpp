@@ -28,6 +28,7 @@ public:
 protected:
     void GenerateInputs() override;
     void SetUp() override;
+    void Run() override;
 };
 
 }  // namespace LayerTestsDefinitions
