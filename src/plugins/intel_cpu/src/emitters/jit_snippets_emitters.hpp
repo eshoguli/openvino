@@ -446,8 +446,8 @@ public:
         mkldnn::impl::cpu::x64::jit_generator* h,
         mkldnn::impl::cpu::x64::cpu_isa_t isa,
         const std::shared_ptr<ov::Node>& n,
-        const ov::element::Type& input_type)
-    : MemoryEmitter(h, isa, n), input_type(input_type) {
+        const ov::element::Type& output_type)
+    : MemoryEmitter(h, isa, n), output_type(output_type) {
     }
 
     size_t get_inputs_num() const override {return 1;}
@@ -478,11 +478,11 @@ private:
         Vmm vmm_src0 = Vmm(in[0]);
 
         h->uni_vmovups(h->ptr[out_reg], vmm_src0);
-        const auto vlen = mkldnn::impl::cpu::x64::cpu_isa_traits<isa>::vlen / (ov::element::f32.bitwidth() / input_type.bitwidth());
+        const auto vlen = mkldnn::impl::cpu::x64::cpu_isa_traits<isa>::vlen / (ov::element::f32.bitwidth() / output_type.bitwidth());
         h->add(out_reg, vlen);
     }
 
-    const ov::element::Type input_type;
+    const ov::element::Type output_type;
 };
 
 class ScalarStoreEmitter : public MemoryEmitter {

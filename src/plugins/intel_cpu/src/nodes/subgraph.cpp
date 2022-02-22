@@ -528,16 +528,6 @@ void MKLDNNSnippetNode::generate() {
     ngraph::snippets::op::Subgraph::BlockedShapeVector input_blocked_shapes;
     std::transform(input_first_row.begin(), input_first_row.end(), std::back_inserter(input_blocked_shapes), edgeToBlockedShape);
 
-    ov::element::Type min_input_type = std::get<2>(input_blocked_shapes[0]);
-    for (auto i = 1ul; i < input_blocked_shapes.size(); ++i) {
-        const auto& value = std::get<2>(input_blocked_shapes[i]);
-        if (min_input_type.bitwidth() > value.bitwidth()) {
-            min_input_type = value;
-        }
-    }
-    // TODO: move it in constructor
-    snippet->get_generator()->set_input_type(min_input_type);
-
     std::vector<MKLDNNEdgePtr> output_first_row;
     for (size_t i = 0; i < outputShapes.size(); i++)
         // Can it go with difference shape or precision to different edges? I assume no.
@@ -545,6 +535,19 @@ void MKLDNNSnippetNode::generate() {
 
     ngraph::snippets::op::Subgraph::BlockedShapeVector output_blocked_shapes;
     std::transform(output_first_row.begin(), output_first_row.end(), std::back_inserter(output_blocked_shapes), edgeToBlockedShape);
+
+    //ov::element::Type min_input_type = std::get<2>(input_blocked_shapes[0]);
+    //for (auto i = 1ul; i < input_blocked_shapes.size(); ++i) {
+    //    const auto& value = std::get<2>(input_blocked_shapes[i]);
+    //    if (min_input_type.bitwidth() > value.bitwidth()) {
+    //        min_input_type = value;
+    //    }
+    //}
+
+    // TODO: question: one LoadEmitter emitter per input?
+    // TODO: question: one StoreEmitter emitter per output?
+    // TODO: workaround: move to constructor
+    snippet->get_generator()->set_types(std::get<2>(input_blocked_shapes[0]), std::get<2>(output_blocked_shapes[0]));
 
     jit_snippets_compile_args jcp;
     jcp.output_dims = dims_out[max_rank_out_desc_idx];

@@ -86,7 +86,7 @@ void CodegenConvert::SetUp() {
 
     const auto original_subtract = std::make_shared<ngraph::opset1::Subtract>(
         convert,
-        std::make_shared<ngraph::opset1::Constant>(convertPrecisions.second, ov::Shape{}, std::vector<float>{10.f}));
+        std::make_shared<ngraph::opset1::Constant>(convertPrecisions.second, ov::Shape{}, std::vector<float>{3.f}));
 
     const auto subtract = convertPrecisions.second == netPrecision ?
         // net precision => net precision
@@ -95,7 +95,7 @@ void CodegenConvert::SetUp() {
         std::make_shared<ngraph::op::TypeRelaxed<ngraph::opset1::Subtract>>(*original_subtract, ov::element::f32);
     const auto multiply = std::make_shared<ngraph::opset1::Multiply>(
         subtract,
-        std::make_shared<ngraph::opset1::Constant>(ov::element::f32, ov::Shape{}, std::vector<float>{3.f}));
+        std::make_shared<ngraph::opset1::Constant>(ov::element::f32, ov::Shape{}, std::vector<float>{2.f}));
 
     const auto result = std::make_shared<ngraph::opset1::Result>(multiply);
 
