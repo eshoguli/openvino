@@ -83,6 +83,7 @@
 #include <transformations/op_conversions/fq_decomposition.hpp>
 #include <transformations/utils/utils.hpp>
 #include <snippets/pass/collapse_subgraph.hpp>
+#include <snippets/pass/adopt_convert.hpp>
 #include "ngraph_transformations/snippets_mark_skipped.hpp"
 
 #include <ngraph/opsets/opset1.hpp>
@@ -410,6 +411,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     manager.run_passes(nGraphFunc);
 
+    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.common").run_on_model(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         OV_ITT_SCOPE(FIRST_INFERENCE, MKLDNNPlugin::itt::domains::MKLDNN_LT, "LowPrecisionTransformations");
@@ -471,6 +474,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             return MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
         });
         lptManager.run_passes(nGraphFunc);
+
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_model(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;
@@ -479,8 +484,11 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     postLPTPassManager.register_pass<ReshapePRelu>();
 
     postLPTPassManager.get_pass_config()->set_callback<ngraph::pass::FakeQuantizeDecomposition>([](const_node_ptr &node) -> bool {
-        std::string errMsg;
-        return MKLDNNFakeQuantizeNode::isSupportedOperation(node, errMsg);
+        // TODO: uncomment
+        //std::string errMsg;
+        //return MKLDNNFakeQuantizeNode::isSupportedOperation(node, errMsg);
+
+        return false;
     });
     postLPTPassManager.get_pass_config()->set_callback<ngraph::pass::UnrollTensorIterator>([](const_node_ptr &node) -> bool {
         // UnrollTI transformation is disabled by default, is turned on by LowLatency transformation
@@ -500,11 +508,26 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     postLPTPassManager.run_passes(nGraphFunc);
 
     if (_enableSnippets && with_cpu_x86_avx2()) {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_model(nGraphFunc);
         ngraph::pass::Manager tokenization_manager;
         // TODO: uncomment
         //tokenization_manager.register_pass<SnippetsMarkSkipped>();
+        tokenization_manager.register_pass<ngraph::snippets::pass::AdoptConvert>(std::vector<ov::element::Type>{ov::element::f32});
         tokenization_manager.register_pass<ngraph::snippets::pass::EnumerateNodes>();
         tokenization_manager.register_pass<ngraph::snippets::pass::TokenizeSnippets>();
+        // TODO: uncomment callback to use original Convert for supported operations
+        //tokenization_manager.get_pass_config()->set_callback<ngraph::snippets::pass::AdoptConvert>(
+        //    [](const std::shared_ptr<const ov::Node>& convert) -> bool {
+        //    for (const auto& output : convert->outputs()) {
+        //        for (const auto& child_input : output.get_target_inputs()) {
+        //            const auto& node = child_input.get_node();
+        //            if (ov::is_type<ngraph::opset1::Add>(node)) {
+        //                return true;
+        //            }
+        //        }
+        //    }
+        //    return false;
+        //});
         tokenization_manager.get_pass_config()->set_callback<ngraph::snippets::pass::TokenizeSnippets>(
                 [](const std::shared_ptr<const ov::Node>& n) -> bool {
                     const auto& inputs = n->inputs();
@@ -526,6 +549,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
                     return has_only_const_inputs || bad_input_rank || bad_output_rank;
                 });
         tokenization_manager.run_passes(nGraphFunc);
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming2").run_on_model(nGraphFunc);
     }
 }
 

@@ -23,7 +23,7 @@ const std::vector<std::pair<ov::element::Type, ov::element::Type>> convertPrecis
     //{ov::element::f32, ov::element::i8},
 };
 
-INSTANTIATE_TEST_SUITE_P(NoReshape, CodegenConvert,
+INSTANTIATE_TEST_SUITE_P(CodeGeneration, CodegenConvert,
         ::testing::Combine(
             ::testing::ValuesIn(netPrecisions),
             ::testing::Values(InferenceEngine::SizeVector({1, 3, 1024 * 4, 1024 * 4})),
