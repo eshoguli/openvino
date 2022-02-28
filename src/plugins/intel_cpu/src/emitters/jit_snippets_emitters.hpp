@@ -439,12 +439,8 @@ protected:
 
 class StoreEmitter : public MemoryEmitter  {
 public:
-    StoreEmitter(
-        mkldnn::impl::cpu::x64::jit_generator* h,
-        mkldnn::impl::cpu::x64::cpu_isa_t isa,
-        const std::shared_ptr<ov::Node>& n,
-        const ov::element::Type& output_type)
-    : MemoryEmitter(h, isa, n), output_type(output_type) {
+    StoreEmitter(mkldnn::impl::cpu::x64::jit_generator* h, mkldnn::impl::cpu::x64::cpu_isa_t isa, const std::shared_ptr<ov::Node>& n)
+    : MemoryEmitter(h, isa, n) {
     }
 
     size_t get_inputs_num() const override {return 1;}
@@ -473,13 +469,9 @@ private:
                                     Xmm, isa == dnnl::impl::cpu::x64::avx2, Ymm, Zmm>::type;
         Reg64 out_reg(ea);
         Vmm vmm_src0 = Vmm(in[0]);
-
         h->uni_vmovups(h->ptr[out_reg], vmm_src0);
-        const auto vlen = mkldnn::impl::cpu::x64::cpu_isa_traits<isa>::vlen / (ov::element::f32.bitwidth() / output_type.bitwidth());
-        h->add(out_reg, vlen);
+        h->add(out_reg, mkldnn::impl::cpu::x64::cpu_isa_traits<isa>::vlen);
     }
-
-    const ov::element::Type output_type;
 };
 
 class ScalarStoreEmitter : public MemoryEmitter {
@@ -521,14 +513,8 @@ private:
 
 class LoadEmitter : public MemoryEmitter {
 public:
-    LoadEmitter(
-        mkldnn::impl::cpu::x64::jit_generator* h,
-        mkldnn::impl::cpu::x64::cpu_isa_t isa,
-        const std::shared_ptr<ov::Node>& n,
-        const ov::element::Type& input_type)
-    : MemoryEmitter(h, isa, n), shouldPostIncrement(*n->get_input_shape(0).rbegin() != 1), input_type(input_type) {
-        this->input_type = n->input(0).get_source_output().get_element_type();
-        this->output_type = n->output(0).get_element_type();
+    LoadEmitter(mkldnn::impl::cpu::x64::jit_generator* h, mkldnn::impl::cpu::x64::cpu_isa_t isa, const std::shared_ptr<ov::Node>& n)
+    : MemoryEmitter(h, isa, n), shouldPostIncrement(*n->get_input_shape(0).rbegin() != 1) {
     }
 
     size_t get_inputs_num() const override {return 0;}
@@ -557,47 +543,15 @@ private:
                                             Xmm, isa == dnnl::impl::cpu::x64::avx2, Ymm, Zmm>::type;
         Reg64 in_reg(ea);
         Vmm vmm_src0 = Vmm(out[0]);
-
-        if (input_type != output_type) {
-            switch (input_type) {
-                case ov::element::f32: {
-                    break;
-                }
-                case ov::element::i8: {
-                    h->uni_vpmovsxbd(vmm_src0, h->ptr[in_reg]);
-                    break;
-                }
-                case ov::element::u8: {
-                    h->uni_vpmovzxbd(vmm_src0, h->ptr[in_reg]);
-                    break;
-                }
-                default: {
-                    THROW_IE_EXCEPTION << "unexpected input precision: " << input_type;
-                }
-            }
-
-            // TODO: AVX512: use VPMOVDB directly
-
-            switch (output_type) {
-                case ov::element::f32: {
-                    h->uni_vcvtdq2ps(vmm_src0, vmm_src0);
-                    break;
-                }
-            }
-        } else {
-            h->uni_vmovups(vmm_src0, h->ptr[in_reg]);
-        }
+        h->uni_vmovups(vmm_src0, h->ptr[in_reg]);
 
         if (shouldPostIncrement) {
-            const auto vlen = mkldnn::impl::cpu::x64::cpu_isa_traits<isa>::vlen / (ov::element::f32.bitwidth() / input_type.bitwidth());
-            h->add(in_reg, vlen);
+            h->add(in_reg, mkldnn::impl::cpu::x64::cpu_isa_traits<isa>::vlen);
         }
     }
 
 private:
     bool shouldPostIncrement;
-    ov::element::Type input_type;
-    ov::element::Type output_type;
 };
 
 class BroadcastLoadEmitter : public MemoryEmitter {

@@ -174,6 +174,8 @@ Engine::~Engine() {
 
 static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function> nGraphFunc, const bool _enableLPT,
                                                const bool _enableSnippets, const bool isLegacyApi) {
+    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_model(nGraphFunc);
+
     ngraph::pass::Manager manager;
     manager.set_per_pass_validation(false);
     manager.register_pass<ngraph::pass::InitNodeInfo>();
@@ -424,6 +426,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     manager.run_passes(nGraphFunc);
 
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.common").run_on_model(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         OV_ITT_SCOPE(FIRST_INFERENCE, ov::intel_cpu::itt::domains::intel_cpu_LT, "LowPrecisionTransformations");
@@ -483,6 +487,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             return MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
         });
         lptManager.run_passes(nGraphFunc);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_model(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;
@@ -515,6 +520,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     postLPTPassManager.run_passes(nGraphFunc);
 
     if (_enableSnippets && dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx2)) {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_model(nGraphFunc);
         ngraph::pass::Manager tokenization_manager;
         //tokenization_manager.register_pass<SnippetsMarkSkipped>();
         tokenization_manager.register_pass<ngraph::snippets::pass::AdoptConvert>(std::vector<ov::element::Type>{ov::element::f32});
@@ -541,7 +547,9 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
                     return has_only_const_inputs || bad_input_rank || bad_output_rank;
                 });
         tokenization_manager.run_passes(nGraphFunc);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming3").run_on_model(nGraphFunc);
     }
+    //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.completed").run_on_model(nGraphFunc);
 }
 
 static void Transformation(CNNNetwork& clonedNetwork, const bool _enableLPT, const bool _enableSnippets, const bool isLegacyApi) {

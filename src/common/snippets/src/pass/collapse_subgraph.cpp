@@ -89,7 +89,6 @@ auto is_layout_oblivious(const std::shared_ptr<const Node> &n) -> bool {
             || ov::is_type<opset1::Clamp>(n)
             || ov::is_type<opset1::Floor>(n)
             || ov::is_type<opset1::Ceiling>(n)
-            || ov::is_type<opset1::Convert>(n)
             || ov::is_type<opset1::Elu>(n)
             || ov::is_type<opset1::Erf>(n)
             || ov::is_type<opset1::Exp>(n)
@@ -109,7 +108,7 @@ auto is_layout_oblivious(const std::shared_ptr<const Node> &n) -> bool {
 
 auto has_supported_in_out(const std::shared_ptr<const Node> &n) -> bool {
     auto supported = [](descriptor::Tensor& t) -> bool {
-        return (t.get_element_type() == ngraph::element::f32 || t.get_element_type() == ngraph::element::u8 || t.get_element_type() == ngraph::element::i8) &&
+        return t.get_element_type() == ngraph::element::f32 &&
                t.get_partial_shape().is_static();
     };
     const auto & inputs = n->inputs();
@@ -526,7 +525,6 @@ TokenizeSnippets::TokenizeSnippets() {
                     << " inputs and " << subgraph->outputs().size()
                     << " outputs and " << subgraph->get_body()->get_ops().size() << " ops total\n";
 
-        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming2").run_on_model(act_body);
         return true;
     };
     auto matcher = std::make_shared<ngraph::pattern::Matcher>(label);
