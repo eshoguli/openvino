@@ -83,6 +83,7 @@
 #include <transformations/op_conversions/fq_decomposition.hpp>
 #include <transformations/utils/utils.hpp>
 #include <snippets/pass/collapse_subgraph.hpp>
+#include <snippets/pass/common_optimizations.hpp>
 #include "ngraph_transformations/snippets_mark_skipped.hpp"
 
 #include <ngraph/opsets/opset1.hpp>
@@ -485,7 +486,6 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     }
 
     ngraph::pass::Manager postLPTPassManager;
-    postLPTPassManager.register_pass<ngraph::pass::FakeQuantizeDecomposition>();
     postLPTPassManager.register_pass<ngraph::pass::UnrollTensorIterator>();
     postLPTPassManager.register_pass<ReshapePRelu>();
 
@@ -510,7 +510,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     postLPTPassManager.register_pass<ngraph::pass::ConstantFolding>();
     postLPTPassManager.run_passes(nGraphFunc);
 
-    if (!useLpt && _enableSnippets && dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx2)) {
+    if (_enableSnippets && dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx2)) {
         ngraph::pass::Manager tokenization_manager;
         tokenization_manager.register_pass<SnippetsMarkSkipped>();
         tokenization_manager.register_pass<ngraph::snippets::pass::EnumerateNodes>();
@@ -535,7 +535,17 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
                                                              [&](const ov::Output<const ov::Node>& out) {return  rank_is_too_large(out.get_tensor());});
                     return has_only_const_inputs || bad_input_rank || bad_output_rank;
                 });
+        tokenization_manager.register_pass<ngraph::snippets::pass::CommonOptimizations>();
         tokenization_manager.run_passes(nGraphFunc);
+    } else {
+        ngraph::pass::Manager fqDecompositionManager;
+        fqDecompositionManager.register_pass<ngraph::pass::FakeQuantizeDecomposition>();
+        fqDecompositionManager.get_pass_config()->set_callback<ngraph::pass::FakeQuantizeDecomposition>(
+            [](const_node_ptr& node) -> bool {
+                std::string errMsg;
+                return MKLDNNFakeQuantizeNode::isSupportedOperation(node, errMsg);
+            });
+        fqDecompositionManager.run_passes(nGraphFunc);
     }
 }
 
