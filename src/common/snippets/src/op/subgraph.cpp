@@ -21,6 +21,8 @@
 #include <memory>
 #include <array>
 
+#include "ngraph/pass/visualize_tree.hpp"
+
 using namespace std;
 using namespace ngraph;
 
@@ -275,6 +277,13 @@ snippets::Schedule snippets::op::Subgraph::generate(ngraph::pass::Manager& opt, 
 
     // actual code emission
     ngraph::snippets::code ptr = m_generator->generate(m_body, compile_params);
+
+    auto file_name = m_body->get_friendly_name();
+    std::replace(file_name.begin(), file_name.end(), '\\', '_');
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.generated_" + file_name).run_on_model(m_body);
+    ov::pass::Serialize(
+        "c:\\Projects\\temp\\cpu.snippets.generated_" + file_name + ".xml",
+        "c:\\Projects\\temp\\cpu.snippets.generated_" + file_name + ".bin").run_on_model(m_body);
 
     // check that body doesn't have constants for scheduling
     std::vector<std::shared_ptr<opset1::Constant>> constants;

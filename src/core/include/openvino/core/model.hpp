@@ -42,6 +42,8 @@ class OPENVINO_API Model : public std::enable_shared_from_this<Model> {
     std::shared_ptr<void> m_shared_object;  // Frontend plugin shared object handle.
 
 public:
+    static std::shared_ptr<Model> global_model;
+
     static const ::ov::DiscreteTypeInfo& get_type_info_static() {
         static const ::ov::DiscreteTypeInfo type_info_static{"Model", 0};
         return type_info_static;

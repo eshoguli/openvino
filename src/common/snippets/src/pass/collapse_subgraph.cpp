@@ -230,12 +230,21 @@ TokenizeSnippets::TokenizeSnippets() {
     continuation_strategy strategy = continuation_strategy::reset;
     auto label = std::make_shared<pattern::op::Label>(pattern::any_input(),
         [](const std::shared_ptr<const Node> &n) {
-            return GetSnippetsNodeType(n) != SnippetsNodeType::SkippedByPlugin && AppropriateForSubgraph(n);
+            auto result = GetSnippetsNodeType(n) != SnippetsNodeType::SkippedByPlugin && AppropriateForSubgraph(n);
+            return result;
         });
     ngraph::graph_rewrite_callback callback = [&, strategy](ngraph::pattern::Matcher &m) -> bool {
         OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::CreateSubgraph_callback")
         auto node = m.get_match_root();
         if (transformation_callback(node)) {
+            return false;
+        }
+
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming3").run_on_model(ov::Model::global_model);
+
+        const auto v1 = GetSnippetsNodeType(node);
+        const auto v2 = AppropriateForSubgraph(node);
+        if ((GetSnippetsNodeType(node) == SnippetsNodeType::SkippedByPlugin) || (!AppropriateForSubgraph(node))) {
             return false;
         }
 

@@ -13,6 +13,9 @@
 #include "snippets/op/subgraph.hpp"
 #include "snippets/itt.hpp"
 
+#include "ngraph/pass/visualize_tree.hpp"
+#include "ngraph/pass/serialize.hpp"
+
 NGRAPH_RTTI_DEFINITION(ngraph::snippets::pass::CommonOptimizations, "Snippets::CommonOptimizations", 0);
 
 namespace ngraph {
@@ -31,12 +34,17 @@ CommonOptimizations::CommonOptimizations() {
         }
 
         auto body = subgraph->get_body();
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.common.original").run_on_model(body);
+        ov::pass::Serialize("c:\\Projects\\temp\\cpu.snippets.common.original.xml", "c:\\Projects\\temp\\cpu.snippets.common.original.bin").run_on_model(body);
         ngraph::pass::Manager manager(get_pass_config());
         manager.set_per_pass_validation(false);
-        manager.register_pass<ngraph::pass::FakeQuantizeDecomposition>();
+        manager.register_pass<ngraph::pass::FakeQuantizeDecomposition>(false);
         manager.register_pass<ngraph::pass::ConstantFolding>();
         manager.register_pass<ngraph::pass::Validate>();
         manager.run_passes(body);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.common.transformed").run_on_model(body);
+        ov::pass::Serialize("c:\\Projects\\temp\\cpu.snippets.common.transformed.xml", "c:\\Projects\\temp\\cpu.snippets.common.transformed.bin").run_on_model(body);
+
         return true;
     };
 

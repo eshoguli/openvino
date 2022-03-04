@@ -179,6 +179,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     manager.register_pass<ngraph::pass::InitNodeInfo>();
 
     const bool useLpt =
+        false &&
             _enableLPT &&
         ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(nGraphFunc);
     auto defaultPrecisions = useLpt ? ngraph::pass::low_precision::precision_set::int8_support : std::vector<ov::element::Type>{};
@@ -426,6 +427,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.lpt.original").run_on_model(nGraphFunc);
+
         OV_ITT_SCOPE(FIRST_INFERENCE, ov::intel_cpu::itt::domains::intel_cpu_LT, "LowPrecisionTransformations");
 
         auto supportedPrecisions = std::vector<OperationPrecisionRestriction>({
@@ -483,6 +486,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             return MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
         });
         lptManager.run_passes(nGraphFunc);
+
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.lpt.transformed").run_on_model(nGraphFunc);
     }
 
     ngraph::pass::Manager postLPTPassManager;
@@ -511,12 +516,17 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     postLPTPassManager.run_passes(nGraphFunc);
 
     if (_enableSnippets && dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx2)) {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.original").run_on_model(nGraphFunc);
+
         ngraph::pass::Manager tokenization_manager;
         tokenization_manager.register_pass<SnippetsMarkSkipped>();
         tokenization_manager.register_pass<ngraph::snippets::pass::EnumerateNodes>();
         tokenization_manager.register_pass<ngraph::snippets::pass::TokenizeSnippets>();
         tokenization_manager.get_pass_config()->set_callback<ngraph::snippets::pass::TokenizeSnippets>(
                 [](const std::shared_ptr<const ov::Node>& n) -> bool {
+                    if (ov::is_type<ngraph::opset1::FakeQuantize>(n)) {
+                        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming4").run_on_model(ov::Model::global_model);
+                    }
                     const auto& inputs = n->inputs();
                     // todo: clarify whether we can evaluate snippets on const paths
                     const bool has_only_const_inputs = std::all_of(inputs.begin(), inputs.end(),
@@ -537,6 +547,8 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
                 });
         tokenization_manager.register_pass<ngraph::snippets::pass::CommonOptimizations>();
         tokenization_manager.run_passes(nGraphFunc);
+
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.transformed").run_on_model(nGraphFunc);
     } else {
         ngraph::pass::Manager fqDecompositionManager;
         fqDecompositionManager.register_pass<ngraph::pass::FakeQuantizeDecomposition>();
