@@ -133,6 +133,9 @@
 
 #include <cpu/x64/cpu_isa_traits.hpp>
 
+#include "ngraph/pass/serialize.hpp"
+#include "ngraph/pass/serialize.hpp"
+
 using namespace ov::intel_cpu;
 using namespace InferenceEngine;
 
@@ -174,6 +177,9 @@ Engine::~Engine() {
 
 static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function> nGraphFunc, const bool _enableLPT,
                                                const bool _enableSnippets, const bool isLegacyApi) {
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_model(nGraphFunc);
+    ov::pass::Serialize("c:\\Projects\\temp\\cpu.original.xml", "c:\\Projects\\temp\\cpu.original.bin").run_on_model(nGraphFunc);
+
     ngraph::pass::Manager manager;
     manager.set_per_pass_validation(false);
     manager.register_pass<ngraph::pass::InitNodeInfo>();
@@ -425,6 +431,9 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     manager.run_passes(nGraphFunc);
 
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.common").run_on_model(nGraphFunc);
+    ov::pass::Serialize("c:\\Projects\\temp\\cpu.common.xml", "c:\\Projects\\temp\\cpu.common.bin").run_on_model(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.lpt.original").run_on_model(nGraphFunc);
@@ -559,6 +568,9 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             });
         fqDecompositionManager.run_passes(nGraphFunc);
     }
+
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_model(nGraphFunc);
+    ov::pass::Serialize("c:\\Projects\\temp\\cpu.transformed.xml", "c:\\Projects\\temp\\cpu.transformed.bin").run_on_model(nGraphFunc);
 }
 
 static void Transformation(CNNNetwork& clonedNetwork, const bool _enableLPT, const bool _enableSnippets, const bool isLegacyApi) {
