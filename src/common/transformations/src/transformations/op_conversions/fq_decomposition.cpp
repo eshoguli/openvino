@@ -33,6 +33,10 @@ bool isValidRangesInputs(const std::shared_ptr<ngraph::opset1::FakeQuantize> &fq
     return !std::any_of(comp_result.begin(), comp_result.end(), [](const bool value) { return value; });
 }
 
+bool is_scalar_constant(const std::shared_ptr<ngraph::Node>& source_output_node)  {
+    return ngraph::is_type<ngraph::opset1::Constant>(source_output_node) && ngraph::shape_size(source_output_node->get_shape()) == 1;
+};
+
 } // namespace
 
 ngraph::pass::FakeQuantizeDecomposition::FakeQuantizeDecomposition(const bool constant_weights) {
@@ -133,4 +137,11 @@ ngraph::pass::FakeQuantizeDecomposition::FakeQuantizeDecomposition(const bool co
 
     auto m = std::make_shared<ngraph::pattern::Matcher>(fake_quantize, matcher_name);
     register_matcher(m, callback);
+}
+
+bool ngraph::pass::FakeQuantizeDecomposition::isAnyScalarConstant(const std::shared_ptr<const ngraph::Node>& node) {
+    return is_scalar_constant(node->get_input_node_shared_ptr(1)) ||
+           is_scalar_constant(node->get_input_node_shared_ptr(2)) ||
+           is_scalar_constant(node->get_input_node_shared_ptr(3)) ||
+           is_scalar_constant(node->get_input_node_shared_ptr(4));
 }

@@ -421,15 +421,18 @@ TokenizeSnippets::TokenizeSnippets() {
                 // Result op has a single input
                 internal_inputs.push_back(source_result->input_value(0));
             } else {
-                if (op::is_scalar_constant(input_node)) {
-                    internal_inputs.push_back(input_node->output(0));
-                } else {
-                    external_inputs.push_back(input_value);
-                    auto new_parameter = std::make_shared<opset1::Parameter>(input_value.get_element_type(), input_value.get_partial_shape());
-                    new_parameter->set_friendly_name(input_node->get_friendly_name());
-                    body_parameters.push_back(new_parameter);
-                    internal_inputs.push_back(new_parameter->output(0));
-                }
+                internal_inputs.push_back(input_node->output(0));
+
+                //if (op::is_scalar_constant(input_node)) {
+                //    internal_inputs.push_back(input_node->output(0));
+                //} else {
+                //    // TODO: step #1, move after common
+                //    external_inputs.push_back(input_value);
+                //    auto new_parameter = std::make_shared<opset1::Parameter>(input_value.get_element_type(), input_value.get_partial_shape());
+                //    new_parameter->set_friendly_name(input_node->get_friendly_name());
+                //    body_parameters.push_back(new_parameter);
+                //    internal_inputs.push_back(new_parameter->output(0));
+                //}
             }
         }
         fusedNames += node->get_friendly_name();
@@ -491,6 +494,7 @@ TokenizeSnippets::TokenizeSnippets() {
             throw ngraph_error("body results and node results size mismatch during subgraph collaps");
         }
         // todo: move this plugin-specific constraint to the plugin callback
+        // TODO: step #2: move to callback
         if (body_parameters.size() + body_results.size() > 7) {
             const std::string message_reset = "new subgraph is created. Impossible to schedule subgraph with " +
             std::to_string(body_parameters.size()) + " inputs and " + std::to_string(body_results.size()) + " outputs.";

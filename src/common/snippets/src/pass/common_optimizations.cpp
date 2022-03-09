@@ -34,10 +34,8 @@ CommonOptimizations::CommonOptimizations() {
         ngraph::pass::Manager manager(get_pass_config());
         manager.set_per_pass_validation(false);
         manager.register_pass<ngraph::pass::FakeQuantizeDecomposition>(false);
-        manager.register_pass<ngraph::pass::ConstantFolding>();
         manager.register_pass<ngraph::pass::Validate>();
         manager.run_passes(body);
-
         return true;
     };
 
