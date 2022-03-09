@@ -138,10 +138,3 @@ ngraph::pass::FakeQuantizeDecomposition::FakeQuantizeDecomposition(const bool co
     auto m = std::make_shared<ngraph::pattern::Matcher>(fake_quantize, matcher_name);
     register_matcher(m, callback);
 }
-
-bool ngraph::pass::FakeQuantizeDecomposition::isAnyScalarConstant(const std::shared_ptr<const ngraph::Node>& node) {
-    return is_scalar_constant(node->get_input_node_shared_ptr(1)) ||
-           is_scalar_constant(node->get_input_node_shared_ptr(2)) ||
-           is_scalar_constant(node->get_input_node_shared_ptr(3)) ||
-           is_scalar_constant(node->get_input_node_shared_ptr(4));
-}

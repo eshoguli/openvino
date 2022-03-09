@@ -12,6 +12,9 @@
 #include "transformations/op_conversions/fq_decomposition.hpp"
 #include "snippets/op/subgraph.hpp"
 #include "snippets/itt.hpp"
+#include "snippets/pass/constant_folding.hpp"
+
+#include "ngraph/pass/visualize_tree.hpp"
 
 NGRAPH_RTTI_DEFINITION(ngraph::snippets::pass::CommonOptimizations, "Snippets::CommonOptimizations", 0);
 
@@ -31,11 +34,23 @@ CommonOptimizations::CommonOptimizations() {
         }
 
         auto body = subgraph->get_body();
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.common.original").run_on_model(body);
+
         ngraph::pass::Manager manager(get_pass_config());
         manager.set_per_pass_validation(false);
         manager.register_pass<ngraph::pass::FakeQuantizeDecomposition>(false);
+        manager.register_pass<ngraph::pass::ConstantFolding>();
         manager.register_pass<ngraph::pass::Validate>();
+
+        auto config = manager.get_pass_config();
+        config->set_callback<ngraph::pass::FakeQuantizeDecomposition>([](const std::shared_ptr<const ov::Node>& n) -> bool {
+            auto& rt = n->get_rt_info();
+            return false;
+        });
+
         manager.run_passes(body);
+
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.common.transformed").run_on_model(body);
         return true;
     };
 

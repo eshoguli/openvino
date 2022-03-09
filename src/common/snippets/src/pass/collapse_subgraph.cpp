@@ -58,84 +58,96 @@ auto outputs_are_not_broadcastable(const std::shared_ptr<const Node>& node) -> b
     return std::find_if_not(std::begin(outputs), std::end(outputs), check_shapes_broadcastable) != std::end(outputs);
 }
 
-auto is_layout_oblivious(const std::shared_ptr<const Node> &n) -> bool {
-    OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::is_layout_oblivious")
-    auto is_layout_supported = [](const std::shared_ptr<const Node>& n) -> bool {
-        const auto fakeQuantize = ov::as_type_ptr<const opset1::FakeQuantize>(n);
-        if (fakeQuantize != nullptr) {
-            return
-                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(1)) &&
-                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(2)) &&
-                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(3)) &&
-                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(4));
-        }
-        return false;
-    };
+//auto is_layout_oblivious(const std::shared_ptr<const Node> &n) -> bool {
+//    OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::is_layout_oblivious")
+//    auto is_layout_supported = [](const std::shared_ptr<const Node>& n) -> bool {
+//        const auto fakeQuantize = ov::as_type_ptr<const opset1::FakeQuantize>(n);
+//        if (fakeQuantize != nullptr) {
+//            return
+//                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(1)) &&
+//                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(2)) &&
+//                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(3)) &&
+//                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(4));
+//        }
+//        return false;
+//    };
+//
+//    auto is_layout_oblivious_binary = [](const std::shared_ptr<const Node> &n) -> bool {
+//        return ov::is_type<opset1::Add>(n)
+//            || ov::is_type<opset1::Divide>(n)
+//            || ov::is_type<opset1::Equal>(n)
+//            || ov::is_type<opset1::FloorMod>(n)
+//            || ov::is_type<opset1::Greater>(n)
+//            || ov::is_type<opset1::GreaterEqual>(n)
+//            || ov::is_type<opset1::Less>(n)
+//            || ov::is_type<opset1::LessEqual>(n)
+//            || ov::is_type<opset1::LogicalAnd>(n)
+//            || ov::is_type<opset1::LogicalOr>(n)
+//            || ov::is_type<opset1::LogicalXor>(n)
+//            || ov::is_type<opset1::Maximum>(n)
+//            || ov::is_type<opset1::Minimum>(n)
+//            || ov::is_type<opset1::Mod>(n)
+//            || ov::is_type<opset1::Multiply>(n)
+//            || ov::is_type<opset1::NotEqual>(n)
+//            || ov::is_type<opset1::PRelu>(n)
+//            || ov::is_type<opset1::Power>(n)
+//            || ov::is_type<opset1::SquaredDifference>(n)
+//            || ov::is_type<opset1::Subtract>(n)
+//            || ov::is_type<opset1::Xor>(n);
+//    };
+//
+//    auto is_layout_oblivious_unary = [](const std::shared_ptr<const Node> &n) -> bool {
+//        return ov::is_type<opset1::Abs>(n)
+//            || ov::is_type<opset1::Clamp>(n)
+//            || ov::is_type<opset1::Floor>(n)
+//            || ov::is_type<opset1::Ceiling>(n)
+//            || ov::is_type<opset1::Elu>(n)
+//            || ov::is_type<opset1::Erf>(n)
+//            || ov::is_type<opset1::Exp>(n)
+//            || ov::is_type<opset1::LogicalNot>(n)
+//            || ov::is_type<opset1::Negative>(n)
+//            || ov::is_type<opset1::Relu>(n)
+//            || ov::is_type<opset5::Round>(n)
+//            || ov::is_type<opset1::Sigmoid>(n)
+//            || ov::is_type<opset1::Sqrt>(n)
+//            || ov::is_type<opset1::Tanh>(n)
+//            || ov::is_type<ngraph::op::v0::Gelu>(n)
+//            || ov::is_type<ngraph::op::v7::Gelu>(n)
+//            || ov::is_type<ngraph::op::v4::HSwish>(n);
+//    };
+//    const auto v1 = is_layout_supported(n);
+//    const auto v2 = is_layout_oblivious_unary(n);
+//    const auto v3 = is_layout_oblivious_binary(n);
+//    if (is_type<opset1::FakeQuantize>(n)) {
+//        std::cout << "is_layout_oblivious: " << std::endl;
+//    }
+//    return v1 || v2 || v3;
+//}
 
-    auto is_layout_oblivious_binary = [](const std::shared_ptr<const Node> &n) -> bool {
-        return ov::is_type<opset1::Add>(n)
-            || ov::is_type<opset1::Divide>(n)
-            || ov::is_type<opset1::Equal>(n)
-            || ov::is_type<opset1::FloorMod>(n)
-            || ov::is_type<opset1::Greater>(n)
-            || ov::is_type<opset1::GreaterEqual>(n)
-            || ov::is_type<opset1::Less>(n)
-            || ov::is_type<opset1::LessEqual>(n)
-            || ov::is_type<opset1::LogicalAnd>(n)
-            || ov::is_type<opset1::LogicalOr>(n)
-            || ov::is_type<opset1::LogicalXor>(n)
-            || ov::is_type<opset1::Maximum>(n)
-            || ov::is_type<opset1::Minimum>(n)
-            || ov::is_type<opset1::Mod>(n)
-            || ov::is_type<opset1::Multiply>(n)
-            || ov::is_type<opset1::NotEqual>(n)
-            || ov::is_type<opset1::PRelu>(n)
-            || ov::is_type<opset1::Power>(n)
-            || ov::is_type<opset1::SquaredDifference>(n)
-            || ov::is_type<opset1::Subtract>(n)
-            || ov::is_type<opset1::Xor>(n);
-    };
-
-    auto is_layout_oblivious_unary = [](const std::shared_ptr<const Node> &n) -> bool {
-        return ov::is_type<opset1::Abs>(n)
-            || ov::is_type<opset1::Clamp>(n)
-            || ov::is_type<opset1::Floor>(n)
-            || ov::is_type<opset1::Ceiling>(n)
-            || ov::is_type<opset1::Elu>(n)
-            || ov::is_type<opset1::Erf>(n)
-            || ov::is_type<opset1::Exp>(n)
-            || ov::is_type<opset1::LogicalNot>(n)
-            || ov::is_type<opset1::Negative>(n)
-            || ov::is_type<opset1::Relu>(n)
-            || ov::is_type<opset5::Round>(n)
-            || ov::is_type<opset1::Sigmoid>(n)
-            || ov::is_type<opset1::Sqrt>(n)
-            || ov::is_type<opset1::Tanh>(n)
-            || ov::is_type<ngraph::op::v0::Gelu>(n)
-            || ov::is_type<ngraph::op::v7::Gelu>(n)
-            || ov::is_type<ngraph::op::v4::HSwish>(n);
-    };
-    return is_layout_supported(n) || is_layout_oblivious_unary(n) || is_layout_oblivious_binary(n);
-}
-
-auto has_supported_in_out(const std::shared_ptr<const Node> &n) -> bool {
-    auto supported = [](descriptor::Tensor& t) -> bool {
-        return t.get_element_type() == ngraph::element::f32 &&
-               t.get_partial_shape().is_static();
-    };
-    const auto & inputs = n->inputs();
-    const auto & outputs = n->outputs();
-    // todo: Is this check necessary? Remove if not
-    for (const auto& out : outputs) {
-        for (const auto &in_out : out.get_target_inputs()) {
-            if (ov::is_type<ngraph::op::v5::Loop>(in_out.get_node()->shared_from_this())) {
-                return false;
-            }
-        }
-    }
-    return std::all_of(inputs.begin(), inputs.end(), [&](const Input<const Node>& in) {return  supported(in.get_tensor());}) &&
-           std::all_of(outputs.begin(), outputs.end(), [&](const Output<const Node>& out) {return  supported(out.get_tensor());});
-}
+//auto has_supported_in_out(const std::shared_ptr<const Node> &n) -> bool {
+//    auto supported = [](descriptor::Tensor& t) -> bool {
+//        return t.get_element_type() == ngraph::element::f32 &&
+//               t.get_partial_shape().is_static();
+//    };
+//    const auto & inputs = n->inputs();
+//    const auto & outputs = n->outputs();
+//    // todo: Is this check necessary? Remove if not
+//    for (const auto& out : outputs) {
+//        for (const auto &in_out : out.get_target_inputs()) {
+//            if (ov::is_type<ngraph::op::v5::Loop>(in_out.get_node()->shared_from_this())) {
+//                return false;
+//            }
+//        }
+//    }
+//    const auto v1 = std::all_of(inputs.begin(), inputs.end(), [&](const Input<const Node>& in) {return  supported(in.get_tensor());});
+//    const auto v2 = std::all_of(outputs.begin(), outputs.end(), [&](const Output<const Node>& out) {return  supported(out.get_tensor());});
+//
+//    if (is_type<opset1::FakeQuantize>(n)) {
+//        std::cout << "has_supported_in_out: " << std::endl;
+//    }
+//
+//    return v1 && v2;
+//}
 
 auto has_result_child(const std::shared_ptr<const Node> &node) -> bool {
     for (const auto &child : node->get_users()) {
@@ -179,9 +191,9 @@ auto update_out_tensor_name(std::shared_ptr<ngraph::snippets::op::Subgraph> &sub
 }
 } // namespace
 
-bool AppropriateForSubgraph(const std::shared_ptr<const Node> &node) {
-    return is_layout_oblivious(node) && has_supported_in_out(node);
-}
+//bool AppropriateForSubgraph(const std::shared_ptr<const Node> &node) {
+//    return is_layout_oblivious(node) && has_supported_in_out(node);
+//}
 
 void SetSnippetsNodeType(const std::shared_ptr<Node> &node, SnippetsNodeType nodeType) {
     auto &rt = node->get_rt_info();
@@ -230,7 +242,13 @@ TokenizeSnippets::TokenizeSnippets() {
     continuation_strategy strategy = continuation_strategy::reset;
     auto label = std::make_shared<pattern::op::Label>(pattern::any_input(),
         [](const std::shared_ptr<const Node> &n) {
-            return GetSnippetsNodeType(n) != SnippetsNodeType::SkippedByPlugin && AppropriateForSubgraph(n);
+            const auto v1 = GetSnippetsNodeType(n);
+            //const auto v2 = AppropriateForSubgraph(n);
+            //if (is_type<opset1::FakeQuantize>(n)) {
+            //    std::cout << "TokenizeSnippets" << std::endl;
+            //}
+            //return GetSnippetsNodeType(n) != SnippetsNodeType::SkippedByPlugin && AppropriateForSubgraph(n);
+            return GetSnippetsNodeType(n) != SnippetsNodeType::SkippedByPlugin;
         });
     ngraph::graph_rewrite_callback callback = [&, strategy](ngraph::pattern::Matcher &m) -> bool {
         OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::CreateSubgraph_callback")

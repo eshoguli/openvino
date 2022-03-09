@@ -85,6 +85,7 @@
 #include <snippets/pass/collapse_subgraph.hpp>
 #include <snippets/pass/common_optimizations.hpp>
 #include <snippets/pass/constant_folding.hpp>
+#include <snippets/pass/attributes.hpp>
 #include "ngraph_transformations/snippets_mark_skipped.hpp"
 
 #include <ngraph/opsets/opset1.hpp>
@@ -514,14 +515,60 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
     postLPTPassManager.run_passes(nGraphFunc);
 
     if (_enableSnippets && dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx2)) {
-        ngraph::pass::Manager tokenization_manager;
-        tokenization_manager.register_pass<SnippetsMarkSkipped>(); // <= TODO: step #3: some fusing are skipped for FQ
-        tokenization_manager.register_pass<ngraph::snippets::pass::EnumerateNodes>();
-        tokenization_manager.register_pass<ngraph::snippets::pass::TokenizeSnippets>();
-        tokenization_manager.get_pass_config()->set_callback<ngraph::snippets::pass::TokenizeSnippets>(
-                [](const std::shared_ptr<const ov::Node>& n) -> bool {
-                    // TODO: workaround: as result as FQ decomposition after tokenization
-                    if (ngraph::is_type<ngraph::opset1::FakeQuantize>(n) && !ngraph::pass::FakeQuantizeDecomposition::isAnyScalarConstant(n)) {
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.original").run_on_model(nGraphFunc);
+
+        {
+            // TODO: just to debug
+            ngraph::pass::Manager tokenization_manager;
+            tokenization_manager.register_pass<SnippetsMarkSkipped>(); // <= TODO: step #3: some fusing are skipped for FQ
+            tokenization_manager.run_passes(nGraphFunc);
+        }
+
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_model(nGraphFunc);
+        ngraph::pass::Serialize("c:\\Projects\\temp\\cpu.transforming1.xml", "c:\\Projects\\temp\\cpu.transforming1.bin").run_on_model(nGraphFunc);
+
+        auto checkAttributes = [](const std::shared_ptr<const ov::Node>& n) -> bool {
+            auto& rt = n->get_rt_info();
+
+            const auto rinfo1 = rt.find("SnippetsNodeType");
+            if (rinfo1 != rt.end()) {
+                const auto nodeType = rinfo1->second.as<ngraph::snippets::pass::SnippetsNodeType>();
+                if (nodeType == ngraph::snippets::pass::SnippetsNodeType::SkippedByPlugin) {
+                    return false;
+                }
+            }
+
+            const auto rinfo2 = rt.find("MayBeFusedInPlugin");
+            if (rinfo2 != rt.end()) {
+                const auto nodeType = rinfo2->second.as<ov::intel_cpu::NodeFusingType>();
+                if (nodeType != ov::intel_cpu::NodeFusingType::NotSet) {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+
+        //{
+        //    ngraph::pass::Manager tokenization_manager;
+        //    tokenization_manager.register_pass<ngraph::pass::FakeQuantizeDecomposition>(false);
+        //    tokenization_manager.get_pass_config()->set_callback<ngraph::pass::FakeQuantizeDecomposition>(
+        //        [checkAttributes](const std::shared_ptr<const ov::Node>& n) -> bool {
+        //            return !checkAttributes(n);
+        //        });
+        //    tokenization_manager.register_pass<ngraph::pass::ConstantFolding>();
+        //}
+
+        //ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming2").run_on_model(nGraphFunc);
+        //ngraph::pass::Serialize("c:\\Projects\\temp\\cpu.transforming2.xml", "c:\\Projects\\temp\\cpu.transforming2.bin").run_on_model(nGraphFunc);
+
+        {
+            ngraph::pass::Manager tokenization_manager;
+            tokenization_manager.register_pass<ngraph::snippets::pass::EnumerateNodes>();
+            tokenization_manager.register_pass<ngraph::snippets::pass::TokenizeSnippets>();
+            tokenization_manager.get_pass_config()->set_callback<ngraph::snippets::pass::TokenizeSnippets>(
+                [checkAttributes](const std::shared_ptr<const ov::Node>& n) -> bool {
+                    if (!checkAttributes(n)) {
                         return true;
                     }
 
@@ -543,9 +590,11 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
                                                              [&](const ov::Output<const ov::Node>& out) {return  rank_is_too_large(out.get_tensor());});
                     return has_only_const_inputs || bad_input_rank || bad_output_rank;
                 });
-        tokenization_manager.register_pass<ngraph::snippets::pass::CommonOptimizations>();
-        tokenization_manager.register_pass<ngraph::snippets::pass::ConstantFolding>();
-        tokenization_manager.run_passes(nGraphFunc);
+            tokenization_manager.run_passes(nGraphFunc);
+        }
+
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.snippets.transformed").run_on_model(nGraphFunc);
+        ngraph::pass::Serialize("c:\\Projects\\temp\\cpu.snippets.transformed.xml", "c:\\Projects\\temp\\cpu.snippets.transformed.bin").run_on_model(nGraphFunc);
     } else {
         ngraph::pass::Manager fqDecompositionManager;
         fqDecompositionManager.register_pass<ngraph::pass::FakeQuantizeDecomposition>();

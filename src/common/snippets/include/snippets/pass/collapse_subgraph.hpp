@@ -7,21 +7,18 @@
 #include <ngraph/ngraph.hpp>
 #include <ngraph/pass/graph_rewrite.hpp>
 #include <ngraph/pattern/matcher.hpp>
+#include "attributes.hpp"
 
 
 namespace ngraph {
 namespace snippets {
 namespace pass {
-/*
- NotSet - default value returned by GetSnippetsNodeType(...) if the node wasn't marked
- SkippedByPlugin - indicate that snippets can't include this node in subgraph. Can be set by Plugin via SetSnippetsNodeType(...).
- */
-enum class SnippetsNodeType : int64_t {NotSet, SkippedByPlugin};
+
 void SetSnippetsNodeType(const std::shared_ptr<Node>&, SnippetsNodeType);
 SnippetsNodeType GetSnippetsNodeType(const std::shared_ptr<const Node>&);
 void SetTopologicalOrder(const std::shared_ptr<Node>&, int64_t);
 int64_t GetTopologicalOrder(const std::shared_ptr<const Node>&);
-bool AppropriateForSubgraph(const std::shared_ptr<const Node>&);
+//bool AppropriateForSubgraph(const std::shared_ptr<const Node>&);
 
 /**
  * @interface EnumerateNodes

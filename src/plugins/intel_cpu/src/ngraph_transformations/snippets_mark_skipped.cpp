@@ -3,7 +3,9 @@
 //
 #include "snippets_mark_skipped.hpp"
 #include <snippets/pass/collapse_subgraph.hpp>
+#include <snippets/pass/attributes.hpp>
 #include <ngraph/opsets/opset1.hpp>
+#include <ngraph/opsets/opset5.hpp>
 #include <utils/general_utils.h>
 #include <utils/cpu_utils.hpp>
 
@@ -275,6 +277,102 @@ void PropagateIfHasOnlyChild(const std::shared_ptr<Node> &node, NodeFusingType n
     const bool has_only_child = out.size() == 1 && out[0].get_target_inputs().size() == 1;
     SetNodeFusingType(node, has_only_child ? nodeType : NodeFusingType::FusedTerminator);
 }
+
+bool is_layout_oblivious(const std::shared_ptr<const Node> &n) {
+    //OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::is_layout_oblivious")
+    auto is_layout_supported = [](const std::shared_ptr<const Node>& n) -> bool {
+        const auto fakeQuantize = ov::as_type_ptr<const opset1::FakeQuantize>(n);
+        if (fakeQuantize != nullptr) {
+            return
+                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(1)) &&
+                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(2)) &&
+                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(3)) &&
+                is_type<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(4));
+        }
+        return false;
+    };
+
+    auto is_layout_oblivious_binary = [](const std::shared_ptr<const Node> &n) -> bool {
+        return ov::is_type<opset1::Add>(n)
+            || ov::is_type<opset1::Divide>(n)
+            || ov::is_type<opset1::Equal>(n)
+            || ov::is_type<opset1::FloorMod>(n)
+            || ov::is_type<opset1::Greater>(n)
+            || ov::is_type<opset1::GreaterEqual>(n)
+            || ov::is_type<opset1::Less>(n)
+            || ov::is_type<opset1::LessEqual>(n)
+            || ov::is_type<opset1::LogicalAnd>(n)
+            || ov::is_type<opset1::LogicalOr>(n)
+            || ov::is_type<opset1::LogicalXor>(n)
+            || ov::is_type<opset1::Maximum>(n)
+            || ov::is_type<opset1::Minimum>(n)
+            || ov::is_type<opset1::Mod>(n)
+            || ov::is_type<opset1::Multiply>(n)
+            || ov::is_type<opset1::NotEqual>(n)
+            || ov::is_type<opset1::PRelu>(n)
+            || ov::is_type<opset1::Power>(n)
+            || ov::is_type<opset1::SquaredDifference>(n)
+            || ov::is_type<opset1::Subtract>(n)
+            || ov::is_type<opset1::Xor>(n);
+    };
+
+    auto is_layout_oblivious_unary = [](const std::shared_ptr<const Node> &n) -> bool {
+        return ov::is_type<opset1::Abs>(n)
+            || ov::is_type<opset1::Clamp>(n)
+            || ov::is_type<opset1::Floor>(n)
+            || ov::is_type<opset1::Ceiling>(n)
+            || ov::is_type<opset1::Elu>(n)
+            || ov::is_type<opset1::Erf>(n)
+            || ov::is_type<opset1::Exp>(n)
+            || ov::is_type<opset1::LogicalNot>(n)
+            || ov::is_type<opset1::Negative>(n)
+            || ov::is_type<opset1::Relu>(n)
+            || ov::is_type<opset5::Round>(n)
+            || ov::is_type<opset1::Sigmoid>(n)
+            || ov::is_type<opset1::Sqrt>(n)
+            || ov::is_type<opset1::Tanh>(n)
+            || ov::is_type<ngraph::op::v0::Gelu>(n)
+            || ov::is_type<ngraph::op::v7::Gelu>(n)
+            || ov::is_type<ngraph::op::v4::HSwish>(n);
+    };
+    const auto v1 = is_layout_supported(n);
+    const auto v2 = is_layout_oblivious_unary(n);
+    const auto v3 = is_layout_oblivious_binary(n);
+    if (is_type<opset1::FakeQuantize>(n)) {
+        std::cout << "is_layout_oblivious: " << std::endl;
+    }
+    return v1 || v2 || v3;
+}
+
+bool has_supported_in_out(const std::shared_ptr<const Node> &n) {
+    auto supported = [](descriptor::Tensor& t) -> bool {
+        return t.get_element_type() == ngraph::element::f32 &&
+               t.get_partial_shape().is_static();
+    };
+    const auto & inputs = n->inputs();
+    const auto & outputs = n->outputs();
+    // todo: Is this check necessary? Remove if not
+    for (const auto& out : outputs) {
+        for (const auto &in_out : out.get_target_inputs()) {
+            if (ov::is_type<ngraph::op::v5::Loop>(in_out.get_node()->shared_from_this())) {
+                return false;
+            }
+        }
+    }
+    const auto v1 = std::all_of(inputs.begin(), inputs.end(), [&](const ngraph::Input<const Node>& in) {return  supported(in.get_tensor());});
+    const auto v2 = std::all_of(outputs.begin(), outputs.end(), [&](const ngraph::Output<const Node>& out) {return  supported(out.get_tensor());});
+
+    if (is_type<opset1::FakeQuantize>(n)) {
+        std::cout << "has_supported_in_out: " << std::endl;
+    }
+
+    return v1 && v2;
+}
+
+bool AppropriateForSubgraph(const std::shared_ptr<const Node>& node) {
+    return is_layout_oblivious(node) && has_supported_in_out(node);
+}
+
 // todo: Skipping MultiSubGraphOp such as TensorIterator, Loop and If. Snippets might tokenize their bodies in the future.
 //  Note that the function is recurrent, since there might be multi-level MultiSubGraphOp, if(){if(){}}else{} for example.
 void MarkSubgraphOpAsSkipped(const std::shared_ptr<Node> &node) {
@@ -294,12 +392,19 @@ void MarkSubgraphOpAsSkipped(const std::shared_ptr<Node> &node) {
                 MarkSubgraphOpAsSkipped(n);
             }
         }
+    } else if (!AppropriateForSubgraph(node)) {
+        snippets::pass::SetSnippetsNodeType(node, snippets::pass::SnippetsNodeType::SkippedByPlugin);
     }
 }
+
 } // namespace
 
 bool SnippetsMarkSkipped::run_on_model(const std::shared_ptr<ov::Model> &m) {
     for (auto &node : m->get_ordered_ops()) {
+        if (is_type<opset1::FakeQuantize>(node)) {
+            std::cout << "SnippetsMarkSkipped::run_on_model: " << node->get_friendly_name() << std::endl;
+        }
+
         if (ngraph::op::is_constant(node))
             continue;
         if (ngraph::op::is_parameter(node)) {
@@ -340,7 +445,7 @@ bool SnippetsMarkSkipped::run_on_model(const std::shared_ptr<ov::Model> &m) {
                 NodeFusingType updatedChainType = fusingChainType;
                 if (isSuitableChildForFusingMatMul(node, updatedChainType))
                     PropagateIfHasOnlyChild(node, updatedChainType);
-            } else if (fusingChainType == NodeFusingType::IgnoredAfterInputs && snippets::pass::AppropriateForSubgraph(node)) {
+            } else if (fusingChainType == NodeFusingType::IgnoredAfterInputs && AppropriateForSubgraph(node)) {
                 SetNodeFusingType(node, NodeFusingType::IgnoredAfterInputs);
             }
         }
