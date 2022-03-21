@@ -465,7 +465,11 @@ TokenizeSnippets::TokenizeSnippets() {
         ResultVector body_results;
         std::vector<std::set<Input<Node>>> subgraph_result_inputs;
 
+        std::string first_input_subgraph_friendly_name;
         for (auto subgraph : input_subgraphs) {
+            if (first_input_subgraph_friendly_name.empty()) {
+                first_input_subgraph_friendly_name = subgraph->get_friendly_name();
+            }
             for (auto output : subgraph->outputs()) {
                 bool first_side_consumer = true;
 
@@ -517,7 +521,7 @@ TokenizeSnippets::TokenizeSnippets() {
         for (size_t i = 0; i < body->get_parameters().size(); i++) {
             body->get_parameters()[i]->set_friendly_name(body_parameters[i]->get_friendly_name());
         }
-        auto subgraph = op::build_subgraph(node, external_inputs, body);
+        auto subgraph = op::build_subgraph(node, external_inputs, body, first_input_subgraph_friendly_name);
         auto act_body = subgraph->get_body();
         for (size_t i = 0; i < act_body->get_parameters().size(); i++) {
             act_body->get_parameters()[i]->set_friendly_name(body_parameters[i]->get_friendly_name());
