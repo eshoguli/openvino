@@ -7,28 +7,13 @@
 #include "common_test_utils/ngraph_test_utils.hpp"
 #include "snippets/pass/common_optimizations.hpp"
 #include "snippets/pass/constant_folding.hpp"
-#include "fake_quantize_function.hpp"
-
-// TODO: to dbug only
 #include "snippets/op/subgraph.hpp"
+#include "fake_quantize_function.hpp"
+#include "function_helper.hpp"
 
 namespace ov {
 namespace test {
 namespace snippets {
-
-namespace {
-std::shared_ptr<ngraph::snippets::op::Subgraph> getSubgraph(const std::shared_ptr<Model>& f) {
-    std::shared_ptr<ngraph::snippets::op::Subgraph> subgraph;
-    for (const auto& op : f->get_ops()) {
-        auto tmp_subgraph = as_type_ptr<ngraph::snippets::op::Subgraph>(op);
-        if (tmp_subgraph != nullptr) {
-            NGRAPH_CHECK(subgraph == nullptr, "function contains more than one subgraph");
-            subgraph = tmp_subgraph;
-        }
-    }
-    return subgraph;
-}
-} // namespace
 
 class FakeQuantizeDecompositionTest : public TransformationTestsF {
 public:
@@ -40,16 +25,29 @@ public:
     void TearDown() override {
         TransformationTestsF::TearDown();
 
-        auto body = getSubgraph(function)->get_body();
-        auto body_ref = getSubgraph(function_ref)->get_body();
-        auto res = comparator.compare(body, body_ref);
-        ASSERT_TRUE(res.valid) << res.message;
+        auto subgraph = FunctionHelper::getSubgraph(function);
+        auto body = subgraph == nullptr ? nullptr : std::dynamic_pointer_cast<ngraph::snippets::op::Subgraph>(subgraph)->get_body();
+
+        auto subgraph_ref = FunctionHelper::getSubgraph(function_ref);
+        auto body_ref = subgraph_ref == nullptr ? nullptr : std::dynamic_pointer_cast<ngraph::snippets::op::Subgraph>(subgraph_ref)->get_body();
+
+        if ((body != nullptr) && (body_ref != nullptr)) {
+            auto res = comparator.compare(body, body_ref);
+            ASSERT_TRUE(res.valid) << res.message;
+        } else {
+            ASSERT_EQ(nullptr, body);
+            ASSERT_EQ(nullptr, body_ref);
+        }
     }
 };
 
-TEST_F(FakeQuantizeDecompositionTest, smoke_Snippets_FakeQuantizeDecomposition) {
-    function = FakeQuantizeFunction::getSubgraphWithFakeQuantize({1, 3, 299, 299}, element::f32, {{}, {}, {}, {}}, true);
-    function_ref = FakeQuantizeFunction::getSubgraphWithDecomposedFakeQuantize({1, 3, 299, 299}, element::f32, {{}, {}, {}, {}}, true);
+TEST_F(FakeQuantizeDecompositionTest, smoke_Snippets_PerTensorFakeQuantizeDecomposition) {
+    function = FakeQuantizeFunction::getSubgraphWithFakeQuantize(
+        {1, 3, 16, 16}, element::f32, {{}, {}, {}, {}}, 1.f);
+
+    function_ref = FakeQuantizeFunction::getSubgraphWithDecomposedFakeQuantize(
+        {1, 3, 16, 16}, element::f32, {{}, {}, {}, {}}, 1.f);
+
     register_passes();
 }
 

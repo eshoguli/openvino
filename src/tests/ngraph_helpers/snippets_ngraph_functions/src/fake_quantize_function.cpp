@@ -7,14 +7,15 @@
 #include <snippets/snippets_isa.hpp>
 #include <snippets/op/subgraph.hpp>
 #include "ngraph_functions/builders.hpp"
+#include "function_helper.hpp"
 
 namespace ov {
 namespace test {
 namespace snippets {
 
 namespace {
-std::shared_ptr<ngraph::op::FakeQuantize> getFakeQuantize(
-    const std::shared_ptr<Node>& parent,
+std::shared_ptr<ngraph::op::FakeQuantize> makeFakeQuantize(
+    const Output<Node>& parent,
     const ngraph::Shape& inputShape,
     const element::Type inputType,
     const std::vector<ngraph::Shape>& fakeQuantizeShapes,
@@ -44,59 +45,125 @@ std::shared_ptr<ngraph::op::FakeQuantize> getFakeQuantize(
 
     return fakeQuantize;
 }
+
+std::shared_ptr<ngraph::opset1::Convolution> makeConvolution(const Output<Node>& parent) {
+    const auto weights = ngraph::opset1::Constant::create(ngraph::element::f32, ngraph::Shape{ 3, 3, 1, 1 }, { 1.f });
+    const auto convolution = std::make_shared<ngraph::opset1::Convolution>(
+        parent,
+        weights,
+        ngraph::Strides{ 1, 1 },
+        ngraph::CoordinateDiff{ 0, 0 },
+        ngraph::CoordinateDiff{ 0, 0 },
+        ngraph::Strides{ 1, 1 });
+    convolution->set_friendly_name("Convolution");
+    return convolution;
+}
+
+std::shared_ptr<ngraph::opset1::GroupConvolution> makeGroupConvolution(const Output<Node>& parent) {
+    const auto weights = ngraph::opset1::Constant::create(ngraph::element::f32, ngraph::Shape{ 1, 3, 3, 1, 1 }, { 1.f });
+    const auto convolution = std::make_shared<ngraph::opset1::GroupConvolution>(
+        parent,
+        weights,
+        ngraph::Strides{ 1, 1 },
+        ngraph::CoordinateDiff{ 0, 0 },
+        ngraph::CoordinateDiff{ 0, 0 },
+        ngraph::Strides{ 1, 1 });
+    convolution->set_friendly_name("GroupConvolution");
+    return convolution;
+}
+
+std::shared_ptr<ngraph::opset1::MatMul> makeMatMul(const Output<Node>& parent1, const Output<Node>& parent2) {
+    const auto matMul = std::make_shared<ngraph::opset1::MatMul>(parent1, parent2);
+    matMul->set_friendly_name("MatMul");
+    return matMul;
+}
+
+Output<Node> initOperation(std::shared_ptr<Node> operation, const std::vector<Output<Node>>& parents) {
+    if (is_type<ngraph::opset1::Convolution>(operation)) {
+        assert(parents.size() == 1ul);
+        return makeConvolution(parents[0]);
+    }
+
+    if (is_type<ngraph::opset1::GroupConvolution>(operation)) {
+        assert(parents.size() == 1ul);
+        return makeGroupConvolution(parents[0]);
+    }
+
+    if (is_type<ngraph::opset1::MatMul>(operation)) {
+        assert(parents.size() == 2ul);
+        return makeMatMul(parents[0], parents[1]);
+    }
+
+    operation->set_argument(0, parents[0]);
+    auto elementType = std::string(operation->get_type_name());
+    operation->set_friendly_name(elementType);
+
+    return operation;
+}
+
+// TODO: workaround while element-wise operations after `Parameter` are not added in Subgraph
+std::shared_ptr<Node> getOperations(const std::vector<std::shared_ptr<Node>>& operations, const Output<Node>& parent) {
+    Output<Node> currentParent = parent;
+    for (auto operation : operations) {
+        operation->set_argument(0, currentParent);
+        currentParent = operation;
+    }
+    return currentParent.get_node_shared_ptr();
+}
+
 } // namespace
 
-std::shared_ptr<ov::Model> FakeQuantizeFunction::get(
+std::shared_ptr<ov::Model> FakeQuantizeFunction::getOperationAndFakeQuantize(
     const ngraph::Shape& inputShape,
     const element::Type inputType,
     const std::vector<ngraph::Shape>& fakeQuantizeShapes,
-    const float zeroPoint) {
+    const float zeroPoint,
+    const std::vector<std::shared_ptr<ngraph::Node>>& prerequisites,
+    std::shared_ptr<ngraph::Node> operation) {
     assert(fakeQuantizeShapes.size() == 4ul);
 
     const auto parameter = std::make_shared<ngraph::opset1::Parameter>(inputType, inputShape);
     parameter->set_friendly_name("parameter");
 
-    const auto convert1 = std::make_shared<ngraph::opset1::Convert>(parameter, ov::element::u8);
-    convert1->set_friendly_name("convert1");
+    auto parent = FunctionHelper::applyPrerequisites(parameter, prerequisites);
 
-    const auto relu1 = std::make_shared<ngraph::opset1::Relu>(convert1);
-    relu1->set_friendly_name("relu1");
+    const auto fakeQuantize = makeFakeQuantize(
+        operation == nullptr ? parent : initOperation(operation, { parent }),
+        inputShape,
+        inputType,
+        fakeQuantizeShapes,
+        zeroPoint);
 
-    const auto convert2 = std::make_shared<ngraph::opset1::Convert>(relu1, ov::element::f32);
-    convert2->set_friendly_name("convert2");
-
-    const auto slope2 = std::make_shared<ngraph::opset1::Constant>(ov::element::f32, ov::Shape{}, std::vector<float>{-1.f});
-    const auto relu2 = std::make_shared<ngraph::opset1::PRelu>(convert2, slope2);
-    relu2->set_friendly_name("relu2");
-
-    const auto fakeQuantize = getFakeQuantize(relu2, inputShape, inputType, fakeQuantizeShapes, zeroPoint);
     fakeQuantize->set_friendly_name("fakeQuantize");
 
-    const auto relu3 = std::make_shared<ngraph::opset1::Relu>(fakeQuantize);
-    relu3->set_friendly_name("relu3");
-
-    const auto result = std::make_shared<ngraph::opset1::Result>(relu3);
+    const auto result = std::make_shared<ngraph::opset1::Result>(fakeQuantize);
     result->set_friendly_name("result");
 
-    return std::make_shared<ngraph::Function>(ngraph::ResultVector{result}, ngraph::ParameterVector{parameter}, "FakeQuantizeFunction");
+    auto function = std::make_shared<ngraph::Function>(ngraph::ResultVector{ result }, ParameterVector{ parameter }, "FakeQuantizeFunction");
+    function->validate_nodes_and_infer_types();
+
+    return function;
 }
 
 std::shared_ptr<ov::Model> FakeQuantizeFunction::getSubgraphWithFakeQuantize(
     const ngraph::Shape& inputShape,
     const element::Type inputType,
     const std::vector<ngraph::Shape>& fakeQuantizeShapes,
-    const float zeroPoint) {
+    const float zeroPoint,
+    const std::vector<std::shared_ptr<ngraph::Node>>& prerequisites,
+    const std::vector<std::shared_ptr<Node>>& beforeFakeQuantizeOperations) {
     assert(fakeQuantizeShapes.size() == 4ul);
 
     auto getSubgraphBody = [](
         const ngraph::Shape& inputShape,
         const element::Type inputType,
         const std::vector<ngraph::Shape>& fakeQuantizeShapes,
-        const float zeroPoint) {
+        const float zeroPoint,
+        const std::vector<std::shared_ptr<Node>>& beforeFakeQuantizeOperations) {
         const auto parameter = std::make_shared<ngraph::opset1::Parameter>(inputType, inputShape);
         parameter->set_friendly_name("parameter");
 
-        const auto fakeQuantize = getFakeQuantize(parameter, inputShape, inputType, fakeQuantizeShapes, zeroPoint);
+        const auto fakeQuantize = makeFakeQuantize(getOperations(beforeFakeQuantizeOperations, {parameter}), inputShape, inputType, fakeQuantizeShapes, zeroPoint);
 
         const auto result = std::make_shared<ngraph::opset1::Result>(fakeQuantize);
         result->set_friendly_name("result");
@@ -107,15 +174,19 @@ std::shared_ptr<ov::Model> FakeQuantizeFunction::getSubgraphWithFakeQuantize(
     const auto parameter = std::make_shared<ngraph::opset1::Parameter>(inputType, inputShape);
     parameter->set_friendly_name("parameter");
 
+    auto parent = FunctionHelper::applyPrerequisites(parameter, prerequisites);
+
     const auto subgraph = std::make_shared<ngraph::snippets::op::Subgraph>(
-        ngraph::OutputVector {parameter},
-        getSubgraphBody(inputShape, inputType, fakeQuantizeShapes, zeroPoint));
+        ngraph::OutputVector{ parent },
+        getSubgraphBody(inputShape, inputType, fakeQuantizeShapes, zeroPoint, beforeFakeQuantizeOperations));
     subgraph->set_friendly_name("subgraph");
 
     const auto result = std::make_shared<ngraph::opset1::Result>(subgraph);
     result->set_friendly_name("result");
 
-    return std::make_shared<ngraph::Function>(ngraph::ResultVector{result}, ngraph::ParameterVector{parameter}, "SubgraphWithFakeQuantize");
+    auto function = std::make_shared<ngraph::Function>(ngraph::ResultVector{ result }, ParameterVector{ parameter }, "SubgraphWithFakeQuantize");
+    function->validate_nodes_and_infer_types();
+    return function;
 }
 
 std::shared_ptr<ov::Model> FakeQuantizeFunction::getSubgraphWithDecomposedFakeQuantize(
