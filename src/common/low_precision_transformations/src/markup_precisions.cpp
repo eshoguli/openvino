@@ -80,6 +80,10 @@ void setRestriction(
 bool ngraph::pass::low_precision::MarkupPrecisions::run_on_model(const std::shared_ptr<ngraph::Function>& f) {
     RUN_ON_FUNCTION_SCOPE(MarkupPrecisions);
     for (const std::shared_ptr<Node>& node : f->get_ordered_ops()) {
+        if (node->get_friendly_name() == "yolov30_repeat1/Tile") {
+            std::cout << "DEBUG" << std::endl;
+        }
+
         if (node->get_input_size() == 0) {
             continue;
         }
@@ -93,7 +97,7 @@ bool ngraph::pass::low_precision::MarkupPrecisions::run_on_model(const std::shar
         const bool supported = ov::is_type<opset1::Result>(node) || isSupported(node);
         if (!supported || !LayerTransformation::canBeTransformedStatic(node, defaultPrecisions)) {
             setRestriction(node, std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>> { {0ul, {}}}, true);
-            setRestriction(node, std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>> { {0ul, {}}}, false);
+            //setRestriction(node, std::vector<std::pair<size_t, std::vector<ngraph::element::Type>>> { {0ul, {}}}, false);
             continue;
         }
 

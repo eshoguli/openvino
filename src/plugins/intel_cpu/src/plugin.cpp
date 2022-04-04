@@ -134,6 +134,8 @@
 #include <cpu/x64/cpu_isa_traits.hpp>
 #include <itt.h>
 
+#include "ngraph/pass/serialize.hpp"
+
 using namespace InferenceEngine;
 
 #define IE_CPU_PLUGIN_THROW(...) IE_THROW(__VA_ARGS__) << "CPU plugin: "
@@ -177,6 +179,9 @@ Engine::~Engine() {
 
 static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function> nGraphFunc, const bool _enableLPT,
                                                const bool _enableSnippets, const bool isLegacyApi) {
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.original").run_on_model(nGraphFunc);
+    ngraph::pass::Serialize("c:\\Projects\\temp\\cpu.original.xml", "c:\\Projects\\temp\\cpu.original.bin").run_on_model(nGraphFunc);
+
     ngraph::pass::Manager manager;
     manager.set_per_pass_validation(false);
     manager.register_pass<ngraph::pass::InitNodeInfo>();
@@ -435,6 +440,9 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     manager.run_passes(nGraphFunc);
 
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.common").run_on_model(nGraphFunc);
+    ngraph::pass::Serialize("c:\\Projects\\temp\\cpu.common.xml", "c:\\Projects\\temp\\cpu.common.bin").run_on_model(nGraphFunc);
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         CPU_LPT_SCOPE(LowPrecisionTransformations_Part4);
@@ -496,6 +504,9 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
         });
         lptManager.run_passes(nGraphFunc);
     }
+
+    ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transformed").run_on_model(nGraphFunc);
+    ngraph::pass::Serialize("c:\\Projects\\temp\\cpu.transformed.xml", "c:\\Projects\\temp\\cpu.transformed.bin").run_on_model(nGraphFunc);
 
     ngraph::pass::Manager postLPTPassManager;
     postLPTPassManager.register_pass<ngraph::pass::FakeQuantizeDecomposition>();

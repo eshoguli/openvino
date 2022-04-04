@@ -167,24 +167,58 @@ MarkupOptimizations::MarkupOptimizations(
 
 bool ngraph::pass::low_precision::MarkupOptimizations::run_on_model(const std::shared_ptr<ngraph::Function>& f) {
     RUN_ON_FUNCTION_SCOPE(MarkupOptimizations);
-    ngraph::pass::Manager markup(get_pass_config());
-    markup.set_per_pass_validation(false);
-    markup.register_pass<low_precision::MarkupCanBeQuantized>(params.defaultPrecisions);
-    if (!precisionRestrictions.empty()) {
-        markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions, params.defaultPrecisions);
+    {
+        ngraph::pass::Manager markup(get_pass_config());
+        //markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::MarkupCanBeQuantized>(params.defaultPrecisions);
+        markup.run_passes(f);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_model(f);
     }
-    if (!quantizationRestrictions.empty()) {
-        markup.register_pass<low_precision::MarkupQuantizationGranularity>(quantizationRestrictions);
+    {
+        if (!precisionRestrictions.empty()) {
+            ngraph::pass::Manager markup(get_pass_config());
+            markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions, params.defaultPrecisions);
+            markup.run_passes(f);
+            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming2").run_on_model(f);
+        }
     }
-    if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
-        markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>(params.defaultPrecisions);
+    {
+        if (!quantizationRestrictions.empty()) {
+            ngraph::pass::Manager markup(get_pass_config());
+            markup.register_pass<low_precision::MarkupQuantizationGranularity>(quantizationRestrictions);
+            markup.run_passes(f);
+            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming3").run_on_model(f);
+        }
     }
-    markup.register_pass<low_precision::PropagatePrecisions>(params);
+    {
+        if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
+            ngraph::pass::Manager markup(get_pass_config());
+            markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>(params.defaultPrecisions);
+            markup.run_passes(f);
+            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming4").run_on_model(f);
+        }
+    }
+    {
+        ngraph::pass::Manager markup(get_pass_config());
+        markup.register_pass<low_precision::PropagatePrecisions>(params);
+        markup.run_passes(f);
+        ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming5").run_on_model(f);
+    }
     if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
-        markup.register_pass<low_precision::AlignQuantizationIntervals>(params.defaultPrecisions);
-        markup.register_pass<low_precision::AlignQuantizationParameters>(params.defaultPrecisions);
+        {
+            ngraph::pass::Manager markup(get_pass_config());
+            markup.register_pass<low_precision::AlignQuantizationIntervals>(params.defaultPrecisions);
+            markup.run_passes(f);
+            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming6").run_on_model(f);
+        }
+        {
+            ngraph::pass::Manager markup(get_pass_config());
+            markup.register_pass<low_precision::AlignQuantizationParameters>(params.defaultPrecisions);
+            markup.run_passes(f);
+            ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming7").run_on_model(f);
+        }
     }
-    markup.run_passes(f);
+
     return false;
 }
 

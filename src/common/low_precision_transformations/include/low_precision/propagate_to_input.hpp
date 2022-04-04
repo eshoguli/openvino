@@ -45,6 +45,10 @@ public:
                 return false;
             }
 
+            if (node->get_friendly_name() == "mfdetv10_conv19_fwd") {
+                std::cout << "PropagateToInput: " << node->get_friendly_name() << std::endl;
+            }
+
             {
                 OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "PropagateToInput");
 
