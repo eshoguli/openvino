@@ -562,6 +562,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
         ngraph::pass::VisualizeTree("c:\\Projects\\temp\\cpu.transforming1").run_on_model(nGraphFunc);
         {
             ngraph::pass::Manager tokenization_manager;
+            tokenization_manager.set_per_pass_validation(false);
             tokenization_manager.register_pass<ngraph::snippets::pass::ConcatenateConstants>();
             tokenization_manager.run_passes(nGraphFunc);
         }
