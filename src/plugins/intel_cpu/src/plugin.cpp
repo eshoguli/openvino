@@ -260,8 +260,14 @@ Engine::~Engine() {
     executorManager()->clear("CPUCallbackExecutor");
 }
 
+#define GNA_SUPPORT
+
 static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function> nGraphFunc, const bool _enableLPT, const bool _enableBF16,
                                                const bool _enableSnippets, const bool isLegacyApi) {
+#ifdef ENABLE_OPENVINO_DEBUG
+    ov::pass::VisualizeTree("c:\\projects\\temp\\cpu.original.svg.dot").run_on_function(nGraphFunc);
+#endif
+
     ngraph::pass::Manager manager;
     manager.set_per_pass_validation(false);
     manager.register_pass<ngraph::pass::InitNodeInfo>();
@@ -270,9 +276,12 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             _enableLPT &&
         ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(nGraphFunc);
     auto defaultPrecisions = useLpt ? ngraph::pass::low_precision::precision_set::int8_support : std::vector<ov::element::Type>{};
+#ifdef GNA_SUPPORT
     bool hasINT16orINT32Levels = false;
+#endif
     if (useLpt) {
         CPU_LPT_SCOPE(LowPrecisionTransformations_Part1);
+#ifdef GNA_SUPPORT
         hasINT16orINT32Levels = ngraph::pass::low_precision::LowPrecision::isFQLevelsPresent(
                 nGraphFunc,
                 {ngraph::pass::low_precision::levels::int16, ngraph::pass::low_precision::levels::int16_narrow_range,
@@ -280,6 +289,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
         if (hasINT16orINT32Levels) {
             defaultPrecisions = ngraph::pass::low_precision::precision_set::int8_int16_int32_support;
         }
+#endif
         manager.register_pass<ngraph::pass::DisableConvertConstantFoldingOnConstPath>(defaultPrecisions);
     }
     auto get_convert_precisions = []() {
@@ -536,6 +546,10 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     manager.run_passes(nGraphFunc);
 
+#ifdef ENABLE_OPENVINO_DEBUG
+    ov::pass::VisualizeTree("c:\\projects\\temp\\cpu.common.svg.dot").run_on_function(nGraphFunc);
+#endif
+
     using namespace ngraph::pass::low_precision;
     if (useLpt) {
         CPU_LPT_SCOPE(LowPrecisionTransformations_Part4);
@@ -583,10 +597,12 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
         // for GNA networks reference execution
         bool updatePrecision = true;
+#ifdef GNA_SUPPORT
         if (hasINT16orINT32Levels) {
             updatePrecision = false;
             supportedPrecisions = std::vector<PrecisionsRestriction>({});
         }
+#endif
 
         ngraph::pass::Manager lptManager;
         lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(
@@ -608,6 +624,10 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             return true;//MultiplyToGroupConvolutionTransformation::isDynamicOrScalar(node);
         });
         lptManager.run_passes(nGraphFunc);
+
+#ifdef ENABLE_OPENVINO_DEBUG
+        ov::pass::VisualizeTree("c:\\projects\\temp\\cpu.lpt.svg.dot").run_on_function(nGraphFunc);
+#endif
     }
 
     ngraph::pass::Manager postLPTPassManager;
@@ -695,6 +715,10 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
         });
     postSnippetsManager.register_pass<ngraph::pass::ConstantFolding>();
     postSnippetsManager.run_passes(nGraphFunc);
+
+#ifdef ENABLE_OPENVINO_DEBUG
+    ov::pass::VisualizeTree("c:\\projects\\temp\\cpu.transformed.svg.dot").run_on_function(nGraphFunc);
+#endif
 }
 
 static bool streamsSet(const std::map<std::string, std::string>& config) {

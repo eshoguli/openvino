@@ -170,6 +170,59 @@ MarkupOptimizations::MarkupOptimizations(
 
 bool ngraph::pass::low_precision::MarkupOptimizations::run_on_model(const std::shared_ptr<ngraph::Function>& f) {
     RUN_ON_FUNCTION_SCOPE(MarkupOptimizations);
+
+#ifdef ENABLE_OPENVINO_DEBUG
+    {
+        ngraph::pass::Manager markup(get_pass_config());
+        markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::MarkupCanBeQuantized>(params.defaultPrecisions);
+        markup.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.1.1.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    if (!precisionRestrictions.empty()) {
+        ngraph::pass::Manager markup(get_pass_config());
+        markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::MarkupPrecisions>(precisionRestrictions, params.defaultPrecisions);
+        markup.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.1.2.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    if (!quantizationRestrictions.empty()) {
+        ngraph::pass::Manager markup(get_pass_config());
+        markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::MarkupQuantizationGranularity>(quantizationRestrictions);
+        markup.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.1.3.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    if (ngraph::op::util::has_op_with_type<ngraph::opset1::AvgPool>(f)) {
+        ngraph::pass::Manager markup(get_pass_config());
+        markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::MarkupAvgPoolPrecisionPreserved>(params.defaultPrecisions);
+        markup.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.1.4.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    {
+        ngraph::pass::Manager markup(get_pass_config());
+        markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::PropagatePrecisions>(params);
+        markup.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.1.5.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    if (ngraph::op::util::has_op_with_type<ngraph::opset1::Concat>(f)) {
+        ngraph::pass::Manager markup(get_pass_config());
+        markup.set_per_pass_validation(false);
+        markup.register_pass<low_precision::AlignQuantizationIntervals>(params.defaultPrecisions);
+        markup.register_pass<low_precision::AlignQuantizationParameters>(params.defaultPrecisions);
+        markup.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.1.6.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+#else
+
     ngraph::pass::Manager markup(get_pass_config());
     markup.set_per_pass_validation(false);
     markup.register_pass<low_precision::MarkupCanBeQuantized>(params.defaultPrecisions);
@@ -188,6 +241,8 @@ bool ngraph::pass::low_precision::MarkupOptimizations::run_on_model(const std::s
         markup.register_pass<low_precision::AlignQuantizationParameters>(params.defaultPrecisions);
     }
     markup.run_passes(f);
+#endif
+
     return false;
 }
 
@@ -195,6 +250,106 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_model(const std::shared_p
     RUN_ON_FUNCTION_SCOPE(LowPrecision);
     OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::LPT_LT, "LowPrecision");
 
+    ov::Model::m_model = f;
+
+#ifdef ENABLE_OPENVINO_DEBUG
+    {
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.01.prerequisites.1.svg.dot").run_on_model(ov::Model::m_model);
+        auto passConfig = get_pass_config();
+        ngraph::pass::Manager manager(passConfig);
+
+        auto prerequisites = manager.register_pass<ngraph::pass::GraphRewrite>();
+        const std::vector<ngraph::element::Type> supportedTypes = {ngraph::element::i8, ngraph::element::u8};
+        prerequisites->add_matcher<PullReshapeThroughDequantization>(supportedTypes);
+        prerequisites->add_matcher<PullTransposeThroughDequantization>(supportedTypes);
+        prerequisites->add_matcher<ngraph::pass::LinOpSequenceFusion>();
+        prerequisites->add_matcher<ngraph::pass::low_precision::MoveFakeQuantize>();
+
+        manager.register_pass<TypeRelaxedReplacer>();
+        manager.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.01.prerequisites.2.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    {
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.1.svg.dot").run_on_model(ov::Model::m_model);
+        auto passConfig = get_pass_config();
+        ngraph::pass::Manager manager(passConfig);
+
+        AttributeParameters attributeParams(params.deqPrecision, params.defaultPrecisions);
+        manager.register_pass<ngraph::pass::low_precision::MarkupOptimizations>(precisionRestrictions,
+                                                                                quantizationRestrictions,
+                                                                                attributeParams);
+        manager.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.02.markup.2.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    {
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.03.main.1.svg.dot").run_on_model(ov::Model::m_model);
+        auto passConfig = get_pass_config();
+        ngraph::pass::Manager manager(passConfig);
+
+        std::shared_ptr<ngraph::pass::GraphRewrite> common = manager.register_pass<ngraph::pass::GraphRewrite>();
+        common->add_matcher<ngraph::pass::low_precision::AddTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::AssignAndReadValueTransformation>(f, params);
+        common->add_matcher<ngraph::pass::low_precision::AvgPoolTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ClampTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ConcatTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ConvolutionTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ConvolutionBackpropDataTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::DepthToSpaceTransformation>(params);
+
+        // here
+        common->add_matcher<ngraph::pass::low_precision::FakeQuantizeDecompositionTransformation>(params);
+
+        common->add_matcher<ngraph::pass::low_precision::FakeQuantizeTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::InterpolateTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::GroupConvolutionTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::MatMulTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::MaxPoolTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::MultiplyTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::MVNTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::NormalizeL2Transformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::PadTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::PReluTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::RecurrentCellTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceMaxTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceMeanTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceMinTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReduceSumTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReluTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ReshapeTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::SqueezeTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::ShuffleChannelsTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::SplitTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::StridedSliceTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::TransposeTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::UnsqueezeTransformation>(params);
+        common->add_matcher<ngraph::pass::low_precision::VariadicSplitTransformation>(params);
+        manager.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.03.main.2.svg.dot").run_on_model(ov::Model::m_model);
+    }
+
+    {
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.04.cleanup.1.svg.dot").run_on_model(ov::Model::m_model);
+        auto passConfig = get_pass_config();
+        ngraph::pass::Manager manager(passConfig);
+
+        std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = manager.register_pass<ngraph::pass::GraphRewrite>();
+        cleanup->add_matcher<ngraph::pass::low_precision::FoldConvertTransformation>(params);
+        cleanup->add_matcher<ngraph::pass::low_precision::FuseConvertTransformation>(params);
+        cleanup->add_matcher<ngraph::pass::low_precision::FuseSubtractToFakeQuantizeTransformation>(params);
+        cleanup->add_matcher<ngraph::pass::low_precision::FuseMultiplyToFakeQuantizeTransformation>(params);
+        // WA: precision restrictions for groupConv must be propagated to MultiplyToGroupConvolution transformation
+        cleanup->add_matcher<ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation>(
+            params,
+            PrecisionsRestriction::getPrecisionsByOperationType<opset1::GroupConvolution>(precisionRestrictions));
+        manager.register_pass<ngraph::pass::low_precision::FoldFakeQuantizeTransformation>(params);
+        manager.register_pass<ngraph::pass::ConstantFolding>();
+
+        manager.run_passes(f);
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.pipline.04.cleanup.2.svg.dot").run_on_model(ov::Model::m_model);
+    }
+#else
     auto passConfig = get_pass_config();
     ngraph::pass::Manager manager(passConfig);
 
@@ -258,6 +413,8 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_model(const std::shared_p
     manager.register_pass<ngraph::pass::ConstantFolding>();
 
     manager.run_passes(f);
+#endif
+
     return false;
 }
 

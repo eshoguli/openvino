@@ -85,6 +85,7 @@ bool ov::pass::GraphRewrite::apply_matcher_passes(std::shared_ptr<Model> f,
                                                   std::deque<std::weak_ptr<Node>> nodes_to_run) {
     OV_ITT_SCOPED_TASK(ov::itt::domains::core, "pass::GraphRewrite::apply_matcher_passes");
 
+    Model::m_model = f;
     bool rewritten = false;
     const auto& pass_config = get_pass_config();
 

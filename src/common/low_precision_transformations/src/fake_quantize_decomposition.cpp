@@ -134,6 +134,11 @@ DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize>
             precisionsForLevels = {element::u8, element::i8};
     }
     const auto resultPrecisions = NetworkHelper::precisionIntersection(precisions, precisionsForLevels);
+    if (resultPrecisions.empty()) {
+        // TODO: mixed precision: INT8 & INT16
+        // TODO: need tests for that
+        return DataPrecision();
+    }
 
     ngraph::element::Type precision;
     bool hasZeroPoint;
@@ -292,7 +297,15 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
         return rewritten;
     }
 
+#if ENABLE_OPENVINO_DEBUG
+    ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.1.svg.dot").run_on_model(ov::Model::m_model);
+#endif
+
     const ngraph::element::Type outputPrecision = layer->get_output_element_type(0);
+    //const ngraph::element::Type outputPrecision = node->get_friendly_name() == "FakeQuantize_21" ? 
+    //    ngraph::element::i32 : 
+    //    layer->get_output_element_type(0);
+
     if (DataPrecision::isSupported(outputPrecision)) {
         const FakeQuantizeDequantization dequantization = NetworkHelper::getDequantizationBelow(layer);
         if (dequantization.empty()) {
@@ -320,6 +333,9 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     }
 
     DataPrecision dataPrecision = fq_decomposition::getDataPrecisionByOutputPort(layer);
+    if (dataPrecision.empty()) {
+        return false;
+    }
 
     PrecisionsAttribute precisionsAttribute(defaultPrecisions);
     {
@@ -411,9 +427,16 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
         updatePrecisions,
         deqPrecision);
 
+#if ENABLE_OPENVINO_DEBUG
+    ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.2.svg.dot").run_on_model(ov::Model::m_model);
+#endif
+
     std::shared_ptr<ngraph::Node> dequantize = std::get<0>(QDQ);
     std::shared_ptr<ngraph::Node> newFakeQuantize = std::get<1>(QDQ);
     if (dequantize == nullptr || newFakeQuantize == nullptr) {
+#if ENABLE_OPENVINO_DEBUG
+        ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.3.svg.dot").run_on_model(ov::Model::m_model);
+#endif
         return rewritten;
     }
 
@@ -422,6 +445,10 @@ bool FakeQuantizeDecompositionTransformation::transform(TransformationContext& c
     if (precisionsAttribute.value().size() != 1ul) {
         precisionsAttribute.value() = { dataPrecision.precision };
     }
+
+#if ENABLE_OPENVINO_DEBUG
+    ov::pass::VisualizeTree("c:\\projects\\temp\\lpt.3.svg.dot").run_on_model(ov::Model::m_model);
+#endif
 
     return true;
 }

@@ -55,6 +55,12 @@ ov::pass::DisableConvertConstantFoldingOnConstPath::DisableConvertConstantFoldin
             return true;
         }
 
+        //if (ov::is_type<ngraph::opset1::Transpose>(parent) &&
+        //    (ov::is_type<ngraph::opset1::Subtract>(child) || ov::is_type<ngraph::opset1::Multiply>(child))) {
+        //    ov::disable_constant_folding(convert);
+        //    return true;
+        //}
+
         return false;
     };
 
