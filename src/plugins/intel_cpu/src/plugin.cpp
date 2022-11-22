@@ -271,16 +271,7 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             _enableLPT &&
         ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(nGraphFunc);
     auto defaultPrecisions = useLpt ? ngraph::pass::low_precision::precision_set::int8_support : std::vector<ov::element::Type>{};
-    bool hasINT16orINT32Levels = false;
     if (useLpt) {
-        CPU_LPT_SCOPE(LowPrecisionTransformations_Part1);
-        hasINT16orINT32Levels = ngraph::pass::low_precision::LowPrecision::isFQLevelsPresent(
-                nGraphFunc,
-                {ngraph::pass::low_precision::levels::int16, ngraph::pass::low_precision::levels::int16_narrow_range,
-                 ngraph::pass::low_precision::levels::int32, ngraph::pass::low_precision::levels::int32_narrow_range});
-        if (hasINT16orINT32Levels) {
-            defaultPrecisions = ngraph::pass::low_precision::precision_set::int8_int16_int32_support;
-        }
         manager.register_pass<ov::pass::MarkDequantizationSubgraph>(defaultPrecisions);
     }
     auto get_convert_precisions = []() {
@@ -566,18 +557,11 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
             QuantizationGranularityRestriction::create<ngraph::opset1::ConvolutionBackpropData>({0})
         });
 
-        // for GNA networks reference execution
-        bool updatePrecision = true;
-        if (hasINT16orINT32Levels) {
-            updatePrecision = false;
-            supportedPrecisions = std::vector<PrecisionsRestriction>({});
-        }
-
         ngraph::pass::Manager lptManager;
         lptManager.register_pass<ngraph::pass::low_precision::LowPrecision>(
             supportedPrecisions,
             quantizationRestrictions,
-            LayerTransformation::Params(updatePrecision, ngraph::element::f32, defaultPrecisions));
+            LayerTransformation::Params(true, ngraph::element::f32, defaultPrecisions));
         lptManager.get_pass_config()->set_callback<ngraph::pass::low_precision::MarkupPrecisions>([](const_node_ptr& node) -> bool {
             if (const auto mulitply = std::dynamic_pointer_cast<const ngraph::opset1::Multiply>(node)) {
                 return !MultiplyToGroupConvolutionTransformation::canBeTransformedToGroupConvolution(mulitply);

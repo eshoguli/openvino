@@ -49,6 +49,12 @@ ov::pass::MarkDequantizationSubgraph::MarkDequantizationSubgraph(const element::
             ov::disable_constant_folding(convert);
         }
 
+        // TODO: not completed
+        if (ov::is_type<opset10::Transpose>(input.get_node())) {
+            // disable ConstantFolding if dequantization subgraph is on constant data
+            ov::disable_constant_folding(convert);
+        }
+
         auto subtract_it = pattern_map.find(subtract_pattern);
         if (subtract_it != pattern_map.end()) {
             // mark Subtract as dequantization node
