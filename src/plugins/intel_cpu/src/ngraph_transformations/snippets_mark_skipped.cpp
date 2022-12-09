@@ -129,12 +129,13 @@ bool SupportsFusingWithConvolution_Simple(const std::shared_ptr<const Node> &nod
 }
 // Convolution is a special case, since it supports peculiar fusings
 bool isSuitableConvolutionParent(const std::shared_ptr<const Node> &node) {
-    const bool is_suitable_node = ov::is_type<ngraph::op::v1::Convolution>(node) ||
-                                  ov::is_type<ngraph::op::v1::GroupConvolution>(node);
-    // has a single output, connected to a single child
-    const auto out = node->outputs();
-    const bool has_only_child = (out.size() == 1) && (out[0].get_target_inputs().size() == 1);
-    return is_suitable_node && has_only_child;
+    //const bool is_suitable_node = ov::is_type<ngraph::op::v1::Convolution>(node) ||
+    //                              ov::is_type<ngraph::op::v1::GroupConvolution>(node);
+    //// has a single output, connected to a single child
+    //const auto out = node->outputs();
+    //const bool has_only_child = (out.size() == 1) && (out[0].get_target_inputs().size() == 1);
+    //return is_suitable_node && has_only_child;
+    return false;
 }
 bool isSuitableBinaryConvolutionParent(const std::shared_ptr<const Node> &node) {
     const bool is_suitable_node = ov::is_type<ngraph::op::v1::BinaryConvolution>(node);

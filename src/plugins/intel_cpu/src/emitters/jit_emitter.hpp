@@ -21,7 +21,26 @@ enum emitter_in_out_map {
     vec_to_gpr,
     gpr_to_vec,
     gpr_to_gpr,
+    // TODO: workarround to support Convolution
+    mixed
 };
+
+#define MARKER_PREAMBLE_BEGIN2    0
+#define MARKER_LOAD               0
+#define MARKER_BROADCAST          1
+#define MARKER_BROADCAST_LOAD     2
+#define MARKER_ADD                3
+#define MARKER_MULTIPLY           4
+#define MARKER_STORE              5
+#define MARKER_TILE               6
+#define MARKER_TILE_SCHEDULER     7
+#define MARKER_MAX_POOL           8
+#define MARKER_LOOP               9
+#define MARKER_CONVOLUTION_KERNEL 10
+#define MARKER_CONDITIONAL_JUMP   11
+#define MARKER_LABEL              12
+#define MARKER_CLAMP              12
+#define MARKER_KERNEL             15
 
 // structure for storage of emitter parameters to hash in map
 struct emitter_params {
@@ -138,6 +157,9 @@ protected:
             push_arg_entry_of(key, te.val, te.bcast);
         }
     }
+
+    // TODO: backprop: just to debug
+    void insert_marker(const size_t marker) const;
 
 private:
     mutable std::vector<size_t> preserved_vec_idxs;

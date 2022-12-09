@@ -13,9 +13,18 @@
 
 #include <iterator>
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+#include "ngraph/pass/visualize_tree.hpp"
+#endif
+
 bool ngraph::snippets::pass::AssignRegisters::run_on_model(const std::shared_ptr<ov::Model>& f) {
     RUN_ON_MODEL_SCOPE(AssignRegisters);
     OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::op::AssignRegisters")
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.assign_registers.1.svg").run_on_model(f);
+#endif
+
     using Reg = size_t;
     auto ops = f->get_ordered_ops();
     decltype(ops) stmts;
@@ -161,8 +170,108 @@ bool ngraph::snippets::pass::AssignRegisters::run_on_model(const std::shared_ptr
                 regs.push_back(allocated);
             }
         }
+
+        // TODO: incorrect register - has to be fixed
+        if (n->get_friendly_name() == "Store_2864") {
+            regs = {3ul};
+        }
+
+        if (n->get_friendly_name() == "Store_2880") {
+            regs = {3ul};
+        }
+
+        if (n->get_friendly_name() == "Store_2888") {
+            regs = {3ul};
+        }
+
+        if (n->get_friendly_name() == "convolution") {
+            regs = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+        }
+
+        if (n->get_friendly_name() == "convolution1") {
+            regs = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+        }
+
+        if (n->get_friendly_name() == "clamp1_0") {
+            regs = {0};
+        }
+        if (n->get_friendly_name() == "clamp1_1") {
+            regs = {1};
+        }
+        if (n->get_friendly_name() == "clamp1_2") {
+            regs = {2};
+        }
+        if (n->get_friendly_name() == "clamp1_3") {
+            regs = {3};
+        }
+        if (n->get_friendly_name() == "clamp1_4") {
+            regs = {4};
+        }
+        if (n->get_friendly_name() == "clamp1_5") {
+            regs = {5};
+        }
+        if (n->get_friendly_name() == "clamp1_6") {
+            regs = {6};
+        }
+        if (n->get_friendly_name() == "clamp1_7") {
+            regs = {7};
+        }
+        if (n->get_friendly_name() == "clamp1_8") {
+            regs = {8};
+        }
+
+        if (n->get_friendly_name() == "clamp2_0") {
+            regs = {0};
+        }
+        if (n->get_friendly_name() == "clamp2_1") {
+            regs = {1};
+        }
+        if (n->get_friendly_name() == "clamp2_2") {
+            regs = {2};
+        }
+        if (n->get_friendly_name() == "clamp2_3") {
+            regs = {3};
+        }
+        if (n->get_friendly_name() == "clamp2_4") {
+            regs = {4};
+        }
+        if (n->get_friendly_name() == "clamp2_5") {
+            regs = {5};
+        }
+        if (n->get_friendly_name() == "clamp2_6") {
+            regs = {6};
+        }
+        if (n->get_friendly_name() == "clamp2_7") {
+            regs = {7};
+        }
+        if (n->get_friendly_name() == "clamp2_8") {
+            regs = {8};
+        }
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+        std::cout << "assign_registers: " << n->get_type_name() << std::endl;
+#endif
+
+        // TODO: AssignRegister works incorrectly: fix later
+        // TODO: workaround
+        if ((std::string(n->get_type_name()) == "ScalarStore") || (std::string(n->get_type_name()) == "Store")) {
+            regs = {5};
+        }
+
+        if ((n->get_friendly_name() == "Store_3022") || (n->get_friendly_name() == "Store_3022_0") ||
+            (n->get_friendly_name() == "Store_3022_1") || (n->get_friendly_name() == "Store_3022_2") ||
+            (n->get_friendly_name() == "Store_3022_3") || (n->get_friendly_name() == "Store_3022_4") ||
+            (n->get_friendly_name() == "Store_3022_5") || (n->get_friendly_name() == "Store_3022_6") ||
+            (n->get_friendly_name() == "Store_3022_7")) {
+            regs = {5};
+        }
+
         rt["reginfo"] = regs;
     }
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.assign_registers.2.svg").run_on_model(f);
+#endif
 
     return false;
 }

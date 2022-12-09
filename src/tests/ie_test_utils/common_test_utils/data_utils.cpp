@@ -8,6 +8,7 @@
 
 #include <ie_blob.h>
 #include <blob_factory.hpp>
+#include <gtest/internal/gtest-internal.h>
 
 using namespace InferenceEngine::details;
 
@@ -251,4 +252,28 @@ void fill_data_const(InferenceEngine::Blob::Ptr& blob, const std::vector<float> 
 void fill_data_const(InferenceEngine::Blob::Ptr& blob, float val) {
     fill_data_const(blob, std::vector<float> {val});
 }
+
+//#define CPU_DEBUG_CAPS_DATA
+void fill_data_random(float* pointer, std::size_t size, const uint32_t range, int32_t start_from, const int32_t k, const int seed) {
+#ifdef DEBUG_DATA
+    for (std::size_t i = 0; i < size; i++) {
+        // input data
+
+        pointer[i] = static_cast<float>(i) + 1;
+        //pointer[i] = 0.5 + static_cast<float>(i) / 100.f;
+    }
+#else
+    testing::internal::Random random(seed);
+    random.Generate(range);
+
+    if (start_from < 0 && !std::is_signed<float>::value) {
+        start_from = 0;
+    }
+
+    for (std::size_t i = 0; i < size; i++) {
+        pointer[i] = static_cast<float>(start_from + static_cast<float>(random.Generate(range)) / k);
+    }
+#endif
+}
+
 }  // namespace CommonTestUtils

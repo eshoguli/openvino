@@ -22,6 +22,13 @@ size_t jit_emitter::get_vec_length() const {
            one_of(host_isa_, cpu::x64::avx2) ? 32 : 16;
 }
 
+void jit_emitter::insert_marker(const size_t marker) const {
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    Ymm vmm_divider = Ymm(marker);
+    h->uni_vmovups(vmm_divider, vmm_divider);
+#endif
+}
+
 void jit_emitter::push_vec(const Xbyak::Address &addr, size_t vec_idx) const {
     if (host_isa_ == cpu::x64::sse41) {
         h->uni_vmovups(addr, Xmm(vec_idx));
@@ -62,8 +69,16 @@ std::set<InferenceEngine::Precision> jit_emitter::get_supported_precisions() {
 void jit_emitter::emitter_preamble(const std::vector<size_t> &in_idxs, const std::vector<size_t> &out_idxs,
                                    const std::vector<size_t> &pool_vec_idxs, const std::vector<size_t> &pool_gpr_idxs) const {
     using namespace Xbyak::util;
-    bool is_vec_input = (in_out_type_ == emitter_in_out_map::vec_to_vec) || (in_out_type_ == emitter_in_out_map::vec_to_gpr);
-    bool is_vec_output = (in_out_type_ == emitter_in_out_map::vec_to_vec) || (in_out_type_ == emitter_in_out_map::gpr_to_vec);
+
+    bool is_vec_input = 
+        (in_out_type_ == emitter_in_out_map::vec_to_vec) ||
+        (in_out_type_ == emitter_in_out_map::vec_to_gpr) || 
+        (in_out_type_ == emitter_in_out_map::mixed);
+
+    bool is_vec_output = 
+        (in_out_type_ == emitter_in_out_map::vec_to_vec) ||
+        (in_out_type_ == emitter_in_out_map::gpr_to_vec) ||
+        (in_out_type_ == emitter_in_out_map::mixed);
 
     for (auto idx : pool_vec_idxs)
         aux_vec_idxs.push_back(idx);

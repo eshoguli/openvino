@@ -11,6 +11,7 @@
 
 #include "transformations/utils/utils.hpp"
 #include "snippets/pass/fq_decomposition.hpp"
+#include "snippets/pass/convolution_decomposition.hpp"
 #include "snippets/op/subgraph.hpp"
 #include "snippets/itt.hpp"
 
@@ -61,6 +62,9 @@ CommonOptimizations::CommonOptimizations() {
         }
 
         auto body = subgraph->body_ptr();
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+        ngraph::pass::VisualizeTree("svg/snippets.common.1.svg").run_on_model(body);
+#endif
         const auto is_quantized = subgraph->is_quantized();
 
         // Firsly we should transform all original Converts inside body to ConvertTruncation to save original behavior.
@@ -70,6 +74,11 @@ CommonOptimizations::CommonOptimizations() {
         if (is_quantized) {
             manager.register_pass<ngraph::snippets::pass::CommonFakeQuantizeDecomposition>();
         }
+
+        //manager.register_pass<snippets::pass::ConvolutionDecomposition>();
+        //manager.register_pass<ngraph::pass::ConstantFolding>();
+        //manager.register_pass<ngraph::pass::Validate>();
+
         manager.run_passes(body);
 
         // At the moment only non-scalar Constants of FakeQuantize can be inside Subgraph
@@ -77,6 +86,10 @@ CommonOptimizations::CommonOptimizations() {
         if (is_quantized) {
             ConvertConstantsToParameters(subgraph);
         }
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+        ngraph::pass::VisualizeTree("svg/snippets.common.2.svg").run_on_model(body);
+#endif
         return true;
     };
 

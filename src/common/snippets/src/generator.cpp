@@ -12,6 +12,10 @@
 
 #include <ngraph/pass/manager.hpp>
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+#include "ngraph/pass/visualize_tree.hpp"
+#endif
+
 auto ngraph::snippets::getRegisters(std::shared_ptr<ngraph::Node>& n) -> ngraph::snippets::RegInfo {
     OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::getRegisters")
     auto rt = n->get_rt_info();
@@ -30,9 +34,13 @@ auto ngraph::snippets::getRegisters(std::shared_ptr<ngraph::Node>& n) -> ngraph:
         auto rt = input.get_source_output().get_node_shared_ptr()->get_rt_info();
         auto it_rt = rt.find("reginfo");
         if (it_rt != rt.end()) {
-            for (auto& reg : it_rt->second.as<std::vector<size_t>>()) {
-                rin.push_back(reg);
+            const auto& registers = it_rt->second.as<std::vector<size_t>>();
+            const auto output_index = input.get_source_output().get_index();
+            if (registers.size() <= output_index) {
+                throw ov::Exception("unexcepted registers count");
             }
+
+            rin.push_back(registers[output_index]);
         }
     }
     return std::make_pair(rin, rout);
@@ -40,6 +48,10 @@ auto ngraph::snippets::getRegisters(std::shared_ptr<ngraph::Node>& n) -> ngraph:
 
 ngraph::snippets::code ngraph::snippets::Generator::generate(std::shared_ptr<ov::Model>& m,
                                                              const void* compile_params) const {
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ov::pass::VisualizeTree("svg/snippets.generator.1.svg").run_on_model(m);
+#endif
+
     OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::Generator::generate")
     if (!target->is_supported())
         throw ngraph_error("unsupported architecture for code genration");
@@ -69,10 +81,20 @@ ngraph::snippets::code ngraph::snippets::Generator::generate(std::shared_ptr<ov:
 
     // scalar tile
     auto m_scalar = ov::clone_model(*m.get());
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ov::pass::VisualizeTree("svg/snippets.generator.2.svg").run_on_model(m_scalar);
+#endif
+
     ngraph::pass::Manager mng;
     mng.register_pass<ngraph::snippets::pass::SetScalarCountForLoad>();
     mng.register_pass<ngraph::snippets::pass::SetScalarCountForStore>();
     mng.run_passes(m_scalar);
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ov::pass::VisualizeTree("svg/snippets.generator.3.svg").run_on_model(m);
+#endif
+
     OV_ITT_TASK_NEXT(GENERATE, "::ScalarTile_get")
     std::vector<AllocatedEmitter> scalar_lowered;
     for (auto n : m_scalar->get_ordered_ops()) {
@@ -82,8 +104,11 @@ ngraph::snippets::code ngraph::snippets::Generator::generate(std::shared_ptr<ov:
     // wrapping into tiles1D
     //todo: in, out, and io_last_dims should derive naturally from the graph representation
     const auto& vector_tile = std::make_shared<ngraph::snippets::op::Tile>(lowered, target->get_lanes(), in, out, io_last_dims, io_data_sizes);
-    const auto& vector_region = std::make_pair(target->get(ngraph::snippets::op::Tile::get_type_info_static())(vector_tile),
-                                   std::make_pair(std::vector<size_t>{}, std::vector<size_t>{}));
+    const auto& vector_region = std::make_pair(
+        target->get(ngraph::snippets::op::Tile::get_type_info_static())(vector_tile),
+        std::make_pair(
+            std::vector<size_t>{target->get_lanes()},
+            std::vector<size_t>{}));
     const auto& scalar_tile = std::make_shared<ngraph::snippets::op::Tile>(scalar_lowered, 1, in, out, io_last_dims, io_data_sizes);
     const auto& scalar_region = std::make_pair(target->get(ngraph::snippets::op::Tile::get_type_info_static())(scalar_tile),
                     std::make_pair(std::vector<size_t>{}, std::vector<size_t>{}));

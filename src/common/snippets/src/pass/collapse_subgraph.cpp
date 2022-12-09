@@ -173,8 +173,16 @@ auto update_out_tensor_name(std::shared_ptr<ngraph::snippets::op::Subgraph> &sub
 }
 } // namespace
 
+// TODO: refactor
+auto is_layout_dependent(const std::shared_ptr<const Node>& n) -> bool {
+    return 
+        ov::is_type<opset1::MaxPool>(n) || 
+        ov::is_type<opset1::Convolution>(n) ||
+        ov::is_type<opset1::GroupConvolution>(n);
+}
+
 bool AppropriateForSubgraph(const std::shared_ptr<const Node> &node) {
-    return is_supported_op(node) && has_supported_in_out(node) && node->get_control_dependencies().empty();
+    return (is_supported_op(node) || is_layout_dependent(node)) && has_supported_in_out(node) && node->get_control_dependencies().empty();
 }
 
 void SetSnippetsNodeType(const std::shared_ptr<Node> &node, SnippetsNodeType nodeType) {
@@ -224,6 +232,13 @@ TokenizeSnippets::TokenizeSnippets() {
     continuation_strategy strategy = continuation_strategy::reset;
     auto label = std::make_shared<pattern::op::Label>(pattern::any_input(),
         [](const std::shared_ptr<const Node> &n) {
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+            if ((n->get_friendly_name() == "convolution1") || (n->get_friendly_name() == "convolution2")) {
+                const auto v1 = GetSnippetsNodeType(n) != SnippetsNodeType::SkippedByPlugin;
+                const auto v2 = AppropriateForSubgraph(n);
+                assert(v1 && v2);
+            }
+#endif
             return GetSnippetsNodeType(n) != SnippetsNodeType::SkippedByPlugin && AppropriateForSubgraph(n);
         });
     ngraph::graph_rewrite_callback callback = [&, strategy](ngraph::pattern::Matcher &m) -> bool {

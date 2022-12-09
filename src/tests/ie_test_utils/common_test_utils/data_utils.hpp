@@ -190,6 +190,8 @@ fill_data_roi(ov::runtime::Tensor& tensor, const uint32_t range, const int heigh
     }
 }
 
+//void fill_data_random(float* pointer, std::size_t size, const uint32_t range = 10, int32_t start_from = 0, const int32_t k = 1, const int seed = 1);
+
 template<class T>
 void inline
 fill_data_random(T *pointer, std::size_t size, const uint32_t range = 10, int32_t start_from = 0, const int32_t k = 1,

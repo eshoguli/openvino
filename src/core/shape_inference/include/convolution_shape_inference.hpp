@@ -278,6 +278,12 @@ void shape_infer(const Convolution* op,
                  const CoordinateDiff& pads_end,
                  const std::vector<T>& input_shapes,
                  std::vector<T>& output_shapes) {
+    // TODO: not completed
+    if ((input_shapes[0].size() == 5ull) && (input_shapes[1].size() == 6ull)) {
+        output_shapes[0] = T{input_shapes[0][0], input_shapes[1][0], input_shapes[0][2], input_shapes[0][3], 8ul};
+        return;
+    }
+
     NODE_VALIDATION_CHECK(op, input_shapes.size() == 2 && output_shapes.size() == 1);
     constexpr size_t num_non_spatial_data_dims = 2, num_non_spatial_filter_dims = 2;
     auto input_shape = input_shapes[0], filters_shape = input_shapes[1];
@@ -360,6 +366,12 @@ void shape_infer(const GroupConvolution* op,
         input_shape.resize(num_spatial + num_non_spatial_data_dims);
     if (filters_shape.rank().is_dynamic())
         filters_shape.resize(num_spatial + num_non_spatial_filter_dims);
+
+    // TODO: not completed
+    if ((input_shapes[0].size() == 5ull) && (input_shapes[1].size() == 6ull)) {
+        output_shapes[0] = T{input_shapes[0][0], input_shapes[1][0], input_shapes[0][2] - 2ull, input_shapes[0][3] - 2ull, 8ul};
+        return;
+    }
 
     NODE_VALIDATION_CHECK(
         op,

@@ -72,6 +72,14 @@ ngraph::snippets::pass::InsertMoveBroadcast::InsertMoveBroadcast() {
             }
             return false;
         };
+
+        // TODO: workaround
+        if (is_type<ngraph::opset1::Add>(root) &&
+            (is_type<ngraph::opset1::Convolution>(root->get_input_node_shared_ptr(0)) ||
+             is_type<ngraph::opset1::GroupConvolution>(root->get_input_node_shared_ptr(0)))) {
+            return false;
+        }
+
         std::vector<ov::Shape> input_shapes;
         std::vector<bool> ignore_as_scalar;
         for (const auto& val : values) {

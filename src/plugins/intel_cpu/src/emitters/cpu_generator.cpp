@@ -21,6 +21,12 @@
 
 #include <ngraph/opsets/opset5.hpp>
 
+#include "snippets/op/convolution_merged_1x1_kernel.hpp"
+#include "snippets/op/convolution_merged_dw_kernel.hpp"
+
+#include "jit_conv_merged_1x1_kernel.hpp"
+#include "jit_conv_merged_dw_kernel.hpp"
+
 using namespace std;
 using namespace ngraph::snippets;
 
@@ -64,6 +70,9 @@ ov::intel_cpu::CPUTargetMachine::CPUTargetMachine(dnnl::impl::cpu::x64::cpu_isa_
     jitters[ngraph::snippets::op::ConvertTruncation::get_type_info_static()] = CREATE_EMITTER(ov::intel_cpu::jit_convert_truncation_emitter);
     jitters[ngraph::snippets::op::ConvertSaturation::get_type_info_static()] = CREATE_EMITTER(ov::intel_cpu::jit_convert_saturation_emitter);
     // jitters[ngraph::opset1::FakeQuantize::get_type_info_static()] = CREATE_EMITTER(); // not supported
+
+    jitters[ngraph::snippets::op::ConvolutionMerged1x1Kernel::get_type_info_static()] = CREATE_EMITTER(ConvolutionMerged1x1KernelEmitter);
+    jitters[ngraph::snippets::op::ConvolutionMergedDwKernel::get_type_info_static()] = CREATE_EMITTER(ConvolutionMergedDwKernelEmitter);
 
     // binary
     jitters[ngraph::opset1::Add::get_type_info_static()] = CREATE_EMITTER(ov::intel_cpu::jit_add_emitter);

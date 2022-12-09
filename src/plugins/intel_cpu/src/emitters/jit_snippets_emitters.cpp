@@ -7,6 +7,7 @@
 #include <cpu/x64/jit_generator.hpp>
 
 #include "jit_snippets_emitters.hpp"
+#include "jit_snippets_generator.hpp"
 
 using namespace Xbyak;
 
@@ -68,6 +69,33 @@ void jit_container_emitter::map_abstract_registers(const std::vector<size_t> &ve
                 vecs_used.insert(in_physical_regs.begin(), in_physical_regs.end());
                 vecs_used.insert(out_physical_regs.begin(), out_physical_regs.end());
                 break;
+            case mixed: {
+                // Load Emitters
+                std::vector<size_t> in_vec_abstract_regs;
+                for (auto i = 0ull; i < 9ull; ++i) {
+                    in_vec_abstract_regs.push_back(in_abstract_regs[i]);
+                }
+                auto in_vec_physical_regs = std::move(abstract_to_physical(in_vec_abstract_regs, vec_pool));
+                vecs_used.insert(in_vec_physical_regs.begin(), in_vec_physical_regs.end());
+                for (auto reg : in_vec_physical_regs) {
+                    in_physical_regs.push_back(reg);
+                }
+
+                std::vector<size_t> in_gpr_abstract_regs;
+                for (auto i = 9ull; i < 11ull; ++i) {
+                    in_gpr_abstract_regs.push_back(in_abstract_regs[i]);
+                }
+                auto in_grp_physical_regs = std::move(abstract_to_physical(in_gpr_abstract_regs, gpr_pool));
+                gprs_used.insert(in_grp_physical_regs.begin(), in_grp_physical_regs.end());
+                for (auto reg : in_grp_physical_regs) {
+                    in_physical_regs.push_back(reg);
+                }
+
+                out_physical_regs = std::move(abstract_to_physical(out_abstract_regs, vec_pool));
+                vecs_used.insert(out_physical_regs.begin(), out_physical_regs.end());
+
+                break;
+            }
             default:
                 IE_THROW() << "Unhandled in_out type";
         }
@@ -142,13 +170,17 @@ void KernelEmitter::init_data_pointers(size_t num_inputs, size_t num_params,
         }
     };
     for (auto i = 0; i < num_params; i++) {
-        if (i < num_inputs)
+        insert_marker(MARKER_KERNEL);
+        if (i < num_inputs) {
             h->mov(data_ptr_regs[i], h->ptr[reg_const_params + GET_OFF(src_ptrs) + i * sizeof(void*)]);
-        else
+        } else {
+            assert(data_ptr_regs.size() > i);
             h->mov(data_ptr_regs[i], h->ptr[reg_const_params + GET_OFF(dst_ptrs) + (i - num_inputs) * sizeof(void*)]);
+        }
         // we can use the last data_ptr_reg as tmp_reg until the last iteration, and reg_const_params then
         Reg64 reg_tmp = i < num_params-1 ? data_ptr_regs.back() : reg_const_params;
         init_ptrs_with_offsets(data_ptr_regs[i], &jcp.data_offsets[i * harness_num_dims], reg_tmp);
+        insert_marker(MARKER_KERNEL);
     }
 }
 void KernelEmitter::emit_impl(const std::vector<size_t>& in,
@@ -156,7 +188,10 @@ void KernelEmitter::emit_impl(const std::vector<size_t>& in,
                               const std::vector<size_t>& allocated_vec_regs,
                               const std::vector<size_t>& allocated_gp_regs,
                               const ov::intel_cpu::emitter_context *emit_context) const {
+    insert_marker(MARKER_PREAMBLE_BEGIN2);
     h->preamble();
+
+    insert_marker(MARKER_KERNEL);
 
     const size_t num_inputs = in[0];
     const size_t num_outputs = in[1];
@@ -180,6 +215,9 @@ void KernelEmitter::emit_impl(const std::vector<size_t>& in,
             out_regs = gp_regs_used;
         emitter->emit_code(in_regs, out_regs, vec_regs_pool, local_gpr_pool);
     }
+
+    insert_marker(MARKER_KERNEL);
+
     h->postamble();
 }
 
@@ -206,8 +244,9 @@ void TileSchedulerEmitter::validate_arguments(const std::vector<size_t> &in,
                                      const std::vector<size_t> &gpr) const {
     if (in.size() != 3)
         IE_THROW() << "TileSchedulerEmitter got invalid number of inputs. Expected 3, got " << in.size();
-    if (out.size() != in[0] + in[1])
-        IE_THROW() << "TileSchedulerEmitter got invalid number of outputs. Expected " << in[0] + in[1] << " , got " << out.size();
+    // TODO: different input & output channels
+    //if (out.size() != in[0] + in[1])
+    //    IE_THROW() << "TileSchedulerEmitter got invalid number of outputs. Expected " << in[0] + in[1] << " , got " << out.size();
     if (body.size() != 2)
         IE_THROW() << "TileSchedulerEmitter got invalid body size, expected 2 (vector & scalar TileEmitter), got " << body.size();
     if (!(std::dynamic_pointer_cast<TileEmitter>(body[0].first) && std::dynamic_pointer_cast<TileEmitter>(body[1].first)))
@@ -271,6 +310,8 @@ void TileSchedulerEmitter::emit_impl(const std::vector<size_t>& in,
                                      const std::vector<size_t>& vec_pool,
                                      const std::vector<size_t>& gpr_pool,
                                      const ov::intel_cpu::emitter_context *emit_context) const {
+    insert_marker(MARKER_TILE_SCHEDULER);
+
     const size_t num_inputs = in[0];
     const size_t num_outputs = in[1];
     const size_t vector_size = in[2];
@@ -285,6 +326,10 @@ void TileSchedulerEmitter::emit_impl(const std::vector<size_t>& in,
     local_gpr_pool.pop_back();
     Reg64 reg_inner_amount = Reg64(static_cast<int>(local_gpr_pool.back()));
     local_gpr_pool.pop_back();
+
+    //auto h2 = static_cast<jit_snippets_generator*>(h);
+    //h2->init_registers(local_gpr_pool);
+
     Label for_body;
     const size_t outer_work_amount = jcp.scheduler_dims[0];
     if (outer_work_amount == 1) {
@@ -302,7 +347,9 @@ void TileSchedulerEmitter::emit_impl(const std::vector<size_t>& in,
             //   To overcome this limitation, we add appropriate negative offsets if necessary.
             for (auto i = 0; i < num_params; i++) {
                 if (jcp.scheduler_offsets[i] != 0) {
-                    h->add(data_ptr_regs[i], jcp.scheduler_offsets[i]);
+                    // TODO: backprop: question: tile offset is here
+                    auto offset = jcp.scheduler_offsets[i];
+                    h->add(data_ptr_regs[i], offset);
                 }
             }
             // Note that outer dimensions are always incremented by 1 (outer tiles are always scalar)
@@ -311,6 +358,27 @@ void TileSchedulerEmitter::emit_impl(const std::vector<size_t>& in,
             h->jge(for_body, CodeGenerator::T_NEAR);
         }
     }
+
+    insert_marker(MARKER_TILE_SCHEDULER);
+
+    // const auto weight_gp_1x1 = Reg64(3);
+    // h->add(weight_gp_1x1, 512);
+    // const auto biases_gp_1x1 = Reg64(6);
+    // h->add(biases_gp_1x1, 32);
+
+    // const auto weight_gp_dw = Reg64(8);
+    // h->add(weight_gp_dw, 288);
+    // const auto biases_gp_dw = Reg64(7);
+    // h->add(biases_gp_dw, 32);
+
+    // const auto output_gp = Reg64(9);
+    // h->add(output_gp, 110 * 110 * 8 * 4);
+
+    // h->sub(loop_r, 1);
+    // h->cmp(loop_r, 1);
+    // h->jge(for_body, CodeGenerator::T_NEAR);
+
+    // insert_marker(MARKER_TILE_SCHEDULER);
 }
 
 std::vector<AllocatedEmitter>& TileEmitter::get_nested_code() {
@@ -370,6 +438,8 @@ void TileEmitter::emit_impl(const std::vector<size_t>& in,
                             const std::vector<size_t>& vec_pool,
                             const std::vector<size_t>& gpr_pool,
                             const ov::intel_cpu::emitter_context *emit_context) const {
+    insert_marker(MARKER_TILE);
+
     Reg64 work_amount = Reg64(static_cast<int>(in[0]));
     std::vector<Reg64> data_ptr_regs;
     transform_idxs_to_regs(out, data_ptr_regs);
@@ -383,6 +453,8 @@ void TileEmitter::emit_impl(const std::vector<size_t>& in,
     h->sub(work_amount, increment);
     h->cmp(work_amount, increment);
     h->jge(for_body, CodeGenerator::T_NEAR);
+
+    insert_marker(MARKER_TILE);
 }
 
 BroadcastMoveEmitter::BroadcastMoveEmitter(dnnl::impl::cpu::x64::jit_generator* h, dnnl::impl::cpu::x64::cpu_isa_t isa,
@@ -490,11 +562,23 @@ void StoreEmitter::emit_impl(const std::vector<size_t>& in,
 
 template <dnnl::impl::cpu::x64::cpu_isa_t isa>
 void StoreEmitter::emit_isa(const std::vector<size_t> &in, const std::vector<size_t> &out) const {
-    using Vmm = typename dnnl::impl::utils::conditional3<isa == dnnl::impl::cpu::x64::sse41,
-            Xmm, isa == dnnl::impl::cpu::x64::avx2, Ymm, Zmm>::type;
-    if (!store_emitter)
-        IE_THROW() << "Store CPU emitter isn't initialized for StoreEmitter!";
-    store_emitter->emit_code({in[0]}, {out[0]}, aux_vec_idxs, aux_gpr_idxs);
+    insert_marker(MARKER_STORE);
+
+    //using Vmm = typename dnnl::impl::utils::conditional3<isa == dnnl::impl::cpu::x64::sse41,
+    //        Xmm, isa == dnnl::impl::cpu::x64::avx2, Ymm, Zmm>::type;
+    //if (!store_emitter)
+    //    IE_THROW() << "Store CPU emitter isn't initialized for StoreEmitter!";
+    //store_emitter->emit_code({in[0]}, {out[0]}, aux_vec_idxs, aux_gpr_idxs);
+
+    // TODO: new source code issue: StoreEmitter::emit_isa
+    using Vmm = typename dnnl::impl::utils::
+    conditional3<isa == dnnl::impl::cpu::x64::sse41, Xmm, isa == dnnl::impl::cpu::x64::avx2, Ymm, Zmm>::type;
+    Reg64 out_reg(static_cast<int>(out[0]));
+    Vmm vmm_src0 = Vmm(in[0]);
+    h->uni_vmovups(h->ptr[out_reg], vmm_src0);
+    h->add(out_reg, dnnl::impl::cpu::x64::cpu_isa_traits<isa>::vlen);
+
+    insert_marker(MARKER_STORE);
 }
 
 void StoreEmitter::emit_data() const {
@@ -529,11 +613,15 @@ void LoadEmitter::emit_impl(const std::vector<size_t>& in,
 
 template <dnnl::impl::cpu::x64::cpu_isa_t isa>
 void LoadEmitter::emit_isa(const std::vector<size_t> &in, const std::vector<size_t> &out) const {
+    insert_marker(MARKER_LOAD);
+
     using Vmm = typename dnnl::impl::utils::conditional3<isa == dnnl::impl::cpu::x64::sse41,
             Xmm, isa == dnnl::impl::cpu::x64::avx2, Ymm, Zmm>::type;
     if (!load_emitter)
         IE_THROW() << "Load CPU emitter isn't initialized for LoadEmitter!";
     load_emitter->emit_code({in[0]}, {out[0]}, aux_vec_idxs, aux_gpr_idxs);
+
+    insert_marker(MARKER_LOAD);
 }
 
 void LoadEmitter::emit_data() const {
