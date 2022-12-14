@@ -82,6 +82,8 @@
 #include "low_precision/fuse_subtract_to_fake_quantize.hpp"
 #include "low_precision/multiply_to_group_convolution.hpp"
 
+#include "low_precision/update_precision.hpp"
+
 ngraph::pass::low_precision::LowPrecision::LowPrecision(
     const std::vector<PrecisionsRestriction>& precisionRestrictions,
     const std::vector<QuantizationGranularityRestriction>& quantizationRestrictions,
@@ -265,6 +267,13 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_model(const std::shared_p
     REGISTER_PASS(manager, ConstantFolding)
 
     manager.run_passes(f);
+
+    if (params.keepPrecision != ov::element::undefined) {
+        auto passConfig = get_pass_config();
+        ngraph::pass::Manager manager(passConfig);
+        manager.register_pass<ngraph::pass::low_precision::UpdatePrecision>(params.keepPrecision);
+        manager.run_passes(f);
+    }
     return false;
 }
 

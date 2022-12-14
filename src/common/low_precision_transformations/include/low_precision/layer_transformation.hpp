@@ -243,11 +243,13 @@ public:
             element::Type deqPrecision = element::f32,
             const std::vector<ngraph::element::Type> defaultPrecisions =
             { ngraph::element::u8,  ngraph::element::i8 },
-            const bool reshapeIgnorePerTensorQuantizationCheck = false) :
+            const bool reshapeIgnorePerTensorQuantizationCheck = false,
+            const element::Type keepPrecision = element::undefined) :
             updatePrecisions(updatePrecisions),
             deqPrecision(deqPrecision),
             defaultPrecisions(defaultPrecisions),
-            reshapeIgnorePerTensorQuantizationCheck(reshapeIgnorePerTensorQuantizationCheck) {}
+            reshapeIgnorePerTensorQuantizationCheck(reshapeIgnorePerTensorQuantizationCheck),
+            keepPrecision(keepPrecision) {}
 
         Params& setUpdatePrecisions(const bool updatePrecisions) {
             this->updatePrecisions = updatePrecisions;
@@ -269,6 +271,7 @@ public:
         std::vector<ngraph::element::Type> defaultPrecisions;
         // to support GPU workarround to keep Reshape and MatMul in FP32
         bool reshapeIgnorePerTensorQuantizationCheck;
+        element::Type keepPrecision;
     };
 
     class PrecisionDetails {

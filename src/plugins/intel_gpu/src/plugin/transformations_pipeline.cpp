@@ -536,7 +536,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         bool reshapeIgnorePerTensorQuantizationCheck = false;
         if (device_info.supports_immad) // Disable reshape transform until onednn i8 fc is optimized
             reshapeIgnorePerTensorQuantizationCheck = true;
-        auto params = LayerTransformation::Params(true, element::f32, defaultPrecisions, reshapeIgnorePerTensorQuantizationCheck);
+        auto params = LayerTransformation::Params(true, element::f32, defaultPrecisions, reshapeIgnorePerTensorQuantizationCheck, element::f16);
         lptManager.register_pass<LowPrecision>(supportedPrecisions, perTensorQuantization, params);
         lptManager.run_passes(func);
     }
