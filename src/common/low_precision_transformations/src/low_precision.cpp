@@ -139,20 +139,21 @@ void make_matcher_type_relaxed(ngraph::pass::GraphRewrite* transformation) {
 }
 
 ngraph::pass::low_precision::TypeRelaxedReplacer::TypeRelaxedReplacer() {
-    make_matcher_type_relaxed<opset1::Add>(this);
+    make_matcher_type_relaxed<opset1::Add>(this); //
     make_matcher_type_relaxed<opset1::AvgPool>(this);
-    make_matcher_type_relaxed<opset1::Clamp>(this);
+    make_matcher_type_relaxed<opset1::Clamp>(this); //
     make_matcher_type_relaxed<opset1::Convolution>(this);
     make_matcher_type_relaxed<opset1::ConvolutionBackpropData>(this);
     make_matcher_type_relaxed<opset1::DepthToSpace>(this);
     make_matcher_type_relaxed<opset1::FakeQuantize>(this);
     make_matcher_type_relaxed<opset1::GroupConvolution>(this);
-    make_matcher_type_relaxed<opset1::PRelu>(this);
+    make_matcher_type_relaxed<opset1::PRelu>(this); //
     make_matcher_type_relaxed<opset1::ReduceMean>(this);
     make_matcher_type_relaxed<opset1::ReduceSum>(this);
-    make_matcher_type_relaxed<opset1::Subtract>(this);
+    make_matcher_type_relaxed<opset1::Subtract>(this); //
+    // Devide
     make_matcher_type_relaxed<opset1::Interpolate>(this);
-    make_matcher_type_relaxed<opset1::Multiply>(this);
+    make_matcher_type_relaxed<opset1::Multiply>(this); //
     make_matcher_type_relaxed<op::MVN>(this);
     make_matcher_type_relaxed<opset6::MVN>(this);
     make_matcher_type_relaxed<opset1::NormalizeL2>(this);

@@ -61,8 +61,21 @@ void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     }
 }
 
-std::set<Precision> jit_add_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+//std::set<std::vector<InferenceEngine::Precision>>
+//{
+//    { Precision::FP32, Precision::FP32 },
+//    { Precision::I8, Precision::I8 }
+//}
+// output precision <= from validate_and_infer_types
+// add snippets::op::Add: TypeRelaxed op has to be replaced
+//
+std::set<std::vector<InferenceEngine::Precision>> jit_add_emitter::get_supported_precisions() {
+    return {
+        {Precision::FP32, Precision::FP32}, 
+        {Precision::I32, Precision::I32}, 
+        {Precision::U8, Precision::U8},
+        {Precision::I8, Precision::I8}
+    };
 }
 
 /// MUL_ADD ///
@@ -154,8 +167,8 @@ size_t jit_mul_add_emitter::aux_vecs_count() const {
     return 1;
 }
 
-std::set<Precision> jit_mul_add_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+std::set<std::vector<InferenceEngine::Precision>> jit_mul_add_emitter::get_supported_precisions() {
+    return {{Precision::FP32, Precision::FP32}, {Precision::I32, Precision::I32}};
 }
 
 /// SUB ///
@@ -203,8 +216,8 @@ void jit_subtract_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, cons
     }
 }
 
-std::set<Precision> jit_subtract_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+std::set<std::vector<InferenceEngine::Precision>> jit_subtract_emitter::get_supported_precisions() {
+    return {{Precision::FP32, Precision::FP32}, {Precision::I32, Precision::I32}};
 }
 
 /// MULTIPLY ///
@@ -252,8 +265,8 @@ void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, cons
     }
 }
 
-std::set<Precision> jit_multiply_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+std::set<std::vector<InferenceEngine::Precision>> jit_multiply_emitter::get_supported_precisions() {
+    return {{Precision::FP32, Precision::FP32}, {Precision::I32, Precision::I32}};
 }
 
 /// DIVIDE ///
@@ -315,8 +328,8 @@ void jit_divide_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const 
     }
 }
 
-std::set<Precision> jit_divide_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+std::set<std::vector<InferenceEngine::Precision>> jit_divide_emitter::get_supported_precisions() {
+    return {{Precision::FP32, Precision::FP32}, {Precision::I32, Precision::I32}};
 }
 
 size_t jit_divide_emitter::aux_vecs_count() const {
@@ -534,8 +547,8 @@ void jit_maximum_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
     }
 }
 
-std::set<Precision> jit_maximum_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+std::set<std::vector<InferenceEngine::Precision>> jit_maximum_emitter::get_supported_precisions() {
+    return {{Precision::FP32, Precision::FP32}, {Precision::I32, Precision::I32}};
 }
 
 /// MINIMUM ///
@@ -584,8 +597,8 @@ void jit_minimum_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
     }
 }
 
-std::set<Precision> jit_minimum_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+std::set<std::vector<InferenceEngine::Precision>> jit_minimum_emitter::get_supported_precisions() {
+    return {{Precision::FP32, Precision::FP32}, {Precision::I32, Precision::I32}};
 }
 
 /// SQUARED_DIFFERENCE ///
@@ -641,8 +654,8 @@ void jit_squared_difference_emitter::emit_isa(const std::vector<size_t> &in_vec_
     }
 }
 
-std::set<Precision> jit_squared_difference_emitter::get_supported_precisions() {
-    return {Precision::FP32, Precision::I32};
+std::set<std::vector<InferenceEngine::Precision>> jit_squared_difference_emitter::get_supported_precisions() {
+    return {{Precision::FP32, Precision::FP32}, {Precision::I32, Precision::I32}};
 }
 
 /// POWER_DYNAMIC ///

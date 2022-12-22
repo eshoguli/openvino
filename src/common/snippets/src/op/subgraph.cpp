@@ -7,9 +7,11 @@
 
 #include "snippets/op/subgraph.hpp"
 #include "snippets/op/convert_saturation.hpp"
+#include "snippets/pass/convert_to_snippets_opset.hpp"
 #include "snippets/pass/insert_load_store.hpp"
 #include "snippets/pass/insert_movebroadcast.hpp"
 #include "snippets/pass/load_movebroadcast_to_broadcastload.hpp"
+#include "snippets/pass/propagate_precision.hpp"
 #include "snippets/pass/assign_registers.hpp"
 #include "snippets/pass/convert_constants.hpp"
 #include "snippets/pass/convert_power_to_powerstatic.hpp"
@@ -29,6 +31,10 @@
 #include <algorithm>
 #include <memory>
 #include <array>
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+#include "ngraph/pass/visualize_tree.hpp"
+#endif
 
 using namespace std;
 using namespace ngraph;
@@ -187,6 +193,10 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
     NODE_VALIDATION_CHECK(this, outputShapes.size() == body_ptr()->get_results().size(),
         "number of results for snippet doesn't match passed to generate method: ", outputShapes.size(), " vs ", body_ptr()->get_results().size(), ".");
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.1.svg").run_on_model(body_ptr());
+#endif
+
     auto getMaxRankBlockedShape = [](const BlockedShapeVector& blockedShapes) -> const BlockedShape& {
         return *std::max_element(blockedShapes.begin(), blockedShapes.end(),
                          [&](const BlockedShape& lhs, const BlockedShape& rhs) {
@@ -234,7 +244,15 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
                 body_ptr()->replace_parameter(i, std::make_shared<opset1::Parameter>(paramType, inShape));
     }
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.2.svg").run_on_model(body_ptr());
+#endif
+
     body_ptr()->validate_nodes_and_infer_types();
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.3.svg").run_on_model(body_ptr());
+#endif
     auto skipStartEndOnes = [](const Shape& shape) {
         auto begin = shape.begin();
         auto end = shape.end();
@@ -268,9 +286,17 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
         NODE_VALIDATION_CHECK(this, compatibleWithOtherOutputs, "Snippets output shapes must be numpy broadcastable");
     }
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.4.svg").run_on_model(body_ptr());
+#endif
+
     // We should insert Converts after Parameters and Constant and before Results
     // to align precision inside Subgraph body that is supported by Plugin
-    align_element_types(outputShapes, inputShapes);
+    //align_element_types(outputShapes, inputShapes);
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.5.svg").run_on_model(body_ptr());
+#endif
 
     exec_domain = outPShape.get_shape();
     return exec_domain;
@@ -353,7 +379,13 @@ void snippets::op::Subgraph::convert_to_snippet_dialect() {
         manager.get_pass_config()->
         set_callback<ngraph::snippets::pass::SetScalarCountForStore>(skip_matching_domain);
     }
+
+    // it's a place to replace all TypeRelax ops to snippets opset ops
+    // manager.register_pass<snippets::pass::ConvertToSnippetsOpset>();
+
     manager.run_passes(body_ptr());
+
+    snippets::pass::ConvertToSnippetsOpset().run_on_model(body_ptr());
 }
 
 snippets::Schedule snippets::op::Subgraph::generate(const BlockedShapeVector& output_shapes,
@@ -377,11 +409,35 @@ snippets::Schedule snippets::op::Subgraph::generate(const void* compile_params) 
 }
 
 snippets::Schedule snippets::op::Subgraph::generate(ngraph::pass::Manager& opt, const void* compile_params) {
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.generate.1.svg").run_on_model(body_ptr());
+#endif
+
     INTERNAL_OP_SCOPE(Subgraph);
     OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::op::generate")
     NGRAPH_CHECK(m_generator != nullptr, "generate is called while generator is not set");
     convert_to_snippet_dialect();
-    opt.run_passes(body_ptr());
+    opt.run_passes(body_ptr()); // just for info: it's a place for custom plugin ops
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.generate.2.svg").run_on_model(body_ptr());
+#endif
+
+    // It's place:
+    //  TargetMachine <= plugin dependencies directly from emitters <= has to be extended:
+    //
+    //  output precision: plugin opset
+    //  opt: custom implementation <= it's possible but not neccessary right now
+    snippets::pass::PropagatePrecision(element::f32, m_generator->get_target_machine()).run_on_model(body_ptr());
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.generate.3.svg").run_on_model(body_ptr());
+#endif
+
+    // Converts:
+    // 1) add Convert to RESTORE precision
+    // scheduling: one week
+
 
     // generation flow
     snippets::pass::AssignRegisters().run_on_model(body_ptr());
@@ -401,6 +457,10 @@ snippets::Schedule snippets::op::Subgraph::generate(ngraph::pass::Manager& opt, 
         }
     }
     NGRAPH_CHECK(!constants.size(), "External constants detected. Snippet is illigal for scheduling");
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.generate.4.svg").run_on_model(body_ptr());
+#endif
 
     return {exec_domain, false /*canBeLinearized*/, ptr};
 }
