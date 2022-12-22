@@ -133,7 +133,6 @@ public:
     static auto constant_input_should_be_inside_body(const std::shared_ptr<ov::Node>& node) -> bool;
 
 private:
-    void align_element_types(const BlockedShapeVector& outputShapes, const BlockedShapeVector& inputShapes);
     void convert_to_snippet_dialect();
     void init_config();
     void initialize_buffer_scratchpad_size();
@@ -164,8 +163,6 @@ private:
     public:
         // True if Subgraph contains FakeQuantize -> FQ decomposition should be called
         bool m_is_quantized = false;
-        // True if we should align element types indise body
-        bool m_is_needed_to_align_precision = false;
         // True if Subgraph contains TypeRelaxed nodes -> for several streams in tp mode we should copy body using mutexes
         // because TypeRelaxed::copy_with_new_inputs() isn't save-thread method
         bool m_has_type_relaxed_ops = false;

@@ -12,6 +12,8 @@ set(DEBUG_SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/subgraph_tests/src/conv_sum_broad
 
 add_library(cpuSpecificRtInfo STATIC $<TARGET_PROPERTY:openvino_intel_cpu_plugin,SOURCE_DIR>/src/utils/rt_info/memory_formats_attribute.hpp
                                      $<TARGET_PROPERTY:openvino_intel_cpu_plugin,SOURCE_DIR>/src/utils/rt_info/memory_formats_attribute.cpp)
+
+
 target_link_libraries(cpuSpecificRtInfo PRIVATE openvino::runtime)
 
 set(INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} $<TARGET_PROPERTY:openvino_intel_cpu_plugin,SOURCE_DIR>/src)
