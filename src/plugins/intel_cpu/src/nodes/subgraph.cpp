@@ -25,6 +25,12 @@
 #include "snippets_transformations/fuse_load_store_and_convert.hpp"
 #include "ngraph_transformations/convert_to_swish_cpu.hpp"
 
+#include "snippets/pass/precision_propagations/insert_converts.hpp"
+#include "snippets/pass/precision_propagations/base_operation.hpp"
+#include "snippets/pass/precision_propagations/unary_operation.hpp"
+#include "snippets/pass/precision_propagations/binary_operation.hpp"
+#include "snippets/pass/precision_propagations/precision_propagation.hpp"
+
 using namespace InferenceEngine;
 using namespace dnnl::impl::utils;
 using namespace dnnl::impl::cpu;
@@ -194,9 +200,28 @@ void Snippet::selectOptimalPrimitiveDescriptor() {
 }
 
 void Snippet::createPrimitive() {
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+        ngraph::pass::VisualizeTree("svg/cpu.create_primitive.1.svg").run_on_model(snippet->body_ptr());
+#endif
     // schedule definition part
     // it defines offsets, strides and sizes for snippet kernel scheduling
     define_schedule();
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/cpu.create_primitive.2.svg").run_on_model(snippet->body_ptr());
+#endif
+    //ngraph::pass::Manager manager;
+    //manager.register_pass<ngraph::snippets::pass::PrecisionPropagation>();
+    //manager.run_passes(snippet->body_ptr());
+
+    ngraph::pass::Manager manager;
+    manager.register_pass<ngraph::snippets::pass::precision_propagation::InsertConverts>(ov::element::f32);
+    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation>();
+    manager.run_passes(snippet->body_ptr());
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/cpu.create_primitive.3.svg").run_on_model(snippet->body_ptr());
+#endif
 
     // code generation part
     // it might be worth to generate explicitly for scheduler work amount for now,
@@ -204,6 +229,10 @@ void Snippet::createPrimitive() {
     // or generate schedule for a kernel.
     // Here kernel is generated for most warying dimension by default.
     generate();
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/cpu.create_primitive.4.svg").run_on_model(snippet->body_ptr());
+#endif
 }
 
 void Snippet::execute(dnnl::stream strm) {
@@ -306,8 +335,16 @@ void Snippet::define_schedule() {
         return result;
     };
     ngraph::snippets::op::Subgraph::BlockedShapeVector input_blocked_shapes;
-    for (size_t i = 0; i < inputShapes.size(); i++)
-        input_blocked_shapes.push_back(edgeToBlockedShape(getParentEdgesAtPort(i)[0]));
+    for (size_t i = 0; i < inputShapes.size(); i++) {
+        const auto& parentEdgesAtPort = getParentEdgesAtPort(i);
+        const auto& parentEdgeAtPort = parentEdgesAtPort[0];
+
+        const auto blockedDesc = parentEdgeAtPort->getMemory().GetDescWithType<BlockedMemoryDesc>();
+        auto dims = blockedDesc->getBlockDims();
+
+        auto result = edgeToBlockedShape(parentEdgeAtPort);
+        input_blocked_shapes.push_back(result);
+    }
 
     ngraph::snippets::op::Subgraph::BlockedShapeVector output_blocked_shapes;
     for (size_t i = 0; i < outputShapes.size(); i++)
