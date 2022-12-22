@@ -13,6 +13,10 @@ using namespace Xbyak;
 namespace ov {
 namespace intel_cpu {
 
+std::set<std::vector<InferenceEngine::Precision>> jit_dnnl_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
+    return { {InferenceEngine::Precision::FP32} };
+}
+
 jit_dnnl_emitter::jit_dnnl_emitter(jit_generator *host, cpu_isa_t host_isa, const std::shared_ptr<ngraph::Node>& node, InferenceEngine::Precision exec_prc)
     : jit_emitter(host, host_isa, node, exec_prc) {
 
