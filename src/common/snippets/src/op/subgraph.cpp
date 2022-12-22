@@ -30,6 +30,10 @@
 #include <memory>
 #include <array>
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+#include "ngraph/pass/visualize_tree.hpp"
+#endif
+
 using namespace std;
 using namespace ngraph;
 using namespace ov::op::util;
@@ -187,6 +191,10 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
     NODE_VALIDATION_CHECK(this, outputShapes.size() == body_ptr()->get_results().size(),
         "number of results for snippet doesn't match passed to generate method: ", outputShapes.size(), " vs ", body_ptr()->get_results().size(), ".");
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.1.svg").run_on_model(body_ptr());
+#endif
+
     auto getMaxRankBlockedShape = [](const BlockedShapeVector& blockedShapes) -> const BlockedShape& {
         return *std::max_element(blockedShapes.begin(), blockedShapes.end(),
                          [&](const BlockedShape& lhs, const BlockedShape& rhs) {
@@ -234,7 +242,15 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
                 body_ptr()->replace_parameter(i, std::make_shared<opset1::Parameter>(paramType, inShape));
     }
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.2.svg").run_on_model(body_ptr());
+#endif
+
     body_ptr()->validate_nodes_and_infer_types();
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.3.svg").run_on_model(body_ptr());
+#endif
     auto skipStartEndOnes = [](const Shape& shape) {
         auto begin = shape.begin();
         auto end = shape.end();
@@ -268,9 +284,17 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
         NODE_VALIDATION_CHECK(this, compatibleWithOtherOutputs, "Snippets output shapes must be numpy broadcastable");
     }
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.4.svg").run_on_model(body_ptr());
+#endif
+
     // We should insert Converts after Parameters and Constant and before Results
     // to align precision inside Subgraph body that is supported by Plugin
-    align_element_types(outputShapes, inputShapes);
+    //align_element_types(outputShapes, inputShapes);
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.5.svg").run_on_model(body_ptr());
+#endif
 
     exec_domain = outPShape.get_shape();
     return exec_domain;

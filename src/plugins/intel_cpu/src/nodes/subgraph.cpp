@@ -25,11 +25,17 @@
 #include "snippets_transformations/fuse_load_store_and_convert.hpp"
 #include "ngraph_transformations/convert_to_swish_cpu.hpp"
 
+#include "snippets/pass/precision_propagations/sequential_manager.hpp"
+#include "snippets/pass/precision_propagations/sequential_graph_rewrite.hpp"
+#include "snippets/pass/precision_propagations/keep_precision.hpp"
+#include "snippets/pass/precision_propagations/propagate_precision.hpp"
+
 using namespace InferenceEngine;
 using namespace dnnl::impl::utils;
 using namespace dnnl::impl::cpu;
 using namespace dnnl::impl::cpu::x64;
 using namespace Xbyak;
+using namespace ngraph::snippets::pass::precision_propagations;
 
 namespace ov {
 namespace intel_cpu {
@@ -198,6 +204,27 @@ void Snippet::createPrimitive() {
     // it defines offsets, strides and sizes for snippet kernel scheduling
     define_schedule();
 
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/cpu.create_primitive.2.svg").run_on_model(snippet->body_ptr());
+#endif
+
+    SequentialManager manager;
+    manager.register_default_pass<KeepPrecision>(ov::element::f32);
+    manager.register_pass<PropagatePrecision<ngraph::opset1::Add>>(precisions_set({
+        {{ov::element::u8, ov::element::u8}, {ov::element::u8}},
+        {{ov::element::i8, ov::element::i8}, {ov::element::i8}},
+        {{ov::element::u32, ov::element::u32}, {ov::element::u32}},
+        {{ov::element::i32, ov::element::i32}, {ov::element::i32}}
+    }));
+    manager.register_pass<PropagatePrecision<ngraph::opset1::MatMul>>(precisions_set({
+        {{ov::element::u8, ov::element::i8}, {ov::element::f32}}
+    }));
+    manager.run_passes(snippet->body_ptr());
+
+#ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::VisualizeTree("svg/cpu.create_primitive.3.svg").run_on_model(snippet->body_ptr());
+#endif
+
     // code generation part
     // it might be worth to generate explicitly for scheduler work amount for now,
     // but in future some interface should be defined in order to communicate schedule for a kernel
@@ -306,8 +333,16 @@ void Snippet::define_schedule() {
         return result;
     };
     ngraph::snippets::op::Subgraph::BlockedShapeVector input_blocked_shapes;
-    for (size_t i = 0; i < inputShapes.size(); i++)
-        input_blocked_shapes.push_back(edgeToBlockedShape(getParentEdgesAtPort(i)[0]));
+    for (size_t i = 0; i < inputShapes.size(); i++) {
+        const auto& parentEdgesAtPort = getParentEdgesAtPort(i);
+        const auto& parentEdgeAtPort = parentEdgesAtPort[0];
+
+        const auto blockedDesc = parentEdgeAtPort->getMemory().GetDescWithType<BlockedMemoryDesc>();
+        auto dims = blockedDesc->getBlockDims();
+
+        auto result = edgeToBlockedShape(parentEdgeAtPort);
+        input_blocked_shapes.push_back(result);
+    }
 
     ngraph::snippets::op::Subgraph::BlockedShapeVector output_blocked_shapes;
     for (size_t i = 0; i < outputShapes.size(); i++)
