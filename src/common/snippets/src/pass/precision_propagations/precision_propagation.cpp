@@ -15,7 +15,7 @@
 
 #include <ngraph/rt_info.hpp>
 
-#include "snippets/pass/precision_propagations/add.hpp"
+//#include "snippets/pass/precision_propagations/add.hpp"
 
 #ifdef CPU_DEBUG_CAPS_SNIPPETS
 #include "ngraph/pass/visualize_tree.hpp"
@@ -32,7 +32,7 @@ bool ngraph::snippets::pass::precision_propagation::PrecisionPropagation::run_on
 
     auto passConfig = get_pass_config();
     ngraph::pass::Manager manager(passConfig);
-    manager.register_pass<ngraph::snippets::pass::precision_propagation::Add>();
+    //manager.register_pass<ngraph::snippets::pass::precision_propagation::Add>();
     manager.run_passes(m);
 
 #ifdef CPU_DEBUG_CAPS_SNIPPETS

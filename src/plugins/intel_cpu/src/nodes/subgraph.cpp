@@ -216,7 +216,16 @@ void Snippet::createPrimitive() {
 
     ngraph::pass::Manager manager;
     manager.register_pass<ngraph::snippets::pass::precision_propagation::InsertConverts>(ov::element::f32);
-    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation>();
+    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation<ngraph::opset1::Add>>(
+        std::set<std::vector<ov::element::Type>>({
+            {ov::element::u8, ov::element::u8},
+            {ov::element::i8, ov::element::i8},
+            {ov::element::u32, ov::element::u32},
+            {ov::element::i32, ov::element::i32}
+        }));
+    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation<ngraph::opset1::MatMul>>(
+        std::set<std::vector<ov::element::Type>>({{ov::element::u8, ov::element::i8}}));
+    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation<ngraph::opset1::Transpose>>();
     manager.run_passes(snippet->body_ptr());
 
 #ifdef CPU_DEBUG_CAPS_SNIPPETS
