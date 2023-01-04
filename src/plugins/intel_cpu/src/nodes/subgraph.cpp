@@ -211,12 +211,8 @@ void Snippet::createPrimitive() {
     ngraph::pass::VisualizeTree("svg/cpu.create_primitive.2.svg").run_on_model(snippet->body_ptr());
 #endif
 
-    //ngraph::snippets::pass::precision_propagations::InsertConverts insert(ov::element::f32);
-    //ngraph::pass::Manager manager;
     ngraph::snippets::pass::precision_propagations::SequentialManager manager;
     manager.register_default_pass<precision_propagations::KeepPrecision>(ov::element::f32);
-    //manager.register_pass<precision_propagations::InsertConverts>(ov::element::f32);
-    //manager.register_pass<precision_propagations::PropagatePrecision<ngraph::opset1::Parameter>>();
     manager.register_pass<precision_propagations::PropagatePrecision<ngraph::opset1::Add>>(precision_propagations::precisions_set({
         {{ov::element::u8, ov::element::u8}, {ov::element::u8}},
         {{ov::element::i8, ov::element::i8}, {ov::element::i8}},

@@ -24,10 +24,10 @@
 #include "ngraph/pass/visualize_tree.hpp"
 #endif
 
-ngraph::snippets::pass::precision_propagations::KeepPrecision::KeepPrecision(const ov::element::Type precision) {
+ngraph::snippets::pass::precision_propagations::KeepPrecision::KeepPrecision(const ov::element::Type supported_precision) {
     MATCHER_SCOPE(KeepPrecision);
 
-    default_pass_callback callback = [precision](const std::shared_ptr<Node>& node) {
+    default_pass_callback callback = [supported_precision](const std::shared_ptr<Node>& node) {
         assert(!std::dynamic_pointer_cast<ngraph::op::TypeRelaxedBase>(node));
 
         if (ngraph::is_type<ngraph::opset1::Parameter>(node) || ngraph::is_type<ngraph::opset1::Result>(node)) {
@@ -36,14 +36,14 @@ ngraph::snippets::pass::precision_propagations::KeepPrecision::KeepPrecision(con
 
         for (auto input_index = 0ull; input_index < node->get_input_size(); input_index++) {
             const auto& input = node->input(input_index);
-            if (input.get_source_output().get_element_type() == precision) {
+            if (input.get_source_output().get_element_type() == supported_precision) {
                 continue;
             }
 
             auto parent_output = input.get_source_output();
             parent_output.remove_target_input(input);
 
-            auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(parent_output, precision);
+            auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(parent_output, supported_precision);
 
             input.replace_source_output(convert->output(0));
         }

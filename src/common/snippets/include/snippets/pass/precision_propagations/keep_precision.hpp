@@ -24,7 +24,7 @@ namespace precision_propagations {
 class KeepPrecision: public DefaultPass {
 public:
     OPENVINO_RTTI("KeepPrecision", "0");
-    KeepPrecision(const ov::element::Type precision);
+    KeepPrecision(const ov::element::Type supported_precision);
 };
 
 }  // namespace precision_propagations

@@ -42,7 +42,7 @@ public:
 
         auto matcher = ngraph::pattern::wrap_type<Operation>();
 
-        ngraph::graph_rewrite_callback callback = [&](pattern::Matcher& m) {
+        ngraph::graph_rewrite_callback callback = [&, precisions](pattern::Matcher& m) {
             auto root = m.get_match_root();
             if (transformation_callback(root)) {
                 return false;
@@ -64,16 +64,26 @@ public:
                 input_precisions.push_back(input.get_source_output().get_element_type());
             }
 
-            //auto output_precision = element::undefined;
-            //for (const auto& precision_item : precisions) {
-            //    precision_item.
-            //}
+            std::vector<element::Type> res_output_precisions;
+            for (const auto& precision_item : precisions) {
+                assert(precision_item.first.size() == input_precisions.size());
+                if (precision_item.first == input_precisions) {
+                    res_output_precisions = precision_item.second;
+                    break;
+                }
+            }
+
+            if (res_output_precisions.empty()) {
+                return false;
+            }
 
             // TODO: not completed
             ov::element::TypeVector output_precisions = { op->output(0).get_element_type() };
 
             auto op_relaxed = std::make_shared<ngraph::op::TypeRelaxed<Operation>>(*op, input_precisions, output_precisions);
-            op_relaxed->set_overridden_output_type(op->get_input_source_output(0).get_node()->input(0).get_source_output().get_element_type());
+            for (auto index = 0ull; index < res_output_precisions.size(); ++index) {
+                op_relaxed->set_overridden_output_type(res_output_precisions[index], index);
+            }
             // TODO: do we need it right now?
             //std::dynamic_pointer_cast<ngraph::Node>(op_relaxed)->validate_and_infer_types();
             copy_runtime_info(op, op_relaxed);
