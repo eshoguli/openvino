@@ -12,10 +12,11 @@ namespace snippets {
 namespace pass {
 namespace precision_propagations {
 
-class InsertConverts: public ngraph::pass::MatcherPass {
+class SequentialGraphRewrite : ov::pass::GraphRewrite {
 public:
-    OPENVINO_RTTI("InsertConverts", "0");
-    InsertConverts(const ov::element::Type supported_precision);
+	explicit SequentialGraphRewrite(const std::shared_ptr<ov::pass::MatcherPass>& pass) : GraphRewrite(pass) {}
+
+	bool apply_matcher_pass(std::shared_ptr<ov::Model> f, std::weak_ptr<Node> node_to_run);
 };
 
 }  // namespace precision_propagations

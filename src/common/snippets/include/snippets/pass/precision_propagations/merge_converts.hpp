@@ -12,10 +12,10 @@ namespace snippets {
 namespace pass {
 namespace precision_propagations {
 
-class InsertConverts: public ngraph::pass::MatcherPass {
+class MergeConverts: public ngraph::pass::MatcherPass {
 public:
     OPENVINO_RTTI("InsertConverts", "0");
-    InsertConverts(const ov::element::Type supported_precision);
+    MergeConverts();
 };
 
 }  // namespace precision_propagations

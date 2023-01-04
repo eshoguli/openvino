@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "snippets/pass/precision_propagations/insert_converts.hpp"
+#include "snippets/pass/precision_propagations/insert_converts_after_parameter.hpp"
 
 #include <snippets/itt.hpp>
 
@@ -21,7 +21,7 @@
 #include "ngraph/pass/visualize_tree.hpp"
 #endif
 
-ngraph::snippets::pass::precision_propagations::InsertConverts::InsertConverts(const ov::element::Type supported_precision) {
+ngraph::snippets::pass::precision_propagations::InsertConvertsAfterParameters::InsertConvertsAfterParameters(const ov::element::Type supported_precision) {
     MATCHER_SCOPE(AddTransformation);
     auto matcher = ngraph::pattern::wrap_type<opset1::Parameter>();
 

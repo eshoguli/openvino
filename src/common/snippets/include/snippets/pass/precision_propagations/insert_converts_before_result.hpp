@@ -10,17 +10,15 @@
 namespace ngraph {
 namespace snippets {
 namespace pass {
-namespace precision_propagation {
+namespace precision_propagations {
 
-class UnaryOperation: public ngraph::pass::MatcherPass {
+class InsertConvertsBeforeResults: public ngraph::pass::MatcherPass {
 public:
-    OPENVINO_RTTI("UnaryOperation", "0");
-    UnaryOperation(const ov::element::Type exec_type = ov::element::f32);
-private:
-    ov::element::Type exec_type;
+    OPENVINO_RTTI("InsertConvertsBeforeResults", "0");
+    InsertConvertsBeforeResults(const ov::element::Type supported_precision);
 };
 
-}  // namespace precision_propagation
+}  // namespace precision_propagations
 }  // namespace pass
 }  // namespace snippets
 }  // namespace ngraph

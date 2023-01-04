@@ -12,13 +12,13 @@ namespace snippets {
 namespace pass {
 namespace precision_propagations {
 
-class InsertConverts: public ngraph::pass::MatcherPass {
+class InsertConvertsAfterParameters : public ngraph::pass::MatcherPass {
 public:
-    OPENVINO_RTTI("InsertConverts", "0");
-    InsertConverts(const ov::element::Type supported_precision);
+    OPENVINO_RTTI("InsertConvertsAfterParameters", "0");
+    InsertConvertsAfterParameters(const ov::element::Type supported_precision);
 };
 
-}  // namespace precision_propagations
+}  // precision_propagations
 }  // namespace pass
 }  // namespace snippets
 }  // namespace ngraph

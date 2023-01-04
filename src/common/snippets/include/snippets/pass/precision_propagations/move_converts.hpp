@@ -17,30 +17,29 @@
 namespace ngraph {
 namespace snippets {
 namespace pass {
-namespace precision_propagation {
+namespace precision_propagations {
 
+using precisions_set = std::set<std::pair<std::vector<ov::element::Type>, std::vector<ov::element::Type>>>;
 
+// TODO: not used
 template<typename Operation>
-class BinaryOperation: public ngraph::pass::MatcherPass {
+class MoveConvert: public ngraph::pass::MatcherPass {
 public:
     OPENVINO_RTTI("BinaryOperation", "0");
-    BinaryOperation(const std::set<std::vector<ov::element::Type>> precisions = {}, const size_t input_count_ = 0ul) {
-        MATCHER_SCOPE(AddTransformation);
-        //auto wrapper1 = ngraph::pattern::wrap_type<ngraph::snippets::op::ConvertSaturation>(pattern::consumers_count(1));
-        //auto wrapper2 = ngraph::pattern::wrap_type<ngraph::snippets::op::ConvertSaturation>(pattern::consumers_count(1));
-        //auto matcher = ngraph::pattern::wrap_type<Operation>({ wrapper1, wrapper2 });
+    MoveConvert(const precisions_set precisions = {}, const size_t input_count_ = 0ul) {
+        MATCHER_SCOPE(Operation);
 
         size_t input_count;
         if (input_count_ == 0ull) {
-            input_count = precisions.size() == 0ull ? 1ull : precisions.begin()->size();
+            input_count = precisions.size() == 0ull ? 1ull : precisions.begin()->first.size();
         } else {
             input_count = input_count_;
         }
 
-        //assert(std::all_of(
-        //    precisions.begin(),
-        //    precisions.end(),
-        //    [&precisions](const std::vector<ov::element::Type>& types) { return precisions[0].size() == types.size(); }));
+        assert(std::all_of(
+            precisions.begin(),
+            precisions.end(),
+            [&precisions](const std::pair<std::vector<ov::element::Type>, std::vector<ov::element::Type>>& pair) { return precisions.begin()->first.size() == pair.first.size(); }));
 
         OutputVector parents(
             input_count,
@@ -59,7 +58,7 @@ public:
                 return false;
             }
 
-            auto op = std::dynamic_pointer_cast<opset1::Add>(root);
+            auto op = std::dynamic_pointer_cast<Operation>(root);
             if (!op) {
                 throw ngraph_error("unexpected operation type");
             }
@@ -71,7 +70,7 @@ public:
 
             ov::element::TypeVector output_precisions = { op->output(0).get_element_type() };
 
-            auto op_relaxed = std::make_shared<ngraph::op::TypeRelaxed<ngraph::opset1::Add>>(*op, input_precisions, output_precisions);
+            auto op_relaxed = std::make_shared<ngraph::op::TypeRelaxed<Operation>>(*op, input_precisions, output_precisions);
             op_relaxed->set_overridden_output_type(op->get_input_source_output(0).get_node()->input(0).get_source_output().get_element_type());
             // TODO: do we need it right now?
             //std::dynamic_pointer_cast<ngraph::Node>(op_relaxed)->validate_and_infer_types();
@@ -102,7 +101,7 @@ private:
     const std::vector<std::pair<ov::element::Type, ov::element::Type>> precisions;
 };
 
-}  // namespace precision_propagation
+}  // namespace precision_propagations
 }  // namespace pass
 }  // namespace snippets
 }  // namespace ngraph

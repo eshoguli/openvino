@@ -25,17 +25,17 @@
 #include "snippets_transformations/fuse_load_store_and_convert.hpp"
 #include "ngraph_transformations/convert_to_swish_cpu.hpp"
 
-#include "snippets/pass/precision_propagations/insert_converts.hpp"
-#include "snippets/pass/precision_propagations/base_operation.hpp"
-#include "snippets/pass/precision_propagations/unary_operation.hpp"
-#include "snippets/pass/precision_propagations/binary_operation.hpp"
-#include "snippets/pass/precision_propagations/precision_propagation.hpp"
+#include "snippets/pass/sequential_manager.hpp"
+#include "snippets/pass/precision_propagations/sequential_graph_rewrite.hpp"
+#include "snippets/pass/precision_propagations/keep_precision.hpp"
+#include "snippets/pass/precision_propagations/propagate_precision.hpp"
 
 using namespace InferenceEngine;
 using namespace dnnl::impl::utils;
 using namespace dnnl::impl::cpu;
 using namespace dnnl::impl::cpu::x64;
 using namespace Xbyak;
+using namespace ngraph::snippets::pass;
 
 namespace ov {
 namespace intel_cpu {
@@ -210,22 +210,23 @@ void Snippet::createPrimitive() {
 #ifdef CPU_DEBUG_CAPS_SNIPPETS
     ngraph::pass::VisualizeTree("svg/cpu.create_primitive.2.svg").run_on_model(snippet->body_ptr());
 #endif
-    //ngraph::pass::Manager manager;
-    //manager.register_pass<ngraph::snippets::pass::PrecisionPropagation>();
-    //manager.run_passes(snippet->body_ptr());
 
-    ngraph::pass::Manager manager;
-    manager.register_pass<ngraph::snippets::pass::precision_propagation::InsertConverts>(ov::element::f32);
-    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation<ngraph::opset1::Add>>(
-        std::set<std::vector<ov::element::Type>>({
-            {ov::element::u8, ov::element::u8},
-            {ov::element::i8, ov::element::i8},
-            {ov::element::u32, ov::element::u32},
-            {ov::element::i32, ov::element::i32}
-        }));
-    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation<ngraph::opset1::MatMul>>(
-        std::set<std::vector<ov::element::Type>>({{ov::element::u8, ov::element::i8}}));
-    manager.register_pass<ngraph::snippets::pass::precision_propagation::BinaryOperation<ngraph::opset1::Transpose>>();
+    //ngraph::snippets::pass::precision_propagations::InsertConverts insert(ov::element::f32);
+    //ngraph::pass::Manager manager;
+    ngraph::snippets::pass::precision_propagations::SequentialManager manager;
+    manager.register_default_pass<precision_propagations::KeepPrecision>(ov::element::f32);
+    //manager.register_pass<precision_propagations::InsertConverts>(ov::element::f32);
+    //manager.register_pass<precision_propagations::PropagatePrecision<ngraph::opset1::Parameter>>();
+    manager.register_pass<precision_propagations::PropagatePrecision<ngraph::opset1::Add>>(precision_propagations::precisions_set({
+        {{ov::element::u8, ov::element::u8}, {ov::element::u8}},
+        {{ov::element::i8, ov::element::i8}, {ov::element::i8}},
+        {{ov::element::u32, ov::element::u32}, {ov::element::u32}},
+        {{ov::element::i32, ov::element::i32}, {ov::element::i32}}
+    }));
+    manager.register_pass<precision_propagations::PropagatePrecision<ngraph::opset1::MatMul>>(precision_propagations::precisions_set({
+        {{ov::element::u8, ov::element::i8}, {ov::element::f32}}
+    }));
+    //manager.register_pass<precision_propagations::PropagatePrecision<ngraph::opset1::Clamp>>();
     manager.run_passes(snippet->body_ptr());
 
 #ifdef CPU_DEBUG_CAPS_SNIPPETS

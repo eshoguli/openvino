@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "snippets/pass/precision_propagations/unary_operation.hpp"
+#include "snippets/pass/precision_propagations/merge_converts.hpp"
 
 #include <snippets/itt.hpp>
 
@@ -21,9 +21,9 @@
 #include "ngraph/pass/visualize_tree.hpp"
 #endif
 
-ngraph::snippets::pass::precision_propagation::UnaryOperation::UnaryOperation(const ov::element::Type exec_type) : exec_type(exec_type) {
+ngraph::snippets::pass::precision_propagations::MergeConverts::MergeConverts() {
     MATCHER_SCOPE(AddTransformation);
-    auto matcher = ngraph::pattern::wrap_type<opset1::Add>();
+    auto matcher = ngraph::pattern::wrap_type<ngraph::snippets::op::ConvertSaturation>();
 
     ngraph::graph_rewrite_callback callback = [this](pattern::Matcher& m) {
         auto op = m.get_match_root();
@@ -31,17 +31,7 @@ ngraph::snippets::pass::precision_propagation::UnaryOperation::UnaryOperation(co
             return false;
         }
 
-//#ifdef CPU_DEBUG_CAPS_SNIPPETS
-//        ngraph::pass::VisualizeTree("svg/snippets.precision_propagation.add.1.svg").run_on_model(m);
-//#endif
-
-        // TODO:
-
-//#ifdef CPU_DEBUG_CAPS_SNIPPETS
-//        ngraph::pass::VisualizeTree("svg/snippets.precision_propagation.add.2.svg").run_on_model(m);
-//#endif
-
-        return true;
+        return false;
     };
 
     auto m = std::make_shared<ngraph::pattern::Matcher>(matcher, matcher_name);
