@@ -157,15 +157,23 @@ void Transformations::UpToCpuSpecificOpSet() {
         }
     }
 
+    ngraph::pass::VisualizeTree("svg/cpu.original.svg").run_on_model(model);
+
     PreLpt(defaultPrecisions, isLegacyApi);
 
-    if (useLpt)
+    ngraph::pass::VisualizeTree("svg/cpu.common.svg").run_on_model(model);
+
+    if (useLpt) {
         Lpt(hasINT16orINT32Levels, defaultPrecisions);
+        ngraph::pass::VisualizeTree("svg/cpu.lpt.svg").run_on_model(model);
+    }
 
     PostLpt();
 
     if (useSnippets)
         Snippets();
+
+    ngraph::pass::VisualizeTree("svg/cpu.transformed.svg").run_on_model(model);
 }
 
 void Transformations::CpuSpecificOpSet(void) {
@@ -433,14 +441,14 @@ void Transformations::Lpt(const bool hasINT16orINT32Levels, const std::vector<ov
     //Only enable conv/group conv signed input on AMX platform.
     std::vector<ov::element::Type> input0LowPrecisionList;
     if (dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx512_core_amx)) {
-        input0LowPrecisionList = {ov::element::u8, ov::element::i8};
+        input0LowPrecisionList = {ov::element::u8, ov::element::i8, ov::element::unsigned_float8 };
     } else {
         input0LowPrecisionList = {ov::element::u8};
     }
     auto supportedPrecisions = std::vector<PrecisionsRestriction>({
             PrecisionsRestriction::create<ov::opset1::Convolution>({
                     {{0}, input0LowPrecisionList},
-                    {{1}, {ov::element::i8}},
+                    {{1}, {ov::element::i8, ov::element::signed_float8}},
                 }),
             PrecisionsRestriction::create<ov::opset1::ConvolutionBackpropData>({
                     {{0}, {ov::element::u8, ov::element::i8}},

@@ -26,10 +26,12 @@ op::FakeQuantize::FakeQuantize(const Output<Node>& data,
                                const Output<Node>& output_low,
                                const Output<Node>& output_high,
                                size_t levels,
-                               const AutoBroadcastSpec& auto_broadcast)
+                               const AutoBroadcastSpec& auto_broadcast,
+                               const Precision precision)
     : Op({data, input_low, input_high, output_low, output_high}),
       m_levels(levels),
-      m_auto_broadcast(auto_broadcast) {
+      m_auto_broadcast(auto_broadcast),
+      m_precision(precision) {
     constructor_validate_and_infer_types();
 }
 

@@ -50,7 +50,9 @@ enum class Type_t {
     u8,         //!< u8 element type
     u16,        //!< u16 element type
     u32,        //!< u32 element type
-    u64         //!< u64 element type
+    u64,        //!< u64 element type
+    signed_float8,
+    unsigned_float8
 };
 
 /// \brief Base class to define element type
@@ -174,6 +176,9 @@ constexpr Type u32(Type_t::u32);
 /// \brief u64 element type
 /// \ingroup ov_element_cpp_api
 constexpr Type u64(Type_t::u64);
+
+constexpr Type signed_float8(Type_t::signed_float8);
+constexpr Type unsigned_float8(Type_t::unsigned_float8);
 
 template <typename T>
 Type from() {

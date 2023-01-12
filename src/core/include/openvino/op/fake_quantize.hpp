@@ -28,6 +28,11 @@ class OPENVINO_API FakeQuantize : public Op {
 public:
     OPENVINO_OP("FakeQuantize", "opset1");
 
+    enum Precision {
+        integer,
+        float_point
+    };
+
     FakeQuantize();
     ///
     /// \brief      Constructs a FakeQuantize operation node.
@@ -47,7 +52,8 @@ public:
                  const Output<Node>& output_low,
                  const Output<Node>& output_high,
                  std::size_t levels,
-                 const AutoBroadcastSpec& auto_broadcast = AutoBroadcastSpec(AutoBroadcastType::NUMPY));
+                 const AutoBroadcastSpec& auto_broadcast = AutoBroadcastSpec(AutoBroadcastType::NUMPY),
+                 const Precision precision = Precision::float_point);
 
     bool visit_attributes(AttributeVisitor& visitor) override;
     void validate_and_infer_types() override;
@@ -57,6 +63,11 @@ public:
     std::size_t get_levels() const {
         return m_levels;
     }
+
+    FakeQuantize::Precision get_precision() const {
+        return m_precision;
+    }
+
     void set_levels(std::size_t levels) {
         m_levels = levels;
     }
@@ -77,6 +88,7 @@ public:
 
 private:
     std::size_t m_levels;
+    Precision m_precision;
     AutoBroadcastSpec m_auto_broadcast = op::AutoBroadcastType::NUMPY;
 };
 }  // namespace v0

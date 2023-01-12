@@ -104,13 +104,19 @@ DataPrecision getDataPrecisionByOutputPort(std::shared_ptr<opset1::FakeQuantize>
     if (precisionsAttribute.empty()) {
         // TODO: explore this case in more details:
         // 1. we should not be here
-        assert(true);
+        assert(true);        
 
         // 2. not possible to get optimal precision by decomposed FakeQuantize
         LayerTransformation::PrecisionDetails precisionDetailsAtOutputIntervals = LayerTransformation::getPrecisionDetails(
             levels,
             outputLowValues,
             outputHighValues);
+
+        if (layer->get_precision() == opset1::FakeQuantize::Precision::float_point) {
+            precisionDetailsAtOutputIntervals.precision = outputLowValues[0] < 0.0 ? 
+                ov::element::signed_float8 : 
+                ov::element::unsigned_float8;
+        }
 
         return DataPrecision(
             precisionDetailsAtOutputIntervals.precision,
