@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Intel Corporation
+// Copyright (C) 2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -6,20 +6,18 @@
 
 #include <assert.h>
 #include <memory>
-
 #include <ie_ngraph_utils.hpp>
-
 #include <snippets/itt.hpp>
 
-#include "snippets/snippets_isa.hpp"
-#include "snippets/op/convert_saturation.hpp"
-#include "snippets/utils.hpp"
-#include "ov_ops/type_relaxed.hpp"
-#include "ngraph/op/util/op_types.hpp"
-#include "ie_precision.hpp"
+//#include "snippets/snippets_isa.hpp"
+//#include "snippets/op/convert_saturation.hpp"
+//#include "snippets/utils.hpp"
+//#include "ov_ops/type_relaxed.hpp"
+//#include "ngraph/op/util/op_types.hpp"
+//#include "ie_precision.hpp"
 
-#include <ngraph/pattern/op/wrap_type.hpp>
-#include "ov_ops/type_relaxed.hpp"
+//#include <ngraph/pattern/op/wrap_type.hpp>
+//#include "ov_ops/type_relaxed.hpp"
 
 #include <ngraph/rt_info.hpp>
 

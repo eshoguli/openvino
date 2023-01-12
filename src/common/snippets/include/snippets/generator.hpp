@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2022 Intel Corporation
+// Copyright (C) 2018-2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -17,7 +17,9 @@ namespace snippets {
 
 auto getRegisters(std::shared_ptr<ngraph::Node>& n) -> ngraph::snippets::RegInfo;
 
-/**
+typedef std::pair<std::function<std::shared_ptr<Emitter>(std::shared_ptr<ngraph::Node>)>,
+                  std::set<std::vector<InferenceEngine::Precision>>> jitters_value;
+    /**
  * @interface TargetMachine
  * @brief Base class Target machine representation. Target derives from this class to provide generator information about supported emitters
  * @ingroup snippets
@@ -75,9 +77,7 @@ public:
 protected:
     std::map<
         const ngraph::DiscreteTypeInfo, 
-        std::pair<
-            std::function<std::shared_ptr<Emitter>(std::shared_ptr<ngraph::Node>)>, 
-            std::set<std::vector<InferenceEngine::Precision>>>> jitters;
+        jitters_value> jitters;
 };
 
 /**

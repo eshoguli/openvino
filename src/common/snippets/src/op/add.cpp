@@ -3,8 +3,6 @@
 //
 
 #include "snippets/op/add.hpp"
-#include <ngraph/runtime/host_tensor.hpp>
-#include <snippets/itt.hpp>
 
 using namespace std;
 using namespace ngraph;

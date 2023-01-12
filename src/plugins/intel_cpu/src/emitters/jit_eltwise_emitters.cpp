@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2022 Intel Corporation
+// Copyright (C) 2018-2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -61,21 +61,8 @@ void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     }
 }
 
-//std::set<std::vector<InferenceEngine::Precision>>
-//{
-//    { Precision::FP32, Precision::FP32 },
-//    { Precision::I8, Precision::I8 }
-//}
-// output precision <= from validate_and_infer_types
-// add snippets::op::Add: TypeRelaxed op has to be replaced
-//
 std::set<std::vector<InferenceEngine::Precision>> jit_add_emitter::get_supported_precisions() {
-    return {
-        {Precision::FP32, Precision::FP32}, 
-        {Precision::I32, Precision::I32}, 
-        {Precision::U8, Precision::U8},
-        {Precision::I8, Precision::I8}
-    };
+    return {{Precision::FP32, Precision::FP32},{Precision::I32, Precision::I32}};
 }
 
 /// MUL_ADD ///

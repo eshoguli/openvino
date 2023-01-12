@@ -1,20 +1,12 @@
-// Copyright (C) 2022 Intel Corporation
+// Copyright (C) 2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
 #pragma once
 
-#include <ngraph/pass/graph_rewrite.hpp>
-#include <ngraph/pattern/matcher.hpp>
-#include <ngraph/pattern/op/wrap_type.hpp>
-#include <ngraph/opsets/opset1.hpp>
-
-#include "ov_ops/type_relaxed.hpp"
-#include <ngraph/rt_info.hpp>
+#include <memory>
+#include <ngraph/pass/pass.hpp>
 #include <snippets/itt.hpp>
-#include "snippets/op/convert_saturation.hpp"
-
-#include "snippets/generator.hpp"
 
 namespace ngraph {
 namespace snippets {
