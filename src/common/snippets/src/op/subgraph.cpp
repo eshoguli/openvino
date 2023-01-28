@@ -40,6 +40,8 @@
 #include <memory>
 #include <array>
 
+#include "ngraph/pass/visualize_tree.hpp"
+
 using namespace std;
 using namespace ngraph;
 using namespace ov::op::util;
@@ -348,8 +350,39 @@ ov::PartialShape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& 
         }
     }
 
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.1.svg").run_on_model(body_ptr());
+    // We should insert Converts after Parameters and Constant and before Results
+    // to align precision inside Subgraph body that is supported by Plugin
+
+    // 1. insert Converts
+    align_element_types(outputShapes, inputShapes);
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.2.svg").run_on_model(body_ptr());
+
     master_shape = outPShape;
     return master_shape;
+}
+
+void snippets::op::Subgraph::align_element_types(const BlockedShapeVector& outputShapes,
+                                                 const BlockedShapeVector& inputShapes) {
+    // We should insert Convert before Results to set original output element type if needed
+    const auto& body_results = body_ptr()->get_results();
+    for (size_t i = 0; i < outputShapes.size(); i++) {
+        const auto needed_out_type = std::get<2>(outputShapes[i]);
+        if (body_results[i]->get_input_element_type(0) != needed_out_type) {
+            const auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
+                body_results[i]->get_input_node_shared_ptr(0), needed_out_type);
+            body_results[i]->set_argument(0, convert);
+        }
+    }
+
+    // We should change existing element type to original for Parameters if needed
+    const auto& body_parameters = body_ptr()->get_parameters();
+    for (size_t i = 0; i < inputShapes.size(); ++i) {
+        const auto needed_in_type = std::get<2>(inputShapes[i]);
+        if (body_parameters[i]->get_element_type() != needed_in_type) {
+            body_parameters[i]->set_element_type(needed_in_type);
+        }
+    }
 }
 
 void snippets::op::Subgraph::initialize_buffer_scratchpad_size() {
@@ -556,26 +589,38 @@ snippets::Schedule snippets::op::Subgraph::generate(const BlockedShapeVector& ou
 
 snippets::Schedule snippets::op::Subgraph::generate(const BlockedShapeVector& output_shapes,
                                                     const BlockedShapeVector& input_shapes,
-                                                    ngraph::pass::Manager& opt,
+                                                    ngraph::pass::Manager& opt1,
+                                                    ngraph::pass::Manager& opt2,
+                                                    ngraph::pass::Manager& opt3,
                                                     const void* compile_params) {
     canonicalize(output_shapes, input_shapes);
-    return generate(opt, compile_params);
+    return generate(opt1, opt2, opt3, compile_params);
 }
 
 snippets::Schedule snippets::op::Subgraph::generate(const void* compile_params) {
     auto mngr = ngraph::pass::Manager();
-    return generate(mngr, compile_params);
+    return generate(mngr, mngr, mngr, compile_params);
 }
 
-snippets::Schedule snippets::op::Subgraph::generate(ngraph::pass::Manager& opt, const void* compile_params) {
+snippets::Schedule snippets::op::Subgraph::generate(
+    ngraph::pass::Manager& opt1,
+    ngraph::pass::Manager& opt2,
+    ngraph::pass::Manager& opt3,
+    const void* compile_params) {
     INTERNAL_OP_SCOPE(Subgraph);
     OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::op::generate")
     NGRAPH_CHECK(m_generator != nullptr, "generate is called while generator is not set");
 
+    opt1.run_passes(body_ptr()); // general: custom plugin pass: for example: FP32 => BF16
     convert_to_snippet_dialect();
-    opt.run_passes(body_ptr());
+    opt2.run_passes(body_ptr()); // snippets dialect: for example: BRGM
 
+    // precisions: based on emitters
+    ngraph::pass::VisualizeTree("svg/snippets.generate.2.svg").run_on_model(body_ptr());
     snippets::pass::PropagatePrecision(element::f32, m_generator->get_target_machine()).run_on_model(body_ptr());
+    ngraph::pass::VisualizeTree("svg/snippets.generate.3.svg").run_on_model(body_ptr());
+
+    opt3.run_passes(body_ptr()); // cleanup: for example: LoadConvert
 
     // After all passes, when all optimizations are completed and all MemoryAccess ops are inserted,
     // we can calculate common buffer scratchpad size and propagate offset from Buffer to the corresponding MemoryAccess ops

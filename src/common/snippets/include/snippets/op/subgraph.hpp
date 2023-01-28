@@ -102,10 +102,18 @@ public:
     bool has_type_relaxed_ops() const { return config.m_has_type_relaxed_ops; }
     bool has_domain_sensitive_ops() const { return config.m_has_domain_sensitive_ops; }
 
-    snippets::Schedule generate(const BlockedShapeVector& output_shapes, const BlockedShapeVector& input_shapes, ngraph::pass::Manager& opt,
+    snippets::Schedule generate(const BlockedShapeVector& output_shapes,
+                                const BlockedShapeVector& input_shapes,
+                                ngraph::pass::Manager& opt1,
+                                ngraph::pass::Manager& opt2,
+                                ngraph::pass::Manager& opt3,
                                 const void* compile_params = nullptr);
     snippets::Schedule generate(const BlockedShapeVector& output_shapes, const BlockedShapeVector& input_shapes, const void* compile_params = nullptr);
-    snippets::Schedule generate(ngraph::pass::Manager &opt, const void* compile_params = nullptr);
+    snippets::Schedule generate(
+        ngraph::pass::Manager& opt1,
+        ngraph::pass::Manager& opt2,
+        ngraph::pass::Manager& opt3,
+        const void* compile_params = nullptr);
     snippets::Schedule generate(const void* compile_params = nullptr);
     ov::PartialShape canonicalize(const BlockedShapeVector& output_shapes, const BlockedShapeVector& input_shapes);
     std::vector<PartialShape> reshape_body(const std::vector<PartialShape>& input_shapes);
@@ -133,6 +141,7 @@ public:
     static auto constant_input_should_be_inside_body(const std::shared_ptr<ov::Node>& node) -> bool;
 
 private:
+    void align_element_types(const BlockedShapeVector& outputShapes, const BlockedShapeVector& inputShapes);
     void convert_to_snippet_dialect();
     void init_config();
     void initialize_buffer_scratchpad_size();

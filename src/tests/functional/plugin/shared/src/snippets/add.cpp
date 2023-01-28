@@ -75,6 +75,8 @@ void AddRollConst::SetUp() {
 
     auto f = ov::test::snippets::AddRollConstFunction({inputShape});
     function = f.getOriginal();
+    ngraph::pass::VisualizeTree("svg/test.actual.svg").run_on_model(function);
+
     setInferenceType(type);
 }
 

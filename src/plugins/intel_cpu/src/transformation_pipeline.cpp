@@ -107,6 +107,8 @@
 #include "dnnl.hpp"
 #include <cpu/x64/cpu_isa_traits.hpp>
 
+#include <ngraph/pass/visualize_tree.hpp>
+
 namespace ov {
 namespace intel_cpu {
 
@@ -157,7 +159,11 @@ void Transformations::UpToCpuSpecificOpSet() {
         }
     }
 
+    ngraph::pass::VisualizeTree("svg/cpu.original.svg").run_on_model(model);
+
     PreLpt(defaultPrecisions, isLegacyApi);
+
+    ngraph::pass::VisualizeTree("svg/cpu.common.svg").run_on_model(model);
 
     if (useLpt)
         Lpt(hasINT16orINT32Levels, defaultPrecisions);
@@ -166,6 +172,8 @@ void Transformations::UpToCpuSpecificOpSet() {
 
     if (useSnippets)
         Snippets();
+
+    ngraph::pass::VisualizeTree("svg/cpu.transformed.svg").run_on_model(model);
 }
 
 void Transformations::CpuSpecificOpSet(void) {
