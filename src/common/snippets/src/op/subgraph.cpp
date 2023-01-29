@@ -376,11 +376,23 @@ void snippets::op::Subgraph::align_element_types(const BlockedShapeVector& outpu
     }
 
     // We should change existing element type to original for Parameters if needed
-    const auto& body_parameters = body_ptr()->get_parameters();
+    const auto& parameters = body_ptr()->get_parameters();
     for (size_t i = 0; i < inputShapes.size(); ++i) {
         const auto needed_in_type = std::get<2>(inputShapes[i]);
-        if (body_parameters[i]->get_element_type() != needed_in_type) {
-            body_parameters[i]->set_element_type(needed_in_type);
+        if (parameters[i]->get_element_type() != needed_in_type) {
+            const auto output = parameters[i]->output(0);
+            for (const auto input : output.get_target_inputs()) {
+                const auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
+                    output,
+                    output.get_element_type());
+
+                const auto op = input.get_node()->shared_from_this();
+                ngraph::copy_runtime_info(op, convert);
+                op->set_argument(input.get_index(), convert);
+            }
+
+            parameters[i]->set_element_type(needed_in_type);
+            parameters[i]->validate_and_infer_types();
         }
     }
 }
