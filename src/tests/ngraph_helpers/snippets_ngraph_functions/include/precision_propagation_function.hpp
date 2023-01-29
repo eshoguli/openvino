@@ -34,6 +34,7 @@ public:
         const ngraph::PartialShape& inputShape1,
         const ngraph::element::Type precision2,
         const ngraph::PartialShape& inputShape2,
+        const ngraph::element::Type constant_precision,
         const std::pair<element::Type, element::Type>& convertion_before_op1 = std::pair<element::Type, element::Type>(),
         const std::pair<element::Type, element::Type>& convertion_before_op2 = std::pair<element::Type, element::Type>(),
         const element::Type convertion_after_op2 = {}) {
@@ -44,9 +45,8 @@ public:
         parent->set_friendly_name("add");
 
         const auto maximum_in2_type = convertion_before_op2.second == element::undefined ?
-            precision1 :
+            constant_precision :
             convertion_before_op2.second;
-
         if ((convertion_before_op2.first == element::undefined) &&
             (parent->get_output_element_type(0) != maximum_in2_type)) {
             parent = std::make_shared<ngraph::snippets::op::ConvertSaturation>(parent, maximum_in2_type);
@@ -55,7 +55,7 @@ public:
         parent = std::make_shared<ngraph::opset1::Maximum>(
             create_convert(parent, convertion_before_op2.first),
             create_convert(
-                std::make_shared<ngraph::opset1::Constant>(precision1, Shape{}, std::vector<float>{0.f}),
+                std::make_shared<ngraph::opset1::Constant>(constant_precision, Shape{}, std::vector<float>{0.f}),
                 convertion_before_op2.second));
         parent->set_friendly_name("maximum");
 

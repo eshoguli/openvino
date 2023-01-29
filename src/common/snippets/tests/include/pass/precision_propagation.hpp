@@ -17,11 +17,14 @@ public:
     public:
         Actual() = default;
 
-        Actual(const std::set<std::vector<InferenceEngine::Precision>>& op1_supported_precisions,
+        Actual(const std::pair<element::Type, element::Type>& convertion_before_op1,
+               const std::set<std::vector<InferenceEngine::Precision>>& op1_supported_precisions,
                const std::set<std::vector<InferenceEngine::Precision>>& op2_supported_precisions)
-            : op1_supported_precisions(op1_supported_precisions),
+            : convertion_before_op1(convertion_before_op1),
+              op1_supported_precisions(op1_supported_precisions),
               op2_supported_precisions(op2_supported_precisions) {}
 
+        std::pair<element::Type, element::Type> convertion_before_op1;
         std::set<std::vector<InferenceEngine::Precision>> op1_supported_precisions;
         std::set<std::vector<InferenceEngine::Precision>> op2_supported_precisions;
     };
@@ -44,14 +47,14 @@ public:
     };
 
     PrecisionPropagationParamsValues() = default;
-    PrecisionPropagationParamsValues(const std::pair<element::Type, element::Type>& input_types,
+    PrecisionPropagationParamsValues(const std::vector<element::Type>& input_types,
                                      const Actual& actual,
                                      const Expected& expected)
         : input_types(input_types),
           actual(actual),
           expected(expected) {}
 
-    std::pair<element::Type, element::Type> input_types;
+    std::vector<element::Type> input_types;
     Actual actual;
     Expected expected;
 };
