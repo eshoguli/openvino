@@ -86,10 +86,14 @@ std::string PrecisionPropagationTest::getTestCaseName(testing::TestParamInfo<Pre
     };
 
     std::ostringstream result;
-    result << "IN0_" << shapes.first << "_" << test_values.input_types[0] << "_";
-    result << to_string(test_values.actual.op1_supported_precisions) << "_"
-           << to_string(test_values.actual.op2_supported_precisions) << "_";
-    result << "IN1_" << shapes.second << "_" << test_values.input_types[1];
+    result << "IN0_" << shapes.first << "_" << test_values.input_types[0] << "_"
+           << "IN1_" << shapes.second << "_" << test_values.input_types[1] << "_"
+           << "IN2_" << test_values.input_types[2]
+           << to_string(test_values.actual.op1_supported_precisions) << "_"
+           << to_string(test_values.actual.op2_supported_precisions) << "_"
+           << test_values.expected.convertion_before_op1.first << "_" << test_values.expected.convertion_before_op1.second << "_"
+           << test_values.expected.convertion_before_op2.first << "_" << test_values.expected.convertion_before_op2.second << "_"
+           << test_values.expected.convertion_after_op2 << "_";
     return result.str();
 }
 
@@ -105,15 +109,14 @@ TEST_P(PrecisionPropagationTest, CompareFunctions) {
                                                            test_values.input_types[1],
                                                            shapes.second,
                                                            test_values.input_types[2],
-                                                           test_values.actual.convertion_before_op1);
-    ngraph::pass::VisualizeTree("svg/test.actual.svg").run_on_model(function);
+                                                           test_values.actual.convertion_before_op1,
+                                                           test_values.actual.convertion_before_op2);
 
     const auto target_machine =
         std::make_shared<DummyPrecisionPropogationTargetMachine>(test_values.actual.op1_supported_precisions,
                                                                  test_values.actual.op2_supported_precisions);
     ngraph::snippets::pass::PropagatePrecision(element::f32, target_machine).run_on_model(function);
     function->validate_nodes_and_infer_types();
-    ngraph::pass::VisualizeTree("svg/test.transformed.svg").run_on_model(function);
 
     function_ref = PrecisionPropagationFunction::get<DummyAdd>(test_values.input_types[0],
                                                                shapes.first,
@@ -123,7 +126,6 @@ TEST_P(PrecisionPropagationTest, CompareFunctions) {
                                                                test_values.expected.convertion_before_op1,
                                                                test_values.expected.convertion_before_op2,
                                                                test_values.expected.convertion_after_op2);
-    ngraph::pass::VisualizeTree("svg/test.reference.svg").run_on_model(function_ref);
 }
 
 namespace PrecisionPropagationTestInstantiation {
@@ -138,6 +140,7 @@ std::vector<PrecisionPropagationParamsValues> test_cases {
         {element::f32, element::f32, element::f32},
         {
             {},
+            {},
             {{InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32}},
             {{InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32}}
         },
@@ -146,6 +149,7 @@ std::vector<PrecisionPropagationParamsValues> test_cases {
     {
         {element::i8, element::i8, element::i8},
         {
+            {},
             {},
             {{InferenceEngine::Precision::I8, InferenceEngine::Precision::I8}},
             {{InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32}}
@@ -159,6 +163,7 @@ std::vector<PrecisionPropagationParamsValues> test_cases {
     {
         {element::i8, element::i8, element::i8},
         {
+            {},
             {},
             {{InferenceEngine::Precision::I8, InferenceEngine::Precision::I8}},
             {{InferenceEngine::Precision::I8, InferenceEngine::Precision::I8}}
@@ -173,6 +178,7 @@ std::vector<PrecisionPropagationParamsValues> test_cases {
         {element::i8, element::i8, element::i8},
         {
             {},
+            {},
             {{InferenceEngine::Precision::I8, InferenceEngine::Precision::I8}},
             {{InferenceEngine::Precision::I32, InferenceEngine::Precision::I32}}
         },
@@ -186,6 +192,7 @@ std::vector<PrecisionPropagationParamsValues> test_cases {
         {element::bf16, element::bf16, element::f32},
         {
             {element::f32, element::f32},
+            {},
             {
                 {InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32},
                 {InferenceEngine::Precision::I8, InferenceEngine::Precision::I8}
@@ -199,6 +206,67 @@ std::vector<PrecisionPropagationParamsValues> test_cases {
             {element::f32, element::f32},
             {},
             {}
+        }
+    },
+    // propagate precision via operation #1
+    {
+        {element::bf16, element::bf16, element::f32},
+        {
+            {element::f32, element::f32},
+            {},
+            {
+                {InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32},
+                {InferenceEngine::Precision::BF16, InferenceEngine::Precision::BF16}
+            },
+            {
+                {InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32}
+            }
+        },
+        {
+            {},
+            {element::f32, element::undefined},
+            {}
+        }
+    },
+    // propagate precision via operation #1
+    {
+        {element::bf16, element::bf16, element::bf16},
+        {
+            {element::f32, element::f32},
+            {element::undefined, element::f32},
+            {
+                {InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32},
+                {InferenceEngine::Precision::BF16, InferenceEngine::Precision::BF16}
+            },
+            {
+                {InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32}
+            }
+        },
+        {
+            {},
+            {element::f32, element::f32},
+            {}
+        }
+    },
+    // propagate precision via both operations
+    {
+        {element::bf16, element::bf16, element::bf16},
+        {
+            {element::f32, element::f32},
+            {element::undefined, element::f32},
+            {
+                {InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32},
+                {InferenceEngine::Precision::BF16, InferenceEngine::Precision::BF16}
+            },
+            {
+                {InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32},
+                {InferenceEngine::Precision::BF16, InferenceEngine::Precision::BF16}
+            }
+        },
+        {
+            {},
+            {},
+            {element::f32}
         }
     },
 };

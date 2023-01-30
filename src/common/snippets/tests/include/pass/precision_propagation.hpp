@@ -18,13 +18,16 @@ public:
         Actual() = default;
 
         Actual(const std::pair<element::Type, element::Type>& convertion_before_op1,
+               const std::pair<element::Type, element::Type>& convertion_before_op2,
                const std::set<std::vector<InferenceEngine::Precision>>& op1_supported_precisions,
                const std::set<std::vector<InferenceEngine::Precision>>& op2_supported_precisions)
             : convertion_before_op1(convertion_before_op1),
+              convertion_before_op2(convertion_before_op2),
               op1_supported_precisions(op1_supported_precisions),
               op2_supported_precisions(op2_supported_precisions) {}
 
         std::pair<element::Type, element::Type> convertion_before_op1;
+        std::pair<element::Type, element::Type> convertion_before_op2;
         std::set<std::vector<InferenceEngine::Precision>> op1_supported_precisions;
         std::set<std::vector<InferenceEngine::Precision>> op2_supported_precisions;
     };

@@ -43,9 +43,19 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
             continue;
         }
 
+        bool alligned_inputs = true;
+        for (const auto& input : op->inputs()) {
+            if (!ov::is_type<ngraph::snippets::op::ConvertSaturation>(input.get_source_output().get_node())) {
+                alligned_inputs = false;
+                break;
+            }
+        }
+
         std::vector<InferenceEngine::Precision> input_precisions;
         for (const auto& input : op->inputs()) {
-            const auto input_precision = input.get_source_output().get_element_type();
+            const auto parent_input = alligned_inputs ? input.get_source_output().get_node()->input(0) : input;
+
+            const auto input_precision = parent_input.get_source_output().get_element_type();
             const auto input_precision_ie = InferenceEngine::details::convertPrecision(input_precision);
             input_precisions.push_back(input_precision_ie);
         }
@@ -57,6 +67,51 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
                 return precisions.size() == input_precisions.size();
             }) && "input precisions count is not equal for supported precisions");
 
+        // if possible remove alligned input convertions
+        if (alligned_inputs &&
+            std::any_of(
+                supported_precisions.begin(),
+                supported_precisions.end(),
+                [&input_precisions](const std::vector<InferenceEngine::Precision>& precisions) {
+                    return precisions == input_precisions;
+                })) {
+            std::vector<element::Type> original_types;
+            for (const auto& output : op->outputs()) {
+                original_types.push_back(output.get_element_type());
+            }
+
+            for (auto i = 0; i < op->get_input_size(); ++i) {
+                const auto convert = op->get_input_node_shared_ptr(i);
+                assert(ov::is_type<ngraph::snippets::op::ConvertSaturation>(convert));
+                op->set_argument(i, convert->input(0).get_source_output());
+                //convert->input(0).get_source_output().replace(op);
+            }
+
+            op->validate_and_infer_types();
+
+            auto insert_final_convert = false;
+            for (auto i = 0ull; i < op->get_output_size(); ++i) {
+                if (original_types[i] != op->output(i).get_element_type()) {
+                    insert_final_convert = true;
+                    break;
+                }
+            }
+
+            if (insert_final_convert) {
+                for (auto i = 0ull; i < op->get_output_size(); ++i) {
+                    const auto& op_output = op->output(i);
+                    for (const auto& input : op_output.get_target_inputs()) {
+                        const auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
+                            op_output,
+                            original_types[i]);
+                        input.replace_source_output(convert->output(0));
+                    }
+                }
+            }
+            continue;
+        }
+
+        // if possible then convert precisions to supported
         if (!supported_precisions.empty() &&
             !std::any_of(
                 supported_precisions.begin(),
