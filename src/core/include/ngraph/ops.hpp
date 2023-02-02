@@ -58,6 +58,7 @@
 #include "ngraph/op/experimental_detectron_topkrois.hpp"
 #include "ngraph/op/extractimagepatches.hpp"
 #include "ngraph/op/eye.hpp"
+#include "ngraph/op/fake_convert_fp8.hpp"
 #include "ngraph/op/fake_quantize.hpp"
 #include "ngraph/op/floor.hpp"
 #include "ngraph/op/floor_mod.hpp"

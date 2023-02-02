@@ -19,21 +19,18 @@ namespace v0 {
 /// \paragraph Implementation This class creates a node which performs the following
 ///            operation:
 ///
-///            round((data - input_low) / (input_high - input_low) * (levels-1)) /
-///                 (levels-1) * (output_high - output_low) + output_low
-///
 ///
 /// \ingroup ov_ops_cpp_api
-class OPENVINO_API FakeQuantize : public BaseFakeQuantize {
+class OPENVINO_API FakeConvertFp8 : public BaseFakeQuantize {
 public:
-    OPENVINO_OP("FakeQuantize", "opset1");
+    OPENVINO_OP("FakeConvertFp8", "opset1");
 
     enum Precision {
         integer,
         float_point
     };
 
-    FakeQuantize();
+    FakeConvertFp8();
     ///
     /// \brief      Constructs a FakeQuantize operation node.
     ///
@@ -46,14 +43,8 @@ public:
     /// \param[in]  auto_broadcast  AutoBroadcast mode to be used for broadcasting
     ///                             limit values
     ///
-    FakeQuantize(const Output<Node>& data,
-                 const Output<Node>& input_low,
-                 const Output<Node>& input_high,
-                 const Output<Node>& output_low,
-                 const Output<Node>& output_high,
-                 std::size_t levels,
-                 const AutoBroadcastSpec& auto_broadcast = AutoBroadcastSpec(AutoBroadcastType::NUMPY),
-                 const Precision precision = Precision::float_point);
+    FakeConvertFp8(const Output<Node>& data,
+                 const Output<Node>& scale);
 
     bool visit_attributes(AttributeVisitor& visitor) override;
     void validate_and_infer_types() override;
@@ -64,7 +55,7 @@ public:
         return m_levels;
     }
 
-    FakeQuantize::Precision get_precision() const {
+    FakeConvertFp8::Precision get_precision() const {
         return m_precision;
     }
 

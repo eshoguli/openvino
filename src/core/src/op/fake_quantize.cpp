@@ -18,7 +18,7 @@
 using namespace std;
 using namespace ngraph;
 
-op::FakeQuantize::FakeQuantize() : Op(), m_levels() {}
+op::FakeQuantize::FakeQuantize() : BaseFakeQuantize(), m_levels() {}
 
 op::FakeQuantize::FakeQuantize(const Output<Node>& data,
                                const Output<Node>& input_low,
@@ -28,7 +28,7 @@ op::FakeQuantize::FakeQuantize(const Output<Node>& data,
                                size_t levels,
                                const AutoBroadcastSpec& auto_broadcast,
                                const Precision precision)
-    : Op({data, input_low, input_high, output_low, output_high}),
+    : BaseFakeQuantize({data, input_low, input_high, output_low, output_high}),
       m_levels(levels),
       m_auto_broadcast(auto_broadcast),
       m_precision(precision) {

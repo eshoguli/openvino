@@ -45,12 +45,14 @@ void ConvolutionTransformation::SetUp() {
     ConvolutionTransformationParam param;
     std::tie(netPrecision, inputShape, targetDevice, params, param) = this->GetParam();
 
-    function = ngraph::builder::subgraph::FakeQuantizeAndConvolutionFunction::get(
+    function = ngraph::builder::subgraph::FakeQuantizeAndConvolutionFunction::get_fp8(
         netPrecision,
         inputShape,
         // TODO: pass from test parameters
         param.fakeQuantizeOnData,
         param.fakeQuantizeOnWeights);
+
+    ngraph::pass::VisualizeTree("svg/test.actual.svg").run_on_model(function);
 }
 
 void ConvolutionTransformation::Run() {

@@ -5,6 +5,7 @@
 #include "lpt_ngraph_functions/fake_quantize_and_convolution_function.hpp"
 
 #include <ngraph/opsets/opset1.hpp>
+#include <ngraph/op/fake_convert_fp8.hpp>
 #include "ngraph_functions/subgraph_builders.hpp"
 #include "lpt_ngraph_functions/common/builders.hpp"
 #include "inference_engine.hpp"
@@ -59,6 +60,58 @@ std::shared_ptr<ngraph::Function> FakeQuantizeAndConvolutionFunction::get(
             ngraph::builder::makeFakeQuantize(
                 weights, precision, fqOnWeights.quantizationLevel, fqOnWeights.constantShape,
                 fqOnWeights.inputLowValues, fqOnWeights.inputHighValues, fqOnWeights.outputLowValues, fqOnWeights.outputHighValues),
+        ngraph::Strides(rankLength - 2, 1ul),
+        ngraph::CoordinateDiff(rankLength - 2, 0ul),
+        ngraph::CoordinateDiff(rankLength - 2, 0ul),
+        ngraph::Strides(rankLength - 2, 1ul));
+    convolution->set_friendly_name("convolution");
+
+    ngraph::ResultVector results{ std::make_shared<ngraph::opset1::Result>(convolution) };
+    return std::make_shared<ngraph::Function>(results, ngraph::ParameterVector{ input }, "FakeQuantizeAndConvolutionFunction");
+}
+
+std::shared_ptr<ngraph::Function> FakeQuantizeAndConvolutionFunction::get_fp8(
+    const ngraph::element::Type precision,
+    const ngraph::PartialShape& inputShape,
+    const FakeQuantizeOnData& fqOnData,
+    const FakeQuantizeOnWeights& fqOnWeights) {
+    const auto rankLength = inputShape.rank().is_dynamic() ? 4 : inputShape.rank().get_length();
+    if ((rankLength != 3ul) && (rankLength != 4ul)) {
+        throw ov::Exception("not supported input shape rank: " + std::to_string(rankLength));
+    }
+
+    const auto input = std::make_shared<ngraph::opset1::Parameter>(precision, inputShape);
+    const std::shared_ptr<Node> fakeQuantizeOnActivations = fqOnData.empty() ?
+        nullptr : std::make_shared<ngraph::op::FakeConvertFp8>(
+            input, 
+            std::make_shared<ngraph::opset1::Constant>(ngraph::element::f32, ngraph::Shape{}, std::vector<float>(1.f, 1)));
+    if (fakeQuantizeOnActivations != nullptr) {
+        fakeQuantizeOnActivations->set_friendly_name("fakeQuantizeOnActivations");
+    }
+
+    const size_t inputChannelsCount = inputShape[1].get_length();
+    const size_t outputChannelsCount = 2 * inputShape[1].get_length();
+    const auto weights = ngraph::opset1::Constant::create(
+        precision,
+        rankLength == 3ul ?
+            (ngraph::Shape{ outputChannelsCount, inputChannelsCount, 1}) :
+            (ngraph::Shape{ outputChannelsCount, inputChannelsCount, 1, 1 }),
+        std::vector<float>(outputChannelsCount * inputChannelsCount, 1));
+
+    auto maxPool = std::make_shared<opset1::MaxPool>(
+        fqOnData.empty() ? input : fakeQuantizeOnActivations,
+        Strides(rankLength - 2, 1ul),
+        Shape(rankLength - 2, 1ul),
+        Shape(rankLength - 2, 0ul),
+        Shape(rankLength - 2, 2ul),
+        op::RoundingType::FLOOR);
+    maxPool->set_friendly_name("maxPool");
+
+    const auto convolution = std::make_shared<ngraph::opset1::Convolution>(
+        maxPool, //fqOnData.empty() ? input : fakeQuantizeOnActivations,
+        fqOnWeights.empty() ? weights->output(0) : std::make_shared<ngraph::op::FakeConvertFp8>(
+            weights, 
+            std::make_shared<ngraph::opset1::Constant>(ngraph::element::f32, ngraph::Shape{}, std::vector<float>(1.f, 1))),
         ngraph::Strides(rankLength - 2, 1ul),
         ngraph::CoordinateDiff(rankLength - 2, 0ul),
         ngraph::CoordinateDiff(rankLength - 2, 0ul),

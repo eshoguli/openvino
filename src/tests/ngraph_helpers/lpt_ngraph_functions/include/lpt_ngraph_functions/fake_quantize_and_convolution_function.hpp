@@ -29,6 +29,12 @@ public:
         const FakeQuantizeOnData& fakeQuantizeOnData,
         const FakeQuantizeOnWeights& fakeQuantizeOnWeights);
 
+    static std::shared_ptr<ngraph::Function> get_fp8(
+        const ngraph::element::Type precision,
+        const ngraph::PartialShape& inputShape,
+        const FakeQuantizeOnData& fakeQuantizeOnData,
+        const FakeQuantizeOnWeights& fakeQuantizeOnWeights);
+
     static std::shared_ptr<ngraph::Function> get(
         const ngraph::element::Type precision,
         const ngraph::PartialShape& inputShape,

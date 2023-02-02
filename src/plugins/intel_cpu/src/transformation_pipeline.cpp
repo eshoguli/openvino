@@ -170,6 +170,8 @@ void Transformations::UpToCpuSpecificOpSet() {
 
     PostLpt();
 
+    ngraph::pass::VisualizeTree("svg/cpu.actual.svg").run_on_model(model);
+
     if (useSnippets)
         Snippets();
 
