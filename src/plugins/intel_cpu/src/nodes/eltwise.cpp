@@ -4,6 +4,7 @@
 
 #include "eltwise.h"
 
+#include <string>
 #include <ie_parallel.hpp>
 
 #include "cpu_types.h"
@@ -104,7 +105,7 @@ struct EltwiseEmitter<jit_is_inf_emitter> {
 /**
  * Implements Eltwise shape inference algorithm. The algorithm is based on broadcasting all the input shapes
  * according to the NUMPY broadcast rule. This implementation is more lightweight than the ngraph one.
- * 
+ *
  */
 class EltwiseShapeInfer : public ShapeInferEmptyPads {
 public:
@@ -545,8 +546,38 @@ private:
         OV_CASE(Algorithm::EltwiseIsInf, jit_is_inf_emitter),
         OV_CASE(Algorithm::EltwiseIsNaN, jit_is_nan_emitter));
 
-        if (precisions.empty())
-            IE_THROW() << "Unsupported operation type for Eltwise emitter";
+        if (precisions.empty()) {
+            auto to_string = [](const std::set<std::vector<Precision>>& precisions) {
+                std::stringstream ss;
+                ss << "{";
+                for (const auto& precisions_set : precisions) {
+                    ss << "{";
+                    for (const auto& precision : precisions_set) {
+                        ss << precision << ",";
+                    }
+                    ss << "}";
+                }
+                ss << "}";
+                return ss.str();
+            };
+
+            //auto to_string2 = [](const std::set<std::vector<Precision>>& precisions) {
+            //    std::stringstream ss;
+            //    ss << "{";
+            //    for (const auto& precisions_set : precisions) {
+            //        ss << "{";
+            //        for (const auto& precision : precisions_set) {
+            //            ss << precision << ",";
+            //        }
+            //        ss << "}";
+            //    }
+            //    ss << "}";
+            //    return ss.str();
+            //};
+
+            IE_THROW() << "Unsupported operation type for Eltwise emitter: algo=" << ov::intel_cpu::algToString(algo) <<
+                ", precisions=" << to_string(precisions);
+        }
 
         return precisions;
     }
