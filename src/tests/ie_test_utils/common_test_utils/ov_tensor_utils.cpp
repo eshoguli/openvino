@@ -275,6 +275,9 @@ void compare(const ov::Tensor& expected,
         }
         double abs = std::fabs(expected_value - actual_value);
         double rel = expected_value ? (abs / std::fabs(expected_value)) : abs;
+        //if (i < 128) {
+        //    std::cout << i << ": expected_value=" << expected_value << ", actual_value: " << actual_value << ", abs: " << abs << ", rel: " << rel << std::endl;
+        //}
         abs_error.update(abs, i);
         rel_error.update(rel, i);
     }

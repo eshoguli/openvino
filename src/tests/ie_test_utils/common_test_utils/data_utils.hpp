@@ -203,7 +203,12 @@ fill_data_random(T *pointer, std::size_t size, const uint32_t range = 10, int32_
 
     for (std::size_t i = 0; i < size; i++) {
         pointer[i] = static_cast<T>(start_from + static_cast<T>(random.Generate(range)) / k);
+        //pointer[i] = static_cast<T>(i / 3.0f);
+        if (i < 127) {
+            std::cout << static_cast<int>(pointer[i]) << ", ";
+        }
     }
+    std::cout << std::endl;
 }
 
 /** @brief Fill a memory area with a sorted sequence of unique elements randomly generated.
