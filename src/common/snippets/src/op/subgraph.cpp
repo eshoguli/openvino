@@ -352,7 +352,9 @@ ov::PartialShape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& 
 
     // We should insert Converts after Parameters and Constant and before Results
     // to align precision inside Subgraph body that is supported by Plugin
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.1.svg").run_on_model(body_ptr());
     align_element_types(outputShapes, inputShapes);
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.2.svg").run_on_model(body_ptr());
 
     master_shape = outPShape;
     return master_shape;
@@ -368,6 +370,7 @@ void snippets::op::Subgraph::align_element_types(const BlockedShapeVector& outpu
             const auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
                 body_results[i]->get_input_node_shared_ptr(0), needed_out_type);
             body_results[i]->set_argument(0, convert);
+            body_results[i]->validate_and_infer_types();
         }
     }
 
@@ -611,21 +614,23 @@ snippets::Schedule snippets::op::Subgraph::generate(const void* compile_params) 
 }
 
 snippets::Schedule snippets::op::Subgraph::generate(
-    ngraph::pass::Manager& opt1,
-    ngraph::pass::Manager& opt2,
-    ngraph::pass::Manager& opt3,
+    ngraph::pass::Manager& pre_dialect,
+    ngraph::pass::Manager& post_dialect,
+    ngraph::pass::Manager& post_precision,
     const void* compile_params) {
     INTERNAL_OP_SCOPE(Subgraph);
     OV_ITT_SCOPED_TASK(ngraph::pass::itt::domains::SnippetsTransform, "Snippets::op::generate")
     NGRAPH_CHECK(m_generator != nullptr, "generate is called while generator is not set");
 
-    opt1.run_passes(body_ptr());
+    pre_dialect.run_passes(body_ptr());
     convert_to_snippet_dialect();
-    opt2.run_passes(body_ptr());
+    post_dialect.run_passes(body_ptr());
 
+    ngraph::pass::VisualizeTree("svg/snippets.generate.2.svg").run_on_model(body_ptr());
     snippets::pass::PropagatePrecision(element::f32, m_generator->get_target_machine()).run_on_model(body_ptr());
+    ngraph::pass::VisualizeTree("svg/snippets.generate.3.svg").run_on_model(body_ptr());
 
-    opt3.run_passes(body_ptr());
+    post_precision.run_passes(body_ptr());
 
     // After all passes, when all optimizations are completed and all MemoryAccess ops are inserted,
     // we can calculate common buffer scratchpad size and propagate offset from Buffer to the corresponding MemoryAccess ops

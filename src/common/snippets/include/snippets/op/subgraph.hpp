@@ -110,9 +110,9 @@ public:
                                 const void* compile_params = nullptr);
     snippets::Schedule generate(const BlockedShapeVector& output_shapes, const BlockedShapeVector& input_shapes, const void* compile_params = nullptr);
     snippets::Schedule generate(
-        ngraph::pass::Manager& opt1,
-        ngraph::pass::Manager& opt2,
-        ngraph::pass::Manager& opt3,
+        ngraph::pass::Manager& pre_dialect,
+        ngraph::pass::Manager& post_dialect,
+        ngraph::pass::Manager& post_precision,
         const void* compile_params = nullptr);
     snippets::Schedule generate(const void* compile_params = nullptr);
     ov::PartialShape canonicalize(const BlockedShapeVector& output_shapes, const BlockedShapeVector& input_shapes);
