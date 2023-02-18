@@ -418,8 +418,8 @@ void Snippet::define_schedule() {
         offsets_in.resize(inputNum);
         for (size_t i = 0; i < inputNum; i++) {
             offsets_in[i].resize(tensorRank, 1);
-            
-                        // TODO: backprop: fix here for input & output
+
+            // TODO: backprop: fix here for input & output
             // input:
             //    offsets_in: {1, 1, 1, 1, 1, 1}
             //    dims_in:  {1, 1, 1, 32, 32, 8}
@@ -689,7 +689,7 @@ void Snippet::schedule_6d(const jit_snippets_call_args& call_args) const {
             int64_t indexes[] = {d0, d1, d2, d3, d4};
 
 #ifdef CPU_DEBUG_CAPS_SNIPPETS
-            auto callable = schedule.get_callable<kernel>();            
+            auto callable = schedule.get_callable<kernel>();
             callable(indexes, &call_args);
 #else
             schedule.get_callable<kernel>()(indexes, &call_args);
