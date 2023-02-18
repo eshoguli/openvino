@@ -175,8 +175,8 @@ auto update_out_tensor_name(std::shared_ptr<ngraph::snippets::op::Subgraph> &sub
 
 // TODO: refactor
 auto is_layout_dependent(const std::shared_ptr<const Node>& n) -> bool {
-    return 
-        ov::is_type<opset1::MaxPool>(n) || 
+    return
+        ov::is_type<opset1::MaxPool>(n) ||
         ov::is_type<opset1::Convolution>(n) ||
         ov::is_type<opset1::GroupConvolution>(n);
 }
