@@ -10,24 +10,36 @@ using namespace LayerTestsDefinitions;
 using namespace ngraph;
 
 const std::vector<ConvolutionTestValues> testValues = {
+    {
+        {1, 16, 112, 112},
+        {{1, 1}, {0, 0}, {0, 0}, {1, 1}},
         {
-            {1, 16, 112, 112},
-            {{1, 1}, {0, 0}, {0, 0}, {1, 1}},
-            {
-                {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 16, 1, 1}},
-                //{{1, 1}, {1, 1}, {1, 1}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}
-                {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}
-            },
+            {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 16, 1, 1}},
+            {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}
         },
+    },
+    {
+        {1, 16, 112 * 2, 112 * 2},
+        {{1, 1}, {0, 0}, {0, 0}, {1, 1}},
         {
-            {1, 16, 224, 224},
-            {{1, 1}, {0, 0}, {0, 0}, {1, 1}},
-            {
-                {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 16, 1, 1}},
-                //{{1, 1}, {1, 1}, {1, 1}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}
-                {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}
-            },
+            {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 16, 1, 1}},
+            {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}
         },
+    },
+    {
+        {1, 16, 112 * 4, 112 * 4},
+        {{1, 1}, {0, 0}, {0, 0}, {1, 1}},
+        {{{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 16, 1, 1}},
+         {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}},
+    },
+    {
+        {1, 16, 112 * 8, 112 * 8},
+        {{1, 1}, {0, 0}, {0, 0}, {1, 1}},
+        {
+            {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 16, 1, 1}},
+            {{1, 1}, {0, 0}, {0, 0}, {1, 1}, ov::op::PadType::VALID, ov::Shape{96, 1, 3, 3}}
+        },
+    },
 };
 
 std::vector<size_t> input_batches = { 1ull, /*2ul*/ };

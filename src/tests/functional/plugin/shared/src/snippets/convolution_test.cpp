@@ -94,6 +94,7 @@ void ConvolutionTest::SetUp() {
 
 #define CPU_DEBUG_CAPS_SNIPPETS
 #ifdef CPU_DEBUG_CAPS_SNIPPETS
+    ngraph::pass::Serialize("svg/test.actual.xml", "svg/test.actual.bin").run_on_model(function);
     ngraph::pass::VisualizeTree("svg/test.actual.svg").run_on_function(function);
     ngraph::pass::Serialize("svg/test.actual.xml", "svg/test.actual.bin").run_on_function(function);
 #endif
