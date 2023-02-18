@@ -91,7 +91,7 @@ bool ngraph::snippets::pass::AlignElementType::run_on_model(const std::shared_pt
 bool ngraph::snippets::pass::AlignElementType::opNeedsAlignElementType(const std::shared_ptr<ov::Node>& op, const ov::element::Type exec_type) {
     // At the moment Snippets support only Eltwise/Convert/FQ which one output so we can just call get_element_type()
     //return op_supports_only_exec_type(op) && op->get_element_type() != exec_type;
-    
+
     // TODO: not completed
     return op_supports_only_exec_type(op) && op->output(0).get_element_type() != exec_type;
 }
