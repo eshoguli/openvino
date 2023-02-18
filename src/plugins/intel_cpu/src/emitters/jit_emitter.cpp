@@ -70,12 +70,12 @@ void jit_emitter::emitter_preamble(const std::vector<size_t> &in_idxs, const std
                                    const std::vector<size_t> &pool_vec_idxs, const std::vector<size_t> &pool_gpr_idxs) const {
     using namespace Xbyak::util;
 
-    bool is_vec_input = 
+    bool is_vec_input =
         (in_out_type_ == emitter_in_out_map::vec_to_vec) ||
-        (in_out_type_ == emitter_in_out_map::vec_to_gpr) || 
+        (in_out_type_ == emitter_in_out_map::vec_to_gpr) ||
         (in_out_type_ == emitter_in_out_map::mixed);
 
-    bool is_vec_output = 
+    bool is_vec_output =
         (in_out_type_ == emitter_in_out_map::vec_to_vec) ||
         (in_out_type_ == emitter_in_out_map::gpr_to_vec) ||
         (in_out_type_ == emitter_in_out_map::mixed);
