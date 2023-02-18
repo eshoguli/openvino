@@ -205,13 +205,13 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
     };
     Shape baseShape;
     AxisVector baseOrder;
-    
+
     // TODO: improve later
     if (inputShapes.size() == 1ull) {
         std::tie(baseShape, baseOrder, std::ignore) = getMaxRankBlockedShape(inputShapes);
     } else {
-        auto inputShapesWithoutSpecificConstant = (inputShapes.size() < 5ull) ? 
-            BlockedShapeVector{inputShapes[0], inputShapes[2]} : 
+        auto inputShapesWithoutSpecificConstant = (inputShapes.size() < 5ull) ?
+            BlockedShapeVector{inputShapes[0], inputShapes[2]} :
             BlockedShapeVector{inputShapes[0], inputShapes[2], inputShapes[4]};
         std::tie(baseShape, baseOrder, std::ignore) = getMaxRankBlockedShape(inputShapesWithoutSpecificConstant);
     }
@@ -310,7 +310,7 @@ Shape snippets::op::Subgraph::canonicalize(const BlockedShapeVector& outputShape
     align_element_types(outputShapes, inputShapes);
 
 #ifdef CPU_DEBUG_CAPS_SNIPPETS
-    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.4.svg").run_on_model(body_ptr());
+    ngraph::pass::VisualizeTree("svg/snippets.canonicalize.5.svg").run_on_model(body_ptr());
 #endif
 
     exec_domain = outPShape.get_shape();
