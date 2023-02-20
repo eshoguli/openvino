@@ -625,8 +625,8 @@ snippets::Schedule snippets::op::Subgraph::generate(
     post_dialect.run_passes(body_ptr());
 
     snippets::pass::PropagatePrecision(element::f32, m_generator->get_target_machine()).run_on_model(body_ptr());
-    ngraph::pass::ConstantFolding().run_on_model(body_ptr());
     ngraph::pass::Manager manager;
+    manager.register_pass<ngraph::pass::ConstantFolding>();
     manager.register_pass<snippets::pass::ConvertConstantsToScalars>();
     manager.run_passes(body_ptr());
 

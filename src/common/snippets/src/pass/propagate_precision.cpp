@@ -28,10 +28,6 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
     }
 
     for (const auto& op : f->get_ordered_ops()) {
-        if (ngraph::is_type<opset1::Constant>(op)) {
-            continue;
-        }
-
         auto type_info = op->get_type_info();
         if (!target_machine->has(type_info)) {
             throw ov::Exception(
@@ -185,6 +181,7 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
             }
 
             if (type_relaxed_node != nullptr) {
+                // TODO: user story 104281
                 // to keep previous functionality
                 // unary and binary element-wise operations are supported
                 // will be replaced to snippets opset later
