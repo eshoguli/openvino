@@ -114,6 +114,16 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
 
         auto input_precisions_were_changed = false;
 
+        auto find_convert = [](const ngraph::Output<ngraph::Node> parent_output, const ngraph::element::Type convert_type) -> snippets::op::ConvertSaturation* {
+            for (const auto& input : parent_output.get_target_inputs()) {
+                const auto child = ngraph::as_type<snippets::op::ConvertSaturation>(input.get_node());
+                if ((child != nullptr) && (child->output(0).get_element_type() == convert_type)) {
+                    return child;
+                }
+            }
+            return nullptr;
+        };
+
         // update input precisions
         // if possible then convert precisions to supported
         if (!supported_precisions.empty() &&
@@ -142,33 +152,51 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
                     input_precisions_were_changed = true;
                     auto existing_convert = ngraph::as_type<ngraph::snippets::op::ConvertSaturation>(
                         parent_output.get_node());
+
                     if (existing_convert == nullptr) {
+                        existing_convert = find_convert(parent_output, required_after);
+                        if (existing_convert != nullptr) {
+                            // reuse existing convert
+                            op->set_argument(op_input.get_index(), existing_convert->shared_from_this());
+                            continue;
+                        }
+                    }
+
+                    if (existing_convert == nullptr) {
+                        // create new Convert
                         auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
                             parent_output,
                             required_after);
                         ngraph::copy_runtime_info(parent_output.get_node_shared_ptr(), convert);
                         op->set_argument(op_input.get_index(), convert);
-                    } else {
-                        const auto actual_before = existing_convert->get_input_source_output(0).get_element_type();
-                        const auto actual_after = existing_convert->output(0).get_element_type();
-                        if (can_be_removed(actual_before, actual_after, required_after)) {
-                            existing_convert->output(0).replace(parent_output);
-                        } else {
-                            if (can_be_fused(actual_after, required_after)) {
-                                auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
-                                    existing_convert->get_input_node_shared_ptr(0),
-                                    required_after);
-                                ngraph::copy_runtime_info(parent_output.get_node_shared_ptr(), convert);
-                                op->set_argument(op_input.get_index(), convert);
-                            } else {
-                                auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
-                                    existing_convert->output(0),
-                                    required_after);
-                                ngraph::copy_runtime_info(existing_convert->shared_from_this(), convert);
-                                op->set_argument(op_input.get_index(), convert);
-                            }
-                        }
+                        continue;
                     }
+
+                    const auto actual_before = existing_convert->get_input_source_output(0).get_element_type();
+                    const auto actual_after = existing_convert->output(0).get_element_type();
+
+                    if (can_be_removed(actual_before, actual_after, required_after)) {
+                        // remove existing convert
+                        existing_convert->output(0).replace(parent_output);
+                        continue;
+                    }
+
+                    if (can_be_fused(actual_after, required_after)) {
+                        // fuse existing convert
+                        auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
+                            existing_convert->get_input_node_shared_ptr(0),
+                            required_after);
+                        ngraph::copy_runtime_info(parent_output.get_node_shared_ptr(), convert);
+                        op->set_argument(op_input.get_index(), convert);
+                        continue;
+                    }
+
+                    // create new convert
+                    auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
+                        existing_convert->output(0),
+                        required_after);
+                    ngraph::copy_runtime_info(existing_convert->output(0).get_node()->shared_from_this(), convert);
+                    op->set_argument(op_input.get_index(), convert);
                 }
             }
         }
