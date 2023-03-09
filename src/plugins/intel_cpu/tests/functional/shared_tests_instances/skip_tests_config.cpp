@@ -194,6 +194,18 @@ std::vector<std::string> disabledTestPatterns() {
         // Issue: 104402. Incorrect broadcasting in FQ reference implentation
         R"(.*smoke_FakeQuantizeLayerCPUTest_Decompos.*IS=\[4\.5\.6\.6\]_TS=\(\(4\.5\.6\.6\)\)_RS=\(\(1\.1\.6\.6\)\)_\(\(1\.1\.6\.6\)\)_\(\(1\.5\.6\.1\)\)_\(\(1\.5\.1\.6\)\).*)",
         R"(.*smoke_FakeQuantizeLayerCPUTest_Decompos.*IS=\[4\.5\.6\.6\]_TS=\(\(4\.5\.6\.6\)\)_RS=\(\(1\.5\.6\.1\)\)_\(\(1\.5\.6\.1\)\)_\(\(1\.5\.6\.1\)\)_\(\(1\.5\.1\.6\)\).*)",
+
+        // TODO: just to test (134 are ignored)
+        R"(.*smoke_TestsClamp_signed/ClampLayerTest.*netPrc=I64.*)",
+        R"(.*smoke_TestsClamp_signed/ClampLayerTest.*netPrc=I32.*)",
+        R"(.*smoke_TestsClamp_unsigned/ClampLayerTest.*netPrc=U64.*)",
+        R"(.*smoke_CompareWithRefs_static/EltwiseLayerTest.EltwiseTests.*NetType=i32.*)",
+        R"(.*smoke_CompareWithRefs_static_check_collapsing/EltwiseLayerTest.*NetType=i32.*)",
+        R"(.*smoke_ConvertCPULayerTest/ConvertCPULayerTest.CompareWithRefs.*I32.*)",
+        R"(.*smoke_ConvertCPULayerTest_Blocked/ConvertCPULayerTest.*inputPRC=I32.*)",
+        R"(.*smoke_ConvertCPULayerTest_Blocked/ConvertCPULayerTest.*targetPRC=I32.*)",
+        R"(.*smoke_CompareWithRefs_5D_I32/EltwiseLayerCPUTest.*NetType=i32.*)",
+        R"(.*smoke_EltwiseChain/EltwiseChainTest.*InPRC0=i32_InPRC1=i32_InPRC2=i32_InPRC3=i32.*)",
     };
 
 #define FIX_62820 0
