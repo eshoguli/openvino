@@ -5,48 +5,13 @@
 #include <gtest/gtest.h>
 #include <ngraph/opsets/opset1.hpp>
 #include <ngraph/pass/manager.hpp>
+#include <snippets/op/convert_saturation.hpp>
 #include "common_test_utils/graph_comparator.hpp"
 #include "snippets_transformations/remove_converts.hpp"
-#include "snippets/op/convert_saturation.hpp"
 
 namespace ov {
 namespace test {
 namespace snippets {
-
-class RemoveConvertsFunction {
-public:
-    static std::shared_ptr<ov::Model> get(
-        const PartialShape& input_shape,
-        ov::element::Type input_type,
-        ov::element::Type convert1_out_type,
-        ov::element::Type convert2_out_type) {
-        const auto parameter = std::make_shared<ngraph::opset1::Parameter>(input_type, input_shape);
-        parameter->set_friendly_name("parameter");
-
-        std::shared_ptr<Node> parent = std::make_shared<ngraph::opset1::Maximum>(
-            parameter,
-            std::make_shared<ngraph::opset1::Constant>(input_type, Shape{}, std::vector<float>{0.f}));
-        parent->set_friendly_name("maximum");
-
-        parent = convert1_out_type == element::undefined ?
-            parent :
-            std::make_shared<ngraph::snippets::op::ConvertSaturation>(parent, convert1_out_type);
-
-        parent = convert2_out_type == element::undefined ?
-            parent :
-            std::make_shared<ngraph::snippets::op::ConvertSaturation>(parent, convert2_out_type);
-
-        parent = std::make_shared<ngraph::opset1::Minimum>(
-            parent,
-            std::make_shared<ngraph::opset1::Constant>(parent->output(0).get_element_type(), Shape{}, std::vector<float>{0.f}));
-        parent->set_friendly_name("minimum");
-
-        const auto result = std::make_shared<ngraph::opset1::Result>(parent);
-        result->set_friendly_name("result");
-
-        return std::make_shared<ngraph::Function>(ngraph::ResultVector{ result }, ngraph::ParameterVector{ parameter }, "SnippetsPrecisionPropagation");
-    }
-};
 
 class RemoveConvertsTestValueItem {
 public:
@@ -81,7 +46,7 @@ protected:
     void SetUp() override {
         RemoveConvertsTestValue test_value = this->GetParam();
 
-        function = RemoveConvertsFunction::get(
+        function = create_model(
             test_value.input_shape,
             test_value.input_type,
             test_value.actual.convert1_type,
@@ -91,7 +56,7 @@ protected:
         manager.register_pass<ov::intel_cpu::pass::RemoveConverts>();
         manager.run_passes(function);
 
-        ref_function = RemoveConvertsFunction::get(
+        ref_function = create_model(
             test_value.input_shape,
             test_value.input_type,
             test_value.expected.convert1_type,
@@ -100,6 +65,41 @@ protected:
 
     std::shared_ptr<ov::Model> function;
     std::shared_ptr<ov::Model> ref_function;
+
+    static std::shared_ptr<ov::Model> create_model(
+        const PartialShape& input_shape,
+        ov::element::Type input_type,
+        ov::element::Type convert1_out_type,
+        ov::element::Type convert2_out_type) {
+        const auto parameter = std::make_shared<ngraph::opset1::Parameter>(input_type, input_shape);
+        parameter->set_friendly_name("parameter");
+
+        std::shared_ptr<Node> parent = std::make_shared<ngraph::opset1::Maximum>(
+            parameter,
+            std::make_shared<ngraph::opset1::Constant>(input_type, Shape{}, std::vector<float>{0.f}));
+        parent->set_friendly_name("maximum");
+
+        parent = convert1_out_type == element::undefined ?
+            parent :
+            std::make_shared<ngraph::snippets::op::ConvertSaturation>(parent, convert1_out_type);
+
+        parent = convert2_out_type == element::undefined ?
+            parent :
+            std::make_shared<ngraph::snippets::op::ConvertSaturation>(parent, convert2_out_type);
+
+        parent = std::make_shared<ngraph::opset1::Minimum>(
+            parent,
+            std::make_shared<ngraph::opset1::Constant>(parent->output(0).get_element_type(), Shape{}, std::vector<float>{0.f}));
+        parent->set_friendly_name("minimum");
+
+        const auto result = std::make_shared<ngraph::opset1::Result>(parent);
+        result->set_friendly_name("result");
+
+        return std::make_shared<ngraph::Function>(
+            ngraph::ResultVector{ result },
+            ngraph::ParameterVector{ parameter },
+            "SnippetsPrecisionPropagation");
+    }
 };
 
 TEST_P(RemoveConvertsTests, RemoveConvertsTests) {
