@@ -3,10 +3,10 @@
 //
 
 #include <gtest/gtest.h>
-#include <ngraph/opsets/opset1.hpp>
-#include <ngraph/pass/manager.hpp>
-#include <snippets/op/convert_saturation.hpp>
 #include "common_test_utils/graph_comparator.hpp"
+#include "ngraph/opsets/opset1.hpp"
+#include "ngraph/pass/manager.hpp""
+#include "snippets/op/convert_saturation.hpp"
 #include "snippets_transformations/remove_converts.hpp"
 
 namespace ov {
@@ -66,6 +66,7 @@ protected:
     std::shared_ptr<ov::Model> function;
     std::shared_ptr<ov::Model> ref_function;
 
+private:
     static std::shared_ptr<ov::Model> create_model(
         const PartialShape& input_shape,
         ov::element::Type input_type,
