@@ -26,7 +26,7 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
         result_types.emplace(result, result->get_input_element_type(0));
     }
 
-    bool was_updated = true;
+    bool was_updated = false;
     for (const auto& op : f->get_ordered_ops()) {
         auto type_info = op->get_type_info();
         OPENVINO_ASSERT(
@@ -44,8 +44,6 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
         //      operation before general algo
         //   2) Type relaxed based operations. Will be resolved by snippet opset.
 
-        auto input_precisions_were_changed = false;
-
         for (const auto& input : op->inputs()) {
             const auto convert = ngraph::as_type<snippets::op::ConvertSaturation>(input.get_source_output().get_node());
             if (convert == nullptr) {
@@ -56,7 +54,7 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
             const auto precision_after = convert->get_output_element_type(0);
             if (can_be_removed(precision_before, precision_after, precision_before)) {
                 op->set_argument(input.get_index(), convert->input(0).get_source_output());
-                input_precisions_were_changed = true;
+                was_updated = true;
             }
         }
 
@@ -107,7 +105,6 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
                 const auto actual_before = parent_output.get_element_type();
                 if (actual_before != required_after) {
                     was_updated = true;
-                    input_precisions_were_changed = true;
                     auto existing_convert = ngraph::as_type<ngraph::snippets::op::ConvertSaturation>(
                         parent_output.get_node());
 
@@ -160,60 +157,9 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
         }
 
         auto type_relaxed_node = std::dynamic_pointer_cast<ov::op::TypeRelaxedBase>(op);
-        if (input_precisions_were_changed || (type_relaxed_node != nullptr)) {
-            // update output precision
-            std::vector<element::Type> op_output_types;
-            for (auto& output : op->outputs()) {
-                op_output_types.push_back(output.get_element_type());
-            }
-
-            if (type_relaxed_node != nullptr) {
-                // TODO: user story 104284
-                // to keep previous functionality
-                // unary and binary element-wise operations are supported
-                // will be replaced to snippets opset later
-                const auto op_element_type = op->get_input_element_type(0);
-                if (type_relaxed_node->get_overridden_output_type(0) != op_element_type) {
-                    was_updated = true;
-                    OPENVINO_ASSERT(op->get_output_size() == 1ull, "operation with several output is not supported");
-
-                    type_relaxed_node->set_overridden_output_type(op_element_type, 0);
-                    op->validate_and_infer_types();
-                }
-            } else {
-                op->validate_and_infer_types();
-            }
-
-            for (size_t i = 0; i < op->get_output_size(); ++i) {
-                auto output = op->output(i);
-
-                if (output.get_element_type() != op_output_types[i]) {
-                    was_updated = true;
-                    auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
-                        output,
-                        op_output_types[i]);
-                    ngraph::copy_runtime_info(output.get_node_shared_ptr(), convert);
-
-                    for (auto& input : output.get_target_inputs()) {
-                        auto child = input.get_node();
-                        if (child == convert.get()) {
-                            continue;
-                        }
-
-                        input.replace_source_output(convert->output(0));
-
-
-                        if (ngraph::is_type<ngraph::op::Result>(input.get_node())) {
-                            input.get_tensor_ptr()->add_names(output.get_tensor_ptr()->get_names());
-
-                            const std::string original_name = op->get_friendly_name();
-                            op->set_friendly_name(original_name + "_original");
-                            convert->set_friendly_name(original_name);
-                        }
-                    }
-                    output.get_tensor_ptr()->set_names({});
-                }
-            }
+        if (was_updated || (type_relaxed_node != nullptr)) {
+            const bool res = validate_and_infer_types_and_restore_outputs(op);
+            was_updated = was_updated || res;
         }
     }
 
@@ -228,6 +174,67 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
                 expected_type);
             ngraph::copy_runtime_info(result->get_input_node_shared_ptr(0), convert);
             result->set_argument(0, convert);
+        }
+    }
+
+    return was_updated;
+}
+
+bool ngraph::snippets::pass::PropagatePrecision::validate_and_infer_types_and_restore_outputs(const std::shared_ptr<ngraph::Node> op) {
+    bool was_updated = false;
+
+    // update output precision
+    std::vector<element::Type> op_output_types;
+    for (auto& output : op->outputs()) {
+        op_output_types.push_back(output.get_element_type());
+    }
+
+    auto type_relaxed_node = std::dynamic_pointer_cast<ov::op::TypeRelaxedBase>(op);
+    if (type_relaxed_node != nullptr) {
+        // TODO: user story 104284
+        // to keep previous functionality
+        // unary and binary element-wise operations are supported
+        // will be replaced to snippets opset later
+        const auto op_element_type = op->get_input_element_type(0);
+        if (type_relaxed_node->get_overridden_output_type(0) != op_element_type) {
+            was_updated = true;
+            OPENVINO_ASSERT(op->get_output_size() == 1ull, "operation with several output is not supported");
+
+            type_relaxed_node->set_overridden_output_type(op_element_type, 0);
+            op->validate_and_infer_types();
+        }
+    } else {
+        op->validate_and_infer_types();
+    }
+
+    for (size_t i = 0; i < op->get_output_size(); ++i) {
+        auto output = op->output(i);
+
+        if (output.get_element_type() != op_output_types[i]) {
+            was_updated = true;
+            auto convert = std::make_shared<ngraph::snippets::op::ConvertSaturation>(
+                output,
+                op_output_types[i]);
+            ngraph::copy_runtime_info(output.get_node_shared_ptr(), convert);
+
+            for (auto& input : output.get_target_inputs()) {
+                auto child = input.get_node();
+                if (child == convert.get()) {
+                    continue;
+                }
+
+                input.replace_source_output(convert->output(0));
+
+
+                if (ngraph::is_type<ngraph::op::Result>(input.get_node())) {
+                    input.get_tensor_ptr()->add_names(output.get_tensor_ptr()->get_names());
+
+                    const std::string original_name = op->get_friendly_name();
+                    op->set_friendly_name(original_name + "_original");
+                    convert->set_friendly_name(original_name);
+                }
+            }
+            output.get_tensor_ptr()->set_names({});
         }
     }
 
@@ -259,6 +266,7 @@ bool ngraph::snippets::pass::PropagatePrecision::can_be_fused(
     }
 
     // general conditions: any new added precision will support
+    // TODO: actual=bf16 and/or required fp16: https://github.com/openvinotoolkit/openvino/pull/14996#discussion_r1145855359
     return
         (actual.is_real() == required.is_real()) &&
         (actual.bitwidth() >= required.bitwidth());

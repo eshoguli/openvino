@@ -1506,6 +1506,7 @@ bool Graph::InsertNode(NodePtr parent, NodePtr child, NodePtr node, int parentPo
 }
 
 // Set all non const data paths precision to BF16
+// TODO: add Subgraph in BF16 support if there are supported operations inside
 void Graph::EnforceBF16() {
     std::function<void(const NodePtr&, std::unordered_set<NodePtr>& skipNodes)> searchForNodesToSkip;
     searchForNodesToSkip = [&](const NodePtr& node, std::unordered_set<NodePtr>& skipNodes) -> void {
