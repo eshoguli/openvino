@@ -89,7 +89,10 @@ TEST_F(PrecisionPropagationConvertTest, smoke_Snippets_PrecisionPropagation_can_
         {element::u32, element::bf16},
 
         {element::u16, element::f16},
-        {element::u16, element::bf16}
+        {element::u16, element::bf16},
+
+        {element::f16, element::bf16},
+        {element::bf16, element::f16}
     };
 
     for (const auto& precisions : precisions_set) {
