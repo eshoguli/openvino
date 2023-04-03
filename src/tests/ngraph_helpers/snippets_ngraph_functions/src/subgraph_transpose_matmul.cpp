@@ -20,12 +20,8 @@ SubgraphTransposeMatMulFunction::SubgraphTransposeMatMulFunction(
     mat_mul(mat_mul) {
 }
 
-std::shared_ptr<ov::Model> SubgraphTransposeMatMulFunction::get(
-    const std::vector<ov::PartialShape>& input_shapes,
-    const element::Type input_type,
-    const bool transpose,
-    const bool mat_mul) {
-    const auto parameter1 = std::make_shared<op::v0::Parameter>(input_type, input_shapes[0]);
+std::shared_ptr<ov::Model> SubgraphTransposeMatMulFunction::initOriginal() const {
+    const auto parameter1 = std::make_shared<op::v0::Parameter>(precision, input_shapes[0]);
     parameter1->set_friendly_name("parameter1");
 
     const auto shift = std::make_shared<op::v0::Constant>(ov::element::i32, ov::Shape{ 1 }, std::vector<float>{1});
@@ -65,7 +61,7 @@ std::shared_ptr<ov::Model> SubgraphTransposeMatMulFunction::get(
     std::shared_ptr<Node> parent2;
 
     if (mat_mul) {
-        parameter2 = std::make_shared<ngraph::opset1::Parameter>(input_type, input_shapes[1]);
+        parameter2 = std::make_shared<ngraph::opset1::Parameter>(precision, input_shapes[1]);
         parameter2->set_friendly_name("parameter2");
 
         parent2 = std::make_shared<ov::op::v7::Roll>(parameter2, shift, axes);
@@ -87,10 +83,6 @@ std::shared_ptr<ov::Model> SubgraphTransposeMatMulFunction::get(
         ngraph::ResultVector{ result },
         parameter2 == nullptr ? ParameterVector{ parameter1 } : ParameterVector{ parameter1, parameter2 },
         "SubgraphTransposeMatMulFunction");
-}
-
-std::shared_ptr<Model> SubgraphTransposeMatMulFunction::initOriginal() const {
-    return get(input_shapes, precision, transpose, mat_mul);
 }
 
 }  // namespace snippets

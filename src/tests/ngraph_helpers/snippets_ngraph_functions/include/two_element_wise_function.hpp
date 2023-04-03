@@ -101,6 +101,10 @@ public:
     };
 };
 
+/**
+ * @class TwoElementWiseFunction
+ * @brief The function for unit tests only, includes dummy operations.
+ */
 class TwoElementWiseFunction : public SnippetsFunctionBase {
 public:
     explicit TwoElementWiseFunction(

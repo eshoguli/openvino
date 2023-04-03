@@ -158,8 +158,7 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
 
         auto type_relaxed_node = std::dynamic_pointer_cast<ov::op::TypeRelaxedBase>(op);
         if (was_updated || (type_relaxed_node != nullptr)) {
-            const bool res = validate_and_infer_types_and_restore_outputs(op);
-            was_updated = was_updated || res;
+            was_updated = was_updated || validate_and_infer_types_and_restore_outputs(op);
         }
     }
 
@@ -180,12 +179,12 @@ bool ngraph::snippets::pass::PropagatePrecision::run_on_model(const std::shared_
     return was_updated;
 }
 
-bool ngraph::snippets::pass::PropagatePrecision::validate_and_infer_types_and_restore_outputs(const std::shared_ptr<ngraph::Node> op) {
+bool ngraph::snippets::pass::PropagatePrecision::validate_and_infer_types_and_restore_outputs(const std::shared_ptr<ngraph::Node>& op) {
     bool was_updated = false;
 
     // update output precision
     std::vector<element::Type> op_output_types;
-    for (auto& output : op->outputs()) {
+    for (const auto& output : op->outputs()) {
         op_output_types.push_back(output.get_element_type());
     }
 

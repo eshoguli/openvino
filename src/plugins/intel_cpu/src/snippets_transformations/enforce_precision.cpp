@@ -12,19 +12,17 @@
 #include "ngraph/rt_info.hpp"
 #include "snippets/pass/propagate_precision.hpp"
 
-#include "ngraph/pass/visualize_tree.hpp"
-
 using namespace ngraph;
 using namespace ov::intel_cpu::pass;
 
 EnforcePrecision::EnforcePrecision(
     const element::Type source,
     const element::Type target,
-    const bool target_isa,
+    const bool is_target_isa_supported,
     std::function<EnforcePrecision::Operation(const std::shared_ptr<ngraph::Node>& op)> get_supported_precisions) :
     source(source),
     target(target),
-    target_isa(target_isa),
+    is_target_isa_supported(is_target_isa_supported),
     get_supported_precisions(get_supported_precisions == nullptr ? get_supported_precisions_default : get_supported_precisions) {
 }
 
@@ -40,12 +38,12 @@ bool EnforcePrecision::run_on_model(const std::shared_ptr<ov::Model>& f) {
             continue;
         }
 
-        if (op_desc.require_target_isa && !target_isa) {
+        if (op_desc.require_target_isa && !is_target_isa_supported) {
             continue;
         }
 
         std::vector<element::Type> actual_precisions;
-        for (const auto input : op->inputs()) {
+        for (const auto& input : op->inputs()) {
             actual_precisions.push_back(input.get_element_type());
         }
 

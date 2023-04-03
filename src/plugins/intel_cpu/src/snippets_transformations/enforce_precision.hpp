@@ -26,7 +26,7 @@ public:
     EnforcePrecision(
         const element::Type source,
         const element::Type target,
-        const bool target_isa,
+        const bool is_target_isa_supported,
         std::function<EnforcePrecision::Operation(const std::shared_ptr<ngraph::Node>& op)> get_supported_precisions = nullptr);
 
     bool run_on_model(const std::shared_ptr<ov::Model>& m) override;
@@ -36,7 +36,7 @@ private:
 
     const element::Type source;
     const element::Type target;
-    const bool target_isa;
+    const bool is_target_isa_supported;
     const std::function<EnforcePrecision::Operation(const std::shared_ptr<ngraph::Node>& op)> get_supported_precisions;
 };
 

@@ -20,17 +20,6 @@ public:
         const bool transpose,
         const bool mat_mul);
 
-    /*
-     * Don't call this method explicity. You should create the instance of PrecisionPropagationConvertionFunction before.
-     * After the method will be called implicitly in getOriginal.
-     * Note, please, getReference and getLowered methods are not implemented and throw exception.
-     */
-    static std::shared_ptr<ov::Model> get(
-        const std::vector<ov::PartialShape>& input_shapes,
-        const element::Type input_type,
-        const bool transpose,
-        const bool mat_mul);
-
 protected:
     std::shared_ptr<Model> initOriginal() const override;
 

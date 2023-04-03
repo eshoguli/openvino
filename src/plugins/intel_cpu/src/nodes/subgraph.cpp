@@ -539,11 +539,14 @@ void Snippet::generate(const jit_snippets_compile_args* jcp) {
     ov::pass::Manager pre_dialect;
     pre_dialect.register_pass<ConvertToSwishCPU>();
     if (context->getConfig().enforceBF16) {
+        // enforce BF16 precisions to supported operations
+        // MatMul has to be decomposed to Brgemm operations before enforcement
+        // Note, MatMul decomposition will be ran later again for case if BF16 enforcement is not happened
         pre_dialect.register_pass<ngraph::snippets::pass::MatMulToBrgemm>();
         pre_dialect.register_pass<pass::EnforcePrecision>(
             element::f32,
             element::bf16,
-            dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx512_core_fp16));
+            dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx512_core_bf16));
     }
 
     ov::pass::Manager post_dialect;
