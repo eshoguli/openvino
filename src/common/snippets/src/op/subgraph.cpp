@@ -535,6 +535,7 @@ void snippets::op::Subgraph::convert_to_snippet_dialect() {
     if (config.m_has_domain_sensitive_ops) {
         manager.register_pass<snippets::pass::MatMulToBrgemm>();
         manager.register_pass<snippets::pass::FuseTransposeBrgemm>();
+        // TODO: potentially we should add MoveTransposeThroughConvert here, but not today
         manager.register_pass<snippets::pass::InsertBuffer>(allocationRank);
         manager.register_pass<snippets::pass::SoftmaxDecomposition>(count, allocationRank);
         manager.register_pass<snippets::pass::TransposeDecomposition>();

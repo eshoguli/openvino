@@ -26,6 +26,7 @@
 #include "utils/cpu_utils.hpp"
 #include "snippets_transformations/enforce_precision.hpp"
 #include "snippets_transformations/fuse_load_store_and_convert.hpp"
+//#include "snippets_transformations/move_transpose_through_convert.hpp"
 #include "snippets_transformations/mul_add_to_fma.hpp"
 #include "snippets_transformations/brgemm_to_brgemm_cpu.hpp"
 #include "snippets_transformations/remove_converts.hpp"
@@ -543,6 +544,8 @@ void Snippet::generate(const jit_snippets_compile_args* jcp) {
         // MatMul has to be decomposed to Brgemm operations before enforcement
         // Note, MatMul decomposition will be ran later again for case if BF16 enforcement is not happened
         pre_dialect.register_pass<ngraph::snippets::pass::MatMulToBrgemm>();
+        //pre_dialect.register_pass<ngraph::snippets::pass::FuseTransposeToBrgemm>(); <= during duscussion: not neccessary
+        //pre_dialect.register_pass<pass::MoveTransposeThroughConvert>(element::f32, element::bf16); <= during duscussion: another place
         pre_dialect.register_pass<pass::EnforcePrecision>(
             element::f32,
             element::bf16,
