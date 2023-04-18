@@ -124,6 +124,8 @@ namespace ov {
 namespace intel_gpu {
 
 void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
+    ngraph::pass::VisualizeTree("svg/gpu.original.svg").run_on_model(func);
+
     OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "TransformationsPipeline::apply");
     using const_node_ptr = const std::shared_ptr<const ngraph::Node>;
 
@@ -441,6 +443,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         manager.run_passes(func);
     }
 
+    ngraph::pass::VisualizeTree("svg/gpu.common.svg").run_on_model(func);
+
     if (enableInt8) {
         OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "TransformationsPipeline::apply::lpt");
         using namespace ngraph::pass::low_precision;
@@ -552,6 +556,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         auto params = LayerTransformation::Params(true, element::f32, defaultPrecisions, reshapeIgnorePerTensorQuantizationCheck);
         lptManager.register_pass<LowPrecision>(supportedPrecisions, perTensorQuantization, params);
         lptManager.run_passes(func);
+
+        ngraph::pass::VisualizeTree("svg/gpu.lpt.svg").run_on_model(func);
     }
 
     {
@@ -575,6 +581,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
 
         manager.run_passes(func);
     }
+
+    ngraph::pass::VisualizeTree("svg/gpu.transformed.svg").run_on_model(func);
 }
 }  // namespace intel_gpu
 }  // namespace ov

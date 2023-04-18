@@ -9,6 +9,7 @@
 #include <ngraph/ngraph.hpp>
 #include <ngraph/pattern/op/wrap_type.hpp>
 #include "itt.hpp"
+#include "low_precision/network_helper.hpp"
 
 namespace ngraph {
 namespace pass {
@@ -38,6 +39,7 @@ EliminateFakeQuantizeTransformation::EliminateFakeQuantizeTransformation(const P
 
 bool EliminateFakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher& m) {
     const auto root = m.get_match_root();
+
     if (!canBeTransformed(context, root)) {
         return false;
     }
@@ -46,25 +48,56 @@ bool EliminateFakeQuantizeTransformation::transform(TransformationContext& conte
 }
 
 namespace {
-bool check_interval(const std::shared_ptr<opset1::Constant>& constant, const float value) noexcept {
+bool check_interval(const std::shared_ptr<opset1::FakeQuantize>& fq,
+                    const std::shared_ptr<opset1::Constant>& constant,
+                    const float value,
+                    const float max_diff) noexcept {
+    bool need_to_check_intervals = false;
     const auto& constant_values = constant->cast_vector<float>();
     for (const auto constant_value : constant_values) {
         if (std::fabs(constant_value - value) > std::numeric_limits<float>::epsilon()) {
-            return false;
+            const auto diff = std::fabs(constant_value - value);
+            if (diff > max_diff) {
+                return false;
+            }
+
+            need_to_check_intervals = true;
         }
     }
+
+    if (need_to_check_intervals) {
+        auto tmp_fq = as_type_ptr<opset1::FakeQuantize>(fq->clone_with_new_inputs({
+            constant,
+            fq->get_input_node_shared_ptr(1),
+            fq->get_input_node_shared_ptr(2),
+            fq->get_input_node_shared_ptr(3),
+            fq->get_input_node_shared_ptr(4)}));
+        auto result = NetworkHelper::fold_fake_quantize(tmp_fq);
+        const auto result_constant = as_type_ptr<opset1::Constant>(result);
+        if (result_constant != nullptr) {
+            const auto& result_values = result_constant->cast_vector<float>();
+            for (const auto result_value : result_values) {
+                if (std::fabs(result_value - value) > std::numeric_limits<float>::epsilon()) {
+                    return false;
+                }
+            }
+        }
+    }
+
     return true;
 }
 
 bool check_intervals(const std::shared_ptr<opset1::FakeQuantize>& fakeQuantize) {
     const auto& element_type = fakeQuantize->get_output_element_type(0);
-    const auto min_value = DataPrecision::getMinValue(element_type, fakeQuantize->get_levels());
-    const auto max_value = DataPrecision::getMaxValue(element_type, fakeQuantize->get_levels());
+    const auto levels = fakeQuantize->get_levels();
+    const auto min_value = DataPrecision::getMinValue(element_type, levels);
+    const auto max_value = DataPrecision::getMaxValue(element_type, levels);
+    const auto max_diff = (max_value - min_value) / levels;
     return
-        check_interval(ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(1)), min_value) &&
-        check_interval(ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(2)), max_value) &&
-        check_interval(ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(3)), min_value) &&
-        check_interval(ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(4)), max_value);
+        check_interval(fakeQuantize, ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(1)), min_value, max_diff) &&
+        check_interval(fakeQuantize, ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(2)), max_value, max_diff) &&
+        check_interval(fakeQuantize, ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(3)), min_value, max_diff) &&
+        check_interval(fakeQuantize, ov::as_type_ptr<opset1::Constant>(fakeQuantize->get_input_node_shared_ptr(4)), max_value, max_diff);
 }
 } // namespace
 

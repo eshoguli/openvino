@@ -36,6 +36,10 @@ FakeQuantizeTransformation::FakeQuantizeTransformation(const Params& params) : L
 
 bool FakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto layer = ov::as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
+    if (layer->get_friendly_name() == "/decoder/layers.0/cross_attn/MatMul_2/fq_input_0") {
+        std::cout << "FakeQuantizeTransformation::transform: " << layer->get_friendly_name() << std::endl;
+    }
+
     if (!layer || !QuantizationDetails::outputLayoutIsSupported(layer)) {
         return false;
     }
@@ -172,7 +176,36 @@ std::shared_ptr<opset1::FakeQuantize> FakeQuantizeTransformation::fuseElementwis
     if (ov::is_type<opset1::Multiply>(eltwise) && checkElementwise(eltwise)) {
         const auto value = foldConvert(constant, element::f32);
 
-        const auto valueVec = ov::as_type_ptr<opset1::Constant>(value)->cast_vector<float>();
+        auto valueVec = ov::as_type_ptr<opset1::Constant>(value)->cast_vector<float>();
+        //if (fakeQuantize->get_friendly_name() == "/decoder/layers.0/cross_attn/MatMul_2/fq_input_0") {
+        //    std::cout << "FakeQuantizeTransformation::fuseElementwise: " << fakeQuantize->get_friendly_name() << std::endl;
+        //    for (const auto& value : valueVec) {
+        //        std::cout << "value: " << value << std::endl;
+        //    }
+
+        //    auto& inputLowValues = as_type_ptr<op::Constant>(inputLowConst_f32)->cast_vector<float>();
+        //    auto& inputHighValues = as_type_ptr<op::Constant>(inputLowConst_f32)->cast_vector<float>();
+        //    for (auto index = 0; index < inputLowValues.size(); ++index) {
+        //        std::cout << "inputLowValues: " << inputLowValues[index] << std::endl;
+        //        std::cout << "inputHighValues: " << inputHighValues[index] << std::endl;
+        //    }
+
+        //    // CPU value
+        //    valueVec[0] = 0.00552538;
+        //    for (const auto& value : valueVec) {
+        //        std::cout << "value: " << value << std::endl;
+        //    }
+
+        //    inputLowConst_f32 = std::make_shared<op::Constant>(element::f32, Shape{}, std::vector<float>{-0.707249});
+        //    inputHighConst_f32 = std::make_shared<op::Constant>(element::f32, Shape{}, std::vector<float>{-0.707249});
+
+        //    inputLowValues = as_type_ptr<op::Constant>(inputLowConst_f32)->cast_vector<float>();
+        //    inputHighValues = as_type_ptr<op::Constant>(inputLowConst_f32)->cast_vector<float>();
+        //    for (auto index = 0; index < inputLowValues.size(); ++index) {
+        //        std::cout << "inputLowValues: " << inputLowValues[index] << std::endl;
+        //        std::cout << "inputHighValues: " << inputHighValues[index] << std::endl;
+        //    }
+        //}
 
         if (std::any_of(valueVec.cbegin(), valueVec.cend(), [](const float value) { return value <= 0.f; })) {
             return nullptr;
