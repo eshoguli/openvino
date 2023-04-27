@@ -269,7 +269,7 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_model(const std::shared_p
     ADD_MATCHER(common, VariadicSplitTransformation, params)
 
     std::shared_ptr<ngraph::pass::GraphRewrite> cleanup = manager.register_pass<ngraph::pass::GraphRewrite>();
-    ADD_MATCHER(cleanup, EliminateFakeQuantizeTransformation, params)
+    //ADD_MATCHER(cleanup, EliminateFakeQuantizeTransformation, params)
     ADD_MATCHER(cleanup, FoldConvertTransformation, params)
     ADD_MATCHER(cleanup, FuseConvertTransformation, params)
     ADD_MATCHER(cleanup, FuseSubtractToFakeQuantizeTransformation, params)
