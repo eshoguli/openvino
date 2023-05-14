@@ -229,6 +229,9 @@ bool ov::pass::GraphRewrite::apply_matcher_passes(std::shared_ptr<Model> f,
                 if (pass_config->is_disabled(m_pass->get_type_info()))
                     continue;
 
+                // TODO: to debug only
+                ov::Model::global_model = f;
+
                 if (run_matcher_pass(m_pass, node)) {
                     rewritten = true;
                     break;
