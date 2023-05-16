@@ -147,6 +147,8 @@ StridedSliceTransformationTestValues::LayerParams channelSlice = {
     {} // elipsisMask
 };
 
+namespace inputs_4d {
+
 StridedSliceTransformationTestValues::LayerParams channelSlice2D = {
     {0, 0},  // begin
     {0, 2},  // end
@@ -188,7 +190,7 @@ StridedSliceTransformationTestValues::LayerParams sliceWithRemovedAxis = {
     { 1, 0, 1, 1 }, // endMask
     { 0, 0, 0, 0 }, // newAxisMask
     { 0, 1, 0, 0 }, // shrinkAxisMask
-    { 0, 0, 0, 0 } // elipsisMask
+    { 0, 0, 0, 0 }  // elipsisMask
 };
 
 StridedSliceTransformationTestValues::LayerParams sliceWithAdditionalAxis = {
@@ -202,7 +204,6 @@ StridedSliceTransformationTestValues::LayerParams sliceWithAdditionalAxis = {
     { 0, 0, 0, 0 } // elipsisMask
 };
 
-namespace inputs_4d {
 const std::vector<ngraph::PartialShape> inputShapes = {
     {1, 3, 24, 24},
     {-1, -1, -1, -1}
@@ -653,7 +654,7 @@ INSTANTIATE_TEST_SUITE_P(
 namespace inputs_3d {
 const std::vector<ngraph::PartialShape> inputShapes = {
     { 1, 18, 4 },
-    //{ 1, -1, 4 }
+    { 1, -1, 4 }
 };
 
 StridedSliceTransformationTestValues::LayerParams slice = {
@@ -666,6 +667,17 @@ StridedSliceTransformationTestValues::LayerParams slice = {
     { 0, 1 }, // shrinkAxisMask
     { 0, 0 }  // elipsisMask
 };
+
+//StridedSliceTransformationTestValues::LayerParams slice = {
+//    { 0, 0 }, // begin
+//    { 0, 0 }, // end
+//    { 1, 1 }, // strided
+//    { 1, 0 }, // beginMask
+//    { 1, 0 }, // endMask
+//    { 0, 0 }, // newAxisMask
+//    { 0, 1 }, // shrinkAxisMask
+//    { 0, 0 }  // elipsisMask
+//};
 
 const std::vector<StridedSliceTransformationTestValues> testValuesWithDQBySpatialDimension = {
     // U8: channel slice, quantization by special dimension
