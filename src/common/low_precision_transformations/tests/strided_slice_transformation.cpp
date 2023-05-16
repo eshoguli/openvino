@@ -653,7 +653,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 namespace inputs_3d {
 const std::vector<ngraph::PartialShape> inputShapes = {
-    { 1, 18, 4 },
+    { 1, 3, 4 },
     { 1, -1, 4 }
 };
 
@@ -668,16 +668,16 @@ StridedSliceTransformationTestValues::LayerParams slice = {
     { 0, 0 }  // elipsisMask
 };
 
-//StridedSliceTransformationTestValues::LayerParams slice = {
-//    { 0, 0 }, // begin
-//    { 0, 0 }, // end
-//    { 1, 1 }, // strided
-//    { 1, 0 }, // beginMask
-//    { 1, 0 }, // endMask
-//    { 0, 0 }, // newAxisMask
-//    { 0, 1 }, // shrinkAxisMask
-//    { 0, 0 }  // elipsisMask
-//};
+StridedSliceTransformationTestValues::LayerParams slice2 = {
+    { 0, 1 }, // begin
+    { 0, 2 }, // end
+    { 1, 1 }, // strided
+    { 1, 0 }, // beginMask
+    { 1, 0 }, // endMask
+    { 0, 0 }, // newAxisMask
+    { 0, 1 }, // shrinkAxisMask
+    { 0, 0 }  // elipsisMask
+};
 
 const std::vector<StridedSliceTransformationTestValues> testValuesWithDQBySpatialDimension = {
     // U8: channel slice, quantization by special dimension
@@ -700,6 +700,29 @@ const std::vector<StridedSliceTransformationTestValues> testValuesWithDQBySpatia
                 {ngraph::element::f32},
                 {{1.f, 2.f, 3.f, 4.f}, ngraph::element::f32, {1, 4}},
                 {{1.f, 2.f, 3.f, 4.f}, ngraph::element::f32, {1, 4}}
+            }
+        }
+    },
+    // U8: channel slice, quantization by special dimension
+    {
+        LayerTransformation::createParamsU8I8(),
+        slice2,
+        {
+            ngraph::element::u8,
+            {
+                {ngraph::element::f32},
+                {{1.f, 2.f, 3.f}, ngraph::element::f32, {1, 3, 1}},
+                {{1.f, 2.f, 3.f}, ngraph::element::f32, {1, 3, 1}}
+            }
+        },
+        {
+            ngraph::element::u8,
+            {},
+            ngraph::element::u8,
+            {
+                {ngraph::element::f32},
+                {{2.f}, ngraph::element::f32, {}},
+                {{2.f}, ngraph::element::f32, {}}
             }
         }
     }
