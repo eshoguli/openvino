@@ -1306,8 +1306,14 @@ void FakeQuantize::getSupportedDescriptors() {
     if (getAxis() != 1) {
         if (isBinarization())
             IE_THROW() << errorPrefix << "doesn't support non per-tensor binarization for axis: " << getAxis();
-        if (getAxis() != 0)
-            IE_THROW() << errorPrefix << "doesn't support non per-tensor quantization for axis: " << getAxis();
+        if (getAxis() != 0) {
+            const bool throw_exception = true;
+            if (throw_exception) {
+                IE_THROW() << errorPrefix << "doesn't support non per-tensor quantization for axis: " << getAxis();
+            } else {
+                std::cout << "doesn't support non per-tensor quantization for axis: " << getAxis() << ": " << getName() << std::endl;
+            }
+        }
     }
 }
 

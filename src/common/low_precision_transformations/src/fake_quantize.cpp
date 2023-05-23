@@ -36,6 +36,11 @@ FakeQuantizeTransformation::FakeQuantizeTransformation(const Params& params) : L
 
 bool FakeQuantizeTransformation::transform(TransformationContext& context, ngraph::pattern::Matcher &m) {
     const auto layer = ov::as_type_ptr<opset1::FakeQuantize>(m.get_match_root());
+
+    if (layer->get_friendly_name() == "/distilbert/transformer/layer.0/attention/k_lin/MatMul/fq_input_0") {
+        std::cout << "FakeQuantizeTransformation::transform: " << layer->get_friendly_name() << std::endl;
+    }
+
     if (!layer || !QuantizationDetails::outputLayoutIsSupported(layer)) {
         return false;
     }
@@ -144,6 +149,7 @@ bool FakeQuantizeTransformation::checkElementwise(const std::shared_ptr<Node>& e
             shape.insert(shape.begin(), 1ul);
         }
 
+        // TODO: uncomment to handle
         for (size_t i = 2ul; i < shape.size(); ++i) {
             if (shape[i] != 1ul) {
                 return false;
