@@ -149,6 +149,9 @@ bool ov::pass::GraphRewrite::apply_matcher_passes(std::shared_ptr<Model> f,
             return false;
         }
 
+        // TODO: debug only
+        ov::Model::global_model = f;
+
         // Apply MatcherPass. In case if it returns true no other MatcherPasses will apply
         // to this node
         bool status = m_pass->apply(node);
