@@ -453,6 +453,11 @@ ov::snippets::pass::TokenizeMHASnippets::TokenizeMHASnippets() {
         subgraph->get_rt_info()["originalLayersNames"] = fused_names;
         subgraph->set_virtual_port_count(hidden_virtual_ports_count);
 
+        //std::cout << subgraph->get_friendly_name() << std::endl;
+        //for (const auto& op : ordered_ops) {
+        //    std::cout << "\t" << op->get_friendly_name() << std::endl;
+        //}
+
         return true;
 
         /* ================================ */
