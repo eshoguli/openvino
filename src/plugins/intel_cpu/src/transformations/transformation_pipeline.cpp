@@ -156,7 +156,7 @@ bool Transformations::fuse_type_to_convert(const std::shared_ptr<ngraph::Node>& 
     return false;
 }
 
-//#define DEBUG_CPU
+#define DEBUG_CPU
 
 void Transformations::UpToCpuSpecificOpSet() {
     const bool useLpt = enableLpt &&

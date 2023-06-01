@@ -91,11 +91,10 @@ ov::pass::PullEltwiseThroughDataMovement::PullEltwiseThroughDataMovement() {
 
             eltwise->validate_and_infer_types();
 
-
-            ngraph::pass::VisualizeTree("svg/common.pull_eltwise_through_data_movement.svg").run_on_model(ov::Model::global_model);
-            ngraph::pass::Serialize(
-                "svg/common.pull_eltwise_through_data_movement.xml",
-                "svg/common.pull_eltwise_through_data_movement.bin").run_on_model(ov::Model::global_model);
+            //ngraph::pass::VisualizeTree("svg/common.pull_eltwise_through_data_movement.svg").run_on_model(ov::Model::global_model);
+            //ngraph::pass::Serialize(
+            //    "svg/common.pull_eltwise_through_data_movement.xml",
+            //    "svg/common.pull_eltwise_through_data_movement.bin").run_on_model(ov::Model::global_model);
 
             was_updated = true;
         }
