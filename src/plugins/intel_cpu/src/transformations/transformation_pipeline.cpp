@@ -24,6 +24,7 @@
 #include "transformations/common_optimizations/fq_mul_fusion.hpp"
 #include "transformations/common_optimizations/mul_fake_quantize_fusion.hpp"
 #include "transformations/common_optimizations/nop_elimination.hpp"
+#include "transformations/common_optimizations/pull_eltwise_through_data_movement.hpp"
 #include "transformations/common_optimizations/transpose_sinking.hpp"
 #include "transformations/common_optimizations/weights_dequantize_to_fake_quantize.hpp"
 #include "transformations/common_optimizations/augru_cell_fusion.hpp"
@@ -119,6 +120,9 @@
 #include "dnnl.hpp"
 #include <cpu/x64/cpu_isa_traits.hpp>
 
+#include "ngraph/pass/serialize.hpp"
+#include "snippets/op/subgraph.hpp"
+
 namespace ov {
 namespace intel_cpu {
 
@@ -152,13 +156,34 @@ bool Transformations::fuse_type_to_convert(const std::shared_ptr<ngraph::Node>& 
     return false;
 }
 
+//#define DEBUG_CPU
+
 void Transformations::UpToCpuSpecificOpSet() {
     const bool useLpt = enableLpt &&
         ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(model) &&
         CPU_DEBUG_CAP_IS_TRANSFORMATION_ENABLED(config.debugCaps, Lpt);
 
+#ifdef DEBUG_CPU
+    if (useLpt) {
+        std::cout << "LPT is used" << std::endl;
+    } else {
+        std::cout << "LPT is ignored" << std::endl;
+    }
+
+    ngraph::pass::VisualizeTree("svg/cpu.original.svg").run_on_model(model);
+    ngraph::pass::Serialize("svg/cpu.original.xml", "svg/cpu.original.bin").run_on_model(model);
+#endif
+
     const bool useSnippets = snippetsMode != Config::SnippetsMode::Disable &&
         CPU_DEBUG_CAP_IS_TRANSFORMATION_ENABLED(config.debugCaps, Snippets);
+
+#ifdef DEBUG_CPU
+    if (useSnippets) {
+        std::cout << "Snippets is used" << std::endl;
+    } else {
+        std::cout << "Snippets is ignored" << std::endl;
+    }
+#endif
 
     auto defaultPrecisions = useLpt ? ngraph::pass::low_precision::precision_set::int8_support : std::vector<ov::element::Type>{};
     bool hasINT16orINT32Levels = false;
@@ -176,13 +201,52 @@ void Transformations::UpToCpuSpecificOpSet() {
 
     PreLpt(defaultPrecisions, isLegacyApi);
 
-    if (useLpt)
+    //for (const auto node : model->get_ordered_ops()) {
+    //    if (node->get_friendly_name() == "/backbone/block1.0/mlp/fc1/Conv/WithoutBiases/fq_input_0") {
+    //        std::cout << "Transformations::UpToCpuSpecificOpSet(): " << node->get_friendly_name() << std::endl;
+    //        ov::replace_node(
+    //            node->get_input_node_shared_ptr(1),
+    //            node->get_input_node_shared_ptr(3)->clone_with_new_inputs({}));
+
+    //        ov::replace_node(
+    //            node->get_input_node_shared_ptr(2),
+    //            node->get_input_node_shared_ptr(4)->clone_with_new_inputs({}));
+    //    }
+    //}
+
+#ifdef DEBUG_CPU
+    ngraph::pass::VisualizeTree("svg/cpu.common.svg").run_on_model(model);
+    ngraph::pass::Serialize("svg/cpu.common.xml", "svg/cpu.common.bin").run_on_model(model);
+#endif
+
+    if (useLpt) {
         Lpt(hasINT16orINT32Levels, defaultPrecisions);
+#ifdef DEBUG_CPU
+        ngraph::pass::VisualizeTree("svg/cpu.lpt.svg").run_on_model(model);
+        ngraph::pass::Serialize("svg/cpu.lpt.xml", "svg/cpu.lpt.bin").run_on_model(model);
+#endif
+    }
 
     PostLpt();
 
     if (useSnippets)
         Snippets();
+
+#ifdef DEBUG_CPU
+    ngraph::pass::VisualizeTree("svg/cpu.transformed.svg").run_on_model(model);
+    ngraph::pass::Serialize("svg/cpu.transformed.xml", "svg/cpu.transformed.bin").run_on_model(model);
+#endif
+
+    //for (const auto node : model->get_ordered_ops()) {
+    //    const auto subgraph = ov::as_type_ptr<ov::snippets::op::Subgraph>(node);
+    //    if (subgraph != nullptr) {
+    //        std::cout << subgraph->get_type_name() << ": " << subgraph->get_friendly_name() << std::endl;
+    //        const auto& body = subgraph->body_ptr();
+    //        for (const auto& op : body->get_ordered_ops()) {
+    //            std::cout << "\t" << op->get_type_name() << ": " << op->get_friendly_name() << std::endl;
+    //        }
+    //    }
+    //}
 }
 
 void Transformations::CpuSpecificOpSet(void) {
@@ -258,6 +322,8 @@ void Transformations::PreLpt(const std::vector<ov::element::Type>& defaultPrecis
     CPU_REGISTER_PASS_COMMON(manager, ov::pass::ConvertPrecision, precisions, type_to_fuse);
     CPU_REGISTER_PASS_COMMON(manager, ov::pass::EliminateConvert);
     CPU_REGISTER_PASS_COMMON(manager, SwapConvertTranspose);
+    //CPU_REGISTER_PASS_COMMON(manager, ov::pass::PullEltwiseThroughDataMovement);
+
     CPU_REGISTER_PASS_X64(manager, ConvertToInteraction);
     CPU_REGISTER_PASS_X64(manager, ConvertInteractionInt8);
     CPU_REGISTER_PASS_ARM(manager, ConvertReduceMultiAxis);
