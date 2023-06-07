@@ -175,9 +175,9 @@ public:
         for (size_t i = 0; i < inputPrecisions.size(); i++) {
             results << "InPRC" << std::to_string(i) << "=" << inputPrecisions[i] << "_";
         }
-        results << "patternType=" << patternType;
-        results << "expect=" << expectedNode;
-        results << "targetDevice=" << targetName;
+        results << "patternType=" << patternType << "_";
+        results << "expect=" << expectedNode << "_";
+        results << "targetDevice=" << targetName << "_";
 
         return results.str();
     }
@@ -290,8 +290,10 @@ INSTANTIATE_TEST_SUITE_P(smoke_MHA, MHATest,
 
 } // namespace
 
-static std::shared_ptr<ov::Model> initMHAQuantSubgraph0(std::vector<ov::PartialShape>& inputDynamicShapes, std::vector<ElementType>& inputPrecisions,
-                                                        std::vector<ElementType>& matMulIn0Precisions) {
+static std::shared_ptr<ov::Model> initMHAQuantSubgraph0(const std::vector<ov::PartialShape>& inputDynamicShapes,
+                                                        const std::vector<ElementType>& inputPrecisions,
+                                                        const std::vector<ElementType>& matMulIn0Precisions,
+                                                        const bool lastFakeQuantizeExists) {
     ngraph::ParameterVector ngraphParam;
 
     auto transpose0Param = std::make_shared<ngraph::opset1::Parameter>(inputPrecisions[0], inputDynamicShapes[0]);
@@ -365,8 +367,11 @@ static std::shared_ptr<ov::Model> initMHAQuantSubgraph0(std::vector<ov::PartialS
         fakeQuantize4 = ngraph::builder::makeFakeQuantize(reshape1, inputPrecisions[0], 256, {}, {-0.128f}, {0.127f}, {-0.128f}, {0.127f});
     const auto transpose2 = std::make_shared<ov::op::v1::Transpose>(fakeQuantize2, transpose2Const);
     const auto matMul1 = std::make_shared<ngraph::opset3::MatMul>(fakeQuantize4, transpose2, transA, transB);
-    const auto fakeQuantize5 = ngraph::builder::makeFakeQuantize(matMul1, inputPrecisions[0], 256, {}, {-1.28f}, {1.27f}, {-1.28f}, {1.27f});
-    const auto transpose3 = std::make_shared<ov::op::v1::Transpose>(fakeQuantize5, transpose3Const);
+    const auto transpose3 = std::make_shared<ov::op::v1::Transpose>(
+        lastFakeQuantizeExists ?
+            ngraph::builder::makeFakeQuantize(matMul1, inputPrecisions[0], 256, {}, { -1.28f }, { 1.27f }, { -1.28f }, { 1.27f }) :
+            matMul1,
+        transpose3Const);
 
     ngraph::ResultVector results{std::make_shared<ngraph::opset1::Result>(transpose3)};
     return std::make_shared<ngraph::Function>(results, ngraphParam, "mha");
@@ -375,7 +380,7 @@ static std::shared_ptr<ov::Model> initMHAQuantSubgraph0(std::vector<ov::PartialS
 static std::shared_ptr<ov::Model> initMHAQuantSubgraph1(const std::vector<ov::PartialShape>& inputDynamicShapes,
                                                         const std::vector<ElementType>& inputPrecisions,
                                                         const std::vector<ElementType>& matMulIn0Precisions,
-                                                        const bool fakeQuantize3Exists) {
+                                                        const bool lastFakeQuantizeExists) {
     ngraph::ParameterVector ngraphParam;
 
     auto transpose0Param = std::make_shared<ngraph::opset1::Parameter>(inputPrecisions[0], inputDynamicShapes[0]);
@@ -431,7 +436,7 @@ static std::shared_ptr<ov::Model> initMHAQuantSubgraph1(const std::vector<ov::Pa
     const auto transpose2 = std::make_shared<ov::op::v1::Transpose>(transpose2Param, transpose2Const);
     const auto matMul1 = std::make_shared<ngraph::opset3::MatMul>(softMax, transpose2, transA, transB);
     const auto transpose3 = std::make_shared<ov::op::v1::Transpose>(
-        fakeQuantize3Exists ?
+        lastFakeQuantizeExists ?
             ngraph::builder::makeFakeQuantize(matMul1, inputPrecisions[0], 256, {}, { 0.0f }, { 2.55f }, { 0.0f }, { 2.55f }) :
             matMul1,
         transpose3Const);
@@ -445,7 +450,7 @@ typedef std::tuple<
     std::vector<ElementType>,  // Input precisions
     std::vector<ElementType>,  // MatMul input #0 precisions
     size_t,                    // pattern type #
-    bool,                      // does FakeQuantize3 exist
+    bool,                      // does last FakeQuantize exist
     std::string,               // Expected node
     std::string                // Device name
 > MHAQuantTuple;
@@ -458,10 +463,10 @@ public:
         std::vector<ElementType> inputPrecisions;
         std::vector<ElementType> matMulIn0Precisions;
         size_t patternType;
-        bool fakeQuantize3Exists;
+        bool lastFakeQuantizeExists;
         std::string targetName;
         std::string expectedNode;
-        std::tie(inputShapes, inputPrecisions, matMulIn0Precisions, patternType, fakeQuantize3Exists, expectedNode, targetName) = obj.param;
+        std::tie(inputShapes, inputPrecisions, matMulIn0Precisions, patternType, lastFakeQuantizeExists, expectedNode, targetName) = obj.param;
         std::ostringstream results;
 
         results << "IS=(";
@@ -480,10 +485,10 @@ public:
         for (size_t i = 0; i < matMulIn0Precisions.size(); i++) {
             results << "MatMulIn0PRC" << std::to_string(i) << "=" << matMulIn0Precisions[i] << "_";
         }
-        results << "patternType=" << patternType;
-        results << "fakeQuantize3Exists=" << fakeQuantize3Exists;
-        results << "expect=" << expectedNode;
-        results << "targetDevice=" << targetName;
+        results << "patternType=" << patternType << "_";
+        results << "lastFakeQuantizeExists=" << lastFakeQuantizeExists << "_";
+        results << "expect=" << expectedNode << "_";
+        results << "targetDevice=" << targetName << "_";
 
         return results.str();
     }
@@ -511,17 +516,17 @@ protected:
         std::vector<InputShape> inputShapes;
         std::vector<ElementType> inputPrecisions;
         std::vector<ElementType> matMulIn0Precisions;
-        bool fakeQuantize3Exists;
+        bool lastFakeQuantizeExists;
         size_t patternType;
         std::string expectedNode;
-        std::tie(inputShapes, inputPrecisions, matMulIn0Precisions, fakeQuantize3Exists, patternType, expectedNode, targetDevice) = this->GetParam();
+        std::tie(inputShapes, inputPrecisions, matMulIn0Precisions, lastFakeQuantizeExists, patternType, expectedNode, targetDevice) = this->GetParam();
 
         init_input_shapes(inputShapes);
 
         if (patternType == 0) {
-            function = initMHAQuantSubgraph0(inputDynamicShapes, inputPrecisions, matMulIn0Precisions);
+            function = initMHAQuantSubgraph0(inputDynamicShapes, inputPrecisions, matMulIn0Precisions, lastFakeQuantizeExists);
         } else if (patternType == 1) {
-            function = initMHAQuantSubgraph1(inputDynamicShapes, inputPrecisions, matMulIn0Precisions, fakeQuantize3Exists);
+            function = initMHAQuantSubgraph1(inputDynamicShapes, inputPrecisions, matMulIn0Precisions, lastFakeQuantizeExists);
         } else {
             FAIL() << "Unsupported MHA pattern type";
         }
@@ -539,10 +544,10 @@ TEST_P(MHAQuantTest, CompareWithRefs) {
     std::vector<InputShape> inputShapes;
     std::vector<ElementType> inputPrecisions;
     std::vector<ElementType> matMulIn0Precisions;
-    bool fakeQuantize3Exists;
+    bool lastFakeQuantizeExists;
     size_t patternType;
     std::string expectedNode;
-    std::tie(inputShapes, inputPrecisions, matMulIn0Precisions, fakeQuantize3Exists, patternType, expectedNode, targetDevice) = this->GetParam();
+    std::tie(inputShapes, inputPrecisions, matMulIn0Precisions, lastFakeQuantizeExists, patternType, expectedNode, targetDevice) = this->GetParam();
 
     if (inputPrecisions[0] == ElementType::bf16 && !InferenceEngine::with_cpu_x86_bfloat16())
         GTEST_SKIP();
@@ -581,7 +586,7 @@ std::vector<size_t> patternTypesQuant = {
     0, 1
 };
 
-std::vector<bool> fakeQuantize3Exists = {
+std::vector<bool> lastFakeQuantizeExists = {
     false, true
 };
 
@@ -591,7 +596,7 @@ INSTANTIATE_TEST_SUITE_P(smoke_MHAQuant, MHAQuantTest,
                                 ::testing::ValuesIn(inputPrecisionsQuant),
                                 ::testing::ValuesIn(matMulIn0PrecisionsQuant),
                                 ::testing::ValuesIn(patternTypesQuant),
-                                ::testing::ValuesIn(fakeQuantize3Exists),
+                                ::testing::ValuesIn(lastFakeQuantizeExists),
                                 ::testing::Values("MHA"),  // Snippets don't support Quantized MHA pattern yet
                                 ::testing::Values(CommonTestUtils::DEVICE_CPU)),
                         MHAQuantTest::getTestCaseName);
