@@ -166,9 +166,6 @@ Node::NodesFactory::NodesFactory()
     INTEL_CPU_NODE(Reshape, Type::Reshape);
     INTEL_CPU_NODE(MVN, Type::MVN);
     INTEL_CPU_NODE(MatMul, Type::MatMul);
-    INTEL_CPU_NODE(ScatterUpdate, Type::ScatterUpdate);
-    INTEL_CPU_NODE(ScatterUpdate, Type::ScatterElementsUpdate);
-    INTEL_CPU_NODE(ScatterUpdate, Type::ScatterNDUpdate);
     INTEL_CPU_NODE(Interpolate, Type::Interpolate);
     INTEL_CPU_NODE(ROIPooling, Type::ROIPooling);
     INTEL_CPU_NODE(TensorIterator, Type::TensorIterator);
