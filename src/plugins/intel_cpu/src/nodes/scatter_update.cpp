@@ -23,6 +23,11 @@ namespace node {
 
 bool ScatterUpdate::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (op->get_friendly_name() == "/down_blocks.0/attentions.0/transformer_blocks.0/ScatterElements") {
+            std::cout << "Reference is used for: " << op->get_friendly_name() << std::endl;
+            return false;
+        }
+
         auto scatterElemUpd = ngraph::as_type_ptr<const ngraph::opset3::ScatterElementsUpdate>(op);
         auto scatterUpd = ngraph::as_type_ptr<const ngraph::opset3::ScatterUpdate>(op);
         auto scatterNdUpd = ngraph::as_type_ptr<const ngraph::opset4::ScatterNDUpdate>(op);

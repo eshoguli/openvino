@@ -158,6 +158,8 @@
 #include <cpu/x64/cpu_isa_traits.hpp>
 #include <itt.h>
 
+#include "ngraph/pass/serialize.hpp"
+
 using namespace InferenceEngine;
 
 #define IE_CPU_PLUGIN_THROW(...) IE_THROW(__VA_ARGS__) << "CPU plugin: "
@@ -287,6 +289,10 @@ static bool fuse_type_to_convert(const std::shared_ptr<ngraph::Node>& node, ov::
 
 static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function> nGraphFunc, const bool _enableLPT, const bool _enableBF16,
                                                const bool _enableSnippets, const bool isLegacyApi) {
+    ngraph::pass::Serialize(
+        "C:\\projects\\tasks\\CVS-112970_stable_diffusion\\pipeline\\unet\\openvino_model_static.xml",
+        "C:\\projects\\tasks\\CVS-112970_stable_diffusion\\pipeline\\unet\\openvino_model_static.bin").run_on_model(nGraphFunc);
+
     ov::pass::Manager manager;
     manager.set_per_pass_validation(false);
     manager.register_pass<ov::pass::InitNodeInfo>();

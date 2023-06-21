@@ -72,6 +72,10 @@ void Reference::execute(dnnl::stream strm) {
                                               getChildEdgesAtPort(i)[0]->getMemory().getStaticDims(), dstDataPtr));
     }
 
+    if (ngraphOp->get_friendly_name() == "/down_blocks.0/attentions.0/transformer_blocks.0/ScatterElements") {
+        std::cout << "Reference::execute: " << ngraphOp->get_friendly_name() << std::endl;
+    }
+
     if (!ngraphOp->evaluate(outputs, inputs)) {
         IE_THROW() << "Evaluation failed on node of type: " << std::string(ngraphOp->get_type_name()) << " name: " << getName();
     }

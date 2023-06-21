@@ -70,7 +70,8 @@ float uint32_to_float(uint32_t x) {
     // mantissa = 23 right bits from generated uint32 random value.
 
     convert_types out_val = {(static_cast<uint32_t>(127) << 23) | (x & 0x7fffffu)};
-    return out_val.f - 1.0f;
+    //return out_val.f - 1.0f;
+    return 0.5f;
 }
 
 // Helper function for converting uint32 values to float16.Sets fractional part of
@@ -171,6 +172,7 @@ void convert_to_output_type(const std::vector<uint32_t>& res,
                            } else {
                                return mod_func(elem, mn[0], mx[0]);
                            }
+                           //return 0.5f;
                        });
     }
 
@@ -222,6 +224,7 @@ std::pair<uint64_t, uint64_t> random_uniform(const uint64_t* out_shape,
     // a pair of values for conversion, so we have 2 result values.
     // Step indicates how many values we generate in one iteration.
     const size_t step = elem_type.size() > 4 ? 2 : 4;
+    std::cout << "random_uniform: elem_type=" << elem_type << std::endl;
 
     for (size_t k = 0; k < elem_count; k += step) {
         // generate 4 random uint32 values using Philox algorithm

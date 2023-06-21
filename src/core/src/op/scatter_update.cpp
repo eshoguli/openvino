@@ -46,6 +46,10 @@ std::vector<int64_t> get_indices(const HostTensorPtr& in) {
 
 bool op::v3::ScatterUpdate::evaluate_scatter_update(const HostTensorVector& outputs,
                                                     const HostTensorVector& inputs) const {
+    if (this->get_friendly_name() == "/down_blocks.0/attentions.0/transformer_blocks.0/ScatterElements") {
+        std::cout << "evaluate_scatter_update: " << this->get_friendly_name() << std::endl;
+    }
+
     const auto& data = inputs[0];
     const auto& indices = inputs[1];
     const auto& updates = inputs[2];
