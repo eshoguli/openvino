@@ -261,3 +261,7 @@ bool op::v1::StridedSlice::evaluate_label(TensorLabelVector& output_labels) cons
     return default_label_evaluator(this, output_labels);
     OPENVINO_SUPPRESS_DEPRECATED_END
 }
+
+bool op::v1::StridedSlice::constant_fold(OutputVector& output_values, const OutputVector& inputs_values) {
+    return false;
+}
