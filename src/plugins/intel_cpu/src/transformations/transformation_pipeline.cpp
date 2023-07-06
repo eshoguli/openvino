@@ -87,6 +87,7 @@
 #include "low_precision/convert_subtract_constant.hpp"
 #include "low_precision/convolution_backprop_data.hpp"
 #include "low_precision/group_convolution.hpp"
+#include "low_precision/markup_bias.hpp"
 #include "low_precision/multiply_to_group_convolution.hpp"
 #include "low_precision/recurrent_cell.hpp"
 #include "low_precision/network_helper.hpp"
@@ -122,6 +123,9 @@
 #include "dnnl.hpp"
 #include <cpu/x64/cpu_isa_traits.hpp>
 
+#include "ngraph/pass/serialize.hpp"
+#include "ngraph/pass/visualize_tree.hpp"
+
 namespace ov {
 namespace intel_cpu {
 
@@ -156,6 +160,9 @@ bool Transformations::fuse_type_to_convert(const std::shared_ptr<ngraph::Node>& 
 }
 
 void Transformations::UpToCpuSpecificOpSet() {
+    ngraph::pass::VisualizeTree("svg/cpu.original.svg").run_on_model(model);
+    ngraph::pass::Serialize("svg/cpu.original.xml", "svg/cpu.original.bin").run_on_model(model);
+
     const bool useLpt = enableLpt &&
         ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(model) &&
         CPU_DEBUG_CAP_IS_TRANSFORMATION_ENABLED(config.debugCaps, Lpt);
@@ -179,13 +186,22 @@ void Transformations::UpToCpuSpecificOpSet() {
 
     PreLpt(defaultPrecisions, isLegacyApi);
 
-    if (useLpt)
+    ngraph::pass::VisualizeTree("svg/cpu.common.svg").run_on_model(model);
+    ngraph::pass::Serialize("svg/cpu.common.xml", "svg/cpu.common.bin").run_on_model(model);
+
+    if (useLpt) {
         Lpt(hasINT16orINT32Levels, defaultPrecisions);
+        ngraph::pass::VisualizeTree("svg/cpu.lpt.svg").run_on_model(model);
+        ngraph::pass::Serialize("svg/cpu.lpt.xml", "svg/cpu.lpt.bin").run_on_model(model);
+    }
 
     PostLpt();
 
     if (useSnippets)
         Snippets();
+
+    ngraph::pass::VisualizeTree("svg/cpu.transformed.svg").run_on_model(model);
+    ngraph::pass::Serialize("svg/cpu.transformed.xml", "svg/cpu.transformed.bin").run_on_model(model);
 }
 
 void Transformations::CpuSpecificOpSet(void) {
@@ -553,6 +569,8 @@ void Transformations::Lpt(const bool hasINT16orINT32Levels, const std::vector<ov
         [](const_node_ptr& node) -> bool {
             return ov::marked_as_bias(node);
         });
+
+    lptManager.get_pass_config()->disable<ngraph::pass::low_precision::MarkupBias>();
 
     CPU_DISABLE_PASS_ARM(lptManager, ngraph::pass::low_precision::RecurrentCellTransformation);
     CPU_DISABLE_PASS_COMMON(lptManager, ngraph::pass::low_precision::MultiplyToGroupConvolutionTransformation);

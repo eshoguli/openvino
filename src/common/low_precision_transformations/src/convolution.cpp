@@ -61,6 +61,9 @@ size_t ConvolutionTransformation::getInputChannels(const std::shared_ptr<ngraph:
 
 bool ConvolutionTransformation::transform(TransformationContext &context, ngraph::pattern::Matcher &m) {
     auto convolution = m.get_match_root();
+    if (convolution->get_friendly_name() == "/backbone/block1.0/mlp/fc1/Conv/WithoutBiases") {
+        std::cout << "ConvolutionTransformation::transform: " << convolution->get_friendly_name() << std::endl;
+    }
 
     if (!canConvolutionBeTransformed(context, convolution, defaultPrecisions)) {
         const auto weightInput = convolution->get_input_node_shared_ptr(1);
