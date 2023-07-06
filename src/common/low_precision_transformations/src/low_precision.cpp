@@ -49,6 +49,7 @@
 #include "low_precision/depth_to_space.hpp"
 #include "low_precision/fake_quantize.hpp"
 #include "low_precision/group_convolution.hpp"
+#include "low_precision/if.hpp"
 #include "low_precision/interpolate.hpp"
 #include "low_precision/mat_mul.hpp"
 #include "low_precision/max_pool.hpp"
@@ -244,6 +245,7 @@ bool ngraph::pass::low_precision::LowPrecision::run_on_model(const std::shared_p
     ADD_MATCHER(common, DepthToSpaceTransformation, params)
     ADD_MATCHER(common, FakeQuantizeDecompositionTransformation, params)
     ADD_MATCHER(common, FakeQuantizeTransformation, params)
+    ADD_MATCHER(common, IfTransformation, params)
     ADD_MATCHER(common, InterpolateTransformation, params)
     ADD_MATCHER(common, GroupConvolutionTransformation, params)
     ADD_MATCHER(common, MatMulTransformation, params)
