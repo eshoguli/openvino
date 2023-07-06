@@ -370,6 +370,10 @@ const std::vector<impl_desc_type>& Convolution::getDefaultImplPriority() {
 const bool Convolution::isBrgConvAvailable = dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx512_core);
 
 void Convolution::getSupportedDescriptors() {
+    if (this->getName() == "/layer2/0/conv1/Conv/WithoutBiases") {
+        std::cout << "" << std::endl;
+    }
+
     if (!descs.empty())
         return;
     if (!attrs.empty())
@@ -488,6 +492,7 @@ void Convolution::getSupportedDescriptors() {
     memory::format_tag nCsp16c = ndims == 3 ? memory::format_tag::nCw16c : (ndims == 4 ? memory::format_tag::nChw16c : memory::format_tag::nCdhw16c);
 
     if (canBeExecutedInInt8()) {
+        std::cout << "Creating I8 descriptor: " << this->getName()  << std::endl;
         DEBUG_LOG(getName(), "Creating I8 descriptor");
 
         SetPostOpsAndZeroPoints(attrs);
@@ -501,6 +506,8 @@ void Convolution::getSupportedDescriptors() {
         out_candidate = std::make_shared<DnnlBlockedMemoryDesc>(getOutputShapeAtPort(0), outputDataType, nspc);
         createDescriptor({ in_candidate }, { out_candidate });
         return;
+    } else {
+        std::cout << "Creating float point descriptor: " << this->getName() << std::endl;
     }
 
     auto getSupportedDataType = [this, ndims](InferenceEngine::Precision originalPrec) {
