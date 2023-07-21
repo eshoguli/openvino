@@ -40,6 +40,12 @@ enum impl_desc_type {
     // sparse
     sparse = 1<<25,
 
+    asimd   = 1<<26,
+    sve_128 = 1<<27,
+    sve_256 = 1<<28,
+    sve_384 = 1<<29,
+    sve_512 = 1<<30,
+
     // real types
     ref_any             = ref  | any,
 
@@ -98,6 +104,12 @@ enum impl_desc_type {
     dw_acl             = _dw | acl,
     gemm_acl           = gemm | acl,
     winograd_acl       = winograd | acl,
+
+    jit_asimd          = jit | asimd,
+    jit_sve_128        = jit | sve_128,
+    jit_sve_256        = jit | sve_256,
+    jit_sve_384        = jit | sve_384,
+    jit_sve_512        = jit | sve_512
 };
 
 const char * impl_type_to_string(impl_desc_type type);
