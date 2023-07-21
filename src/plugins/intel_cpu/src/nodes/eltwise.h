@@ -12,6 +12,17 @@
 #include <caseless.hpp>
 #include "executors/eltwise_list.hpp"
 
+// #if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
+// #define OPENVINO_ARCH_ARM
+// #endif
+#if !defined(OPENVINO_ARCH_X86_64)
+#define OPENVINO_ARCH_ARM
+#endif
+
+#if defined(OPENVINO_ARCH_ARM)
+#include "kernels/aarch64/jit_uni_eltwise_generic.hpp"
+#endif
+
 namespace ov {
 namespace intel_cpu {
 namespace node {
@@ -38,6 +49,8 @@ struct jit_eltwise_params {
     size_t work_amount;
     bool use_runtime_ptrs;
 };
+
+#if defined(OPENVINO_ARCH_X86_64)
 
 struct jit_eltwise_call_args_ptrs {
     const void *src_ptr[MAX_ELTWISE_INPUTS];
@@ -73,28 +86,43 @@ struct jit_uni_eltwise_kernel {
     jit_eltwise_params jep_;
 };
 
+#endif
+
 enum class EltwiseImplType {
     reference = 0,
     optimized = 1,
     optimizedShapeAgnostic = 2
 };
 
+#if defined (OPENVINO_ARCH_X86_64)
+struct EltwiseData {
+    Algorithm algo;
+    dnnl::algorithm onednnAlgorithm;
+    float alpha;
+    float beta;
+    float gamma;
+
+    bool operator==(const EltwiseData& rhs) const noexcept {
+        return algo == rhs.algo &&
+            onednnAlgorithm == rhs.onednnAlgorithm &&
+            alpha == rhs.alpha &&
+            beta == rhs.beta &&
+            gamma == rhs.gamma;
+    }
+};
+#endif
+
 class Eltwise : public Node {
 public:
-    struct EltwiseData {
-        Algorithm algo;
-        dnnl::algorithm onednnAlgorithm;
-        float alpha;
-        float beta;
-        float gamma;
-
-        bool operator==(const EltwiseData& rhs) const noexcept;
-    };
-
     class IEltwiseExecutor {
     public:
         IEltwiseExecutor() = default;
+#if defined(OPENVINO_ARCH_X86_64)
         virtual void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) = 0;
+#endif
+#if defined(OPENVINO_ARCH_ARM)
+        virtual void exec(const ov::intel_cpu::aarch64::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) = 0;
+#endif
         virtual size_t getBatchDimIdx() const = 0;
         virtual const VectorDims& getOutDims() const = 0;
         virtual ~IEltwiseExecutor() = default;
@@ -207,7 +235,12 @@ class eltwise_precision_helper {
 public:
     static InferenceEngine::Precision get_precision(const size_t inputs_number,
                                                     const InferenceEngine::Precision (&src_prc)[MAX_ELTWISE_INPUTS],
-                                                    const std::vector<Eltwise::EltwiseData>& eltwise_data);
+                                                    #if defined(OPENVINO_ARCH_X86_64)
+                                                    const std::vector<EltwiseData>& eltwise_data);
+                                                    #endif
+                                                    #if defined(OPENVINO_ARCH_ARM)
+                                                    const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data);
+                                                    #endif
 
 private:
     static std::set<std::vector<element::Type>> get_supported_precisions(const Algorithm& algo);
