@@ -1522,11 +1522,11 @@ public:
 
 #if defined(OPENVINO_ARCH_X86_64)
         if (mayiuse(x64::avx512_core)) {
-            _pKernel.reset(new jit_uni_eltwise_generic<x64::avx512_core>(jep, eltwise_data, ops_list, post_ops));
+            _pKernel.reset(new ov::intel_cpu::jit_uni_eltwise_generic<x64::avx512_core>(jep, eltwise_data, ops_list, post_ops));
         } else if (mayiuse(x64::avx2)) {
-            _pKernel.reset(new jit_uni_eltwise_generic<x64::avx2>(jep, eltwise_data, ops_list, post_ops));
+            _pKernel.reset(new ov::intel_cpu::jit_uni_eltwise_generic<x64::avx2>(jep, eltwise_data, ops_list, post_ops));
         } else if (mayiuse(x64::sse41)) {
-            _pKernel.reset(new jit_uni_eltwise_generic<x64::sse41>(jep, eltwise_data, ops_list, post_ops));
+            _pKernel.reset(new ov::intel_cpu::jit_uni_eltwise_generic<x64::sse41>(jep, eltwise_data, ops_list, post_ops));
         } else {
             IE_THROW() << "Can't create jit eltwise kernel";
         }

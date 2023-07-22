@@ -8,8 +8,7 @@
 
 namespace ov {
 namespace intel_cpu {
-// TODO: we need namespace here
-// namespace x64 {
+namespace aarch64 {
 
 class jit_add_emitter : public jit_emitter {
 public:
@@ -671,5 +670,7 @@ private:
     template <dnnl::impl::cpu::x64::cpu_isa_t isa>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 };
+
+}   // namespace aarch64
 }   // namespace intel_cpu
 }   // namespace ov
