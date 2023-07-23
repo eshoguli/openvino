@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "jit_uni_eltwise_generic.cpp"
-
+#include "jit_uni_eltwise_generic.hpp"
 
 using namespace dnnl::impl;
 using namespace dnnl::impl::utils;
@@ -11,8 +10,5 @@ using namespace dnnl::impl::utils;
 
 namespace ov {
 namespace intel_cpu {
-
-
-
 }  // namespace intel_cpu
 }  // namespace ov
