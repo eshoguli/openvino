@@ -6,6 +6,7 @@
 
 #include <common/float16.hpp>
 #include <map>
+#include <memory>
 #include <set>
 
 #include "openvino/core/parallel.hpp"
@@ -14,7 +15,6 @@
 #include "cpu_types.h"
 #include "utils/bfloat16.hpp"
 #include "ie_ngraph_utils.hpp"
-#include <cpu/x64/injectors/jit_uni_quantization_injector.hpp>
 #include <cpu/ref_eltwise.hpp>
 #include <openvino/core/except.hpp>
 
@@ -25,10 +25,14 @@
 #include "input.h"
 #include "common/cpu_convert.h"
 
+#if defined(OPENVINO_ARCH_X86_64)
+#include <cpu/x64/injectors/jit_uni_quantization_injector.hpp>
 #include "emitters/x64/jit_emitter.hpp"
 #include "emitters/x64/jit_eltwise_emitters.hpp"
 #include "emitters/x64/jit_dnnl_emitters.hpp"
 #include "emitters/x64/jit_bf16_emitters.hpp"
+#endif
+
 #include <selective_build.h>
 #include "utils/general_utils.h"
 #include "utils/cpu_utils.hpp"
@@ -53,11 +57,25 @@
 #include "memory_desc/dnnl_blocked_memory_desc.h"
 #include "shape_inference/custom/eltwise.hpp"
 
+#if defined(OPENVINO_ARCH_ARM64)
+#include "cpu/aarch64/cpu_isa_traits.hpp"
+#include "kernels/aarch64/jit_uni_eltwise_generic.hpp"
+#include "executors/aarch64/jit_eltwise.hpp"
+#endif
+
 using namespace InferenceEngine;
 using namespace dnnl::impl::utils;
 using namespace dnnl::impl::cpu;
+
+#if defined(OPENVINO_ARCH_X86_64)
 using namespace dnnl::impl::cpu::x64;
 using namespace Xbyak;
+#endif
+
+#if defined(OPENVINO_ARCH_ARM64)
+using namespace ov::intel_cpu::aarch64;
+using namespace dnnl::impl::cpu::aarch64;
+#endif
 
 #define GET_OFF(field) offsetof(jit_eltwise_call_args_ptrs, field)
 
@@ -78,7 +96,7 @@ struct EltwiseEmitterContext {
     std::shared_ptr<jit_emitter> emitter;
     jit_generator *host;
     cpu_isa_t host_isa;
-    const Eltwise::EltwiseData& opData;
+    const EltwiseData& opData;
     ov::element::Type exec_prc;
 };
 
@@ -136,7 +154,7 @@ static void set_intersection(const std::set<std::vector<element::Type>>& precisi
 
 ov::element::Type eltwise_precision_helper::get_precision(const size_t inputs_number,
                                                           const ov::element::Type (&src_prc)[MAX_ELTWISE_INPUTS],
-                                                          const std::vector<Eltwise::EltwiseData>& eltwise_data) {
+                                                          const std::vector<EltwiseData>& eltwise_data) {
     ov::element::Type exec_prc = ov::element::undefined;
 
     std::set<std::vector<element::Type>> supported_precision_intersection =
@@ -261,7 +279,7 @@ struct jit_uni_eltwise_generic : public jit_uni_eltwise_kernel, public jit_gener
     DECLARE_CPU_JIT_AUX_FUNCTIONS(jit_uni_eltwise_generic)
 
     explicit jit_uni_eltwise_generic(const jit_eltwise_params& jep,
-                                     const std::vector<Eltwise::EltwiseData>& eltwise_data,
+                                     const std::vector<EltwiseData>& eltwise_data,
                                      const std::vector<ov::intel_cpu::Type>& ops_list,
                                      const dnnl::post_ops& post_ops)
     : jit_uni_eltwise_kernel(jep), jit_generator(jit_name()), eltwise_data_(eltwise_data), ops_list_(ops_list), post_ops_(post_ops) {}
@@ -563,11 +581,11 @@ private:
 
     std::vector<std::shared_ptr<jit_uni_quantization_injector_f32<isa>>> quantization_injectors = {};
 
-    const std::vector<Eltwise::EltwiseData>& eltwise_data_;
+    const std::vector<EltwiseData>& eltwise_data_;
     const std::vector<ov::intel_cpu::Type>& ops_list_;
     const dnnl::post_ops& post_ops_;
 
-    std::shared_ptr<jit_emitter> create_eltwise_emitter(const Eltwise::EltwiseData& data, ov::element::Type exec_prec) {
+    std::shared_ptr<jit_emitter> create_eltwise_emitter(const EltwiseData& data, ov::element::Type exec_prec) {
         EltwiseEmitterContext ctx = {
             nullptr,
             this,
@@ -1183,8 +1201,9 @@ const std::map<const ov::DiscreteTypeInfo, Eltwise::Initializer>& Eltwise::getIn
 
 
 namespace {
+
 struct EltwiseKey {
-    std::vector<Eltwise::EltwiseData> eltwise_data;
+    std::vector<EltwiseData> eltwise_data;
     std::vector<Type> ops_list;
     VectorDims outBlkDims;
     VectorDims outOrder;
@@ -1198,7 +1217,7 @@ struct EltwiseKey {
         using namespace dnnl::impl;
         using namespace dnnl::impl::primitive_hashing;
         size_t seed = 0;
-        auto hash_combine_eltwiseData = [](size_t seed, const Eltwise::EltwiseData& eltwiseData) {
+        auto hash_combine_eltwiseData = [](size_t seed, const EltwiseData& eltwiseData) {
             seed = hash_combine(seed, eltwiseData.algo);
             seed = hash_combine(seed, eltwiseData.onednnAlgorithm);
             seed = hash_combine(seed, eltwiseData.alpha);
@@ -1206,7 +1225,7 @@ struct EltwiseKey {
             seed = hash_combine(seed, eltwiseData.gamma);
             return seed;
         };
-        std::for_each(eltwise_data.begin(), eltwise_data.end(), [&](const Eltwise::EltwiseData& item) {
+        std::for_each(eltwise_data.begin(), eltwise_data.end(), [&](const EltwiseData& item) {
             seed = hash_combine_eltwiseData(seed, item);
         });
         seed = get_vector_hash(seed, ops_list);
@@ -1283,7 +1302,7 @@ public:
         }
     }
 
-    EltwiseJitExecutor(const std::vector<Eltwise::EltwiseData>& eltwise_data,
+    EltwiseJitExecutor(const std::vector<EltwiseData>& eltwise_data,
                        const std::vector<Type>& ops_list,
                        const VectorDims& outBlkDims,
                        const VectorDims& outOrder,
@@ -1491,6 +1510,15 @@ public:
             OPENVINO_THROW("Can't create jit eltwise kernel");
         }
 #endif // OPENVINO_ARCH_X86_64
+
+#if defined(OPENVINO_ARCH_ARM64)
+        if (mayiuse(aarch64::asimd)) {
+            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::asimd>(jep, eltwise_data, ops_list, post_ops));
+        } else {
+            IE_THROW() << "Can't create jit eltwise kernel";
+        }
+#endif // OPENVINO_ARCH_ARM64
+
         if (_pKernel)
             _pKernel->create_ker();
     }
@@ -1565,7 +1593,7 @@ public:
 template<typename T>
 class EltwiseRefBaseExecutor : public Eltwise::IEltwiseExecutor {
 public:
-    EltwiseRefBaseExecutor(Eltwise::EltwiseData opData,
+    EltwiseRefBaseExecutor(EltwiseData opData,
                            const VectorDims& outBlkDims,
                            std::vector<VectorDims> inpDims)
     : _opData(std::move(opData)), _inpDims(inpDims) {
@@ -1652,7 +1680,7 @@ protected:
         dst_ptr_f = reinterpret_cast<T*>(args_ptrs.dst_ptr) + index_out;
     }
 
-    const Eltwise::EltwiseData _opData;
+    const EltwiseData _opData;
     VectorDims _dims;
     VectorDims _src_offsets[MAX_ELTWISE_INPUTS];
     VectorDims _dst_offsets;
@@ -1671,9 +1699,9 @@ template<typename T,
     ::type * = nullptr>
 class EltwiseRefExecutor : public EltwiseRefBaseExecutor<T> {
 public:
-    EltwiseRefExecutor(Eltwise::EltwiseData opData,
-                          const VectorDims& outBlkDims,
-                          std::vector<VectorDims> inpDims) : EltwiseRefBaseExecutor<T>(opData, outBlkDims, inpDims) {
+    EltwiseRefExecutor(EltwiseData opData,
+                       const VectorDims& outBlkDims,
+                       std::vector<VectorDims> inpDims) : EltwiseRefBaseExecutor<T>(opData, outBlkDims, inpDims) {
     }
 
     void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
@@ -1810,7 +1838,7 @@ template<typename T,
     ::type * = nullptr>
 class BitwiseRefExecutor : public EltwiseRefBaseExecutor<T> {
 public:
-    BitwiseRefExecutor(Eltwise::EltwiseData opData,
+    BitwiseRefExecutor(EltwiseData opData,
                        const VectorDims& outBlkDims,
                        std::vector<VectorDims> inpDims) : EltwiseRefBaseExecutor<T>(opData, outBlkDims, inpDims) {
     }
@@ -1858,14 +1886,6 @@ public:
 };
 
 } // namespace
-
-bool Eltwise::EltwiseData::operator==(const EltwiseData &rhs) const noexcept {
-    return algo == rhs.algo &&
-           onednnAlgorithm == rhs.onednnAlgorithm &&
-           alpha == rhs.alpha &&
-           beta == rhs.beta &&
-           gamma == rhs.gamma;
-}
 
 static Eltwise::executorPtr buildRefExecutor(const EltwiseKey& key) {
     switch (key.outPrc) {
@@ -2075,11 +2095,20 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         return;
 
     // if dim rank is greater than the maximum possible, we should use the reference execution
+#ifdef OPENVINO_ARCH_X86_64
     bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
+#endif
+
+#ifdef OPENVINO_ARCH_ARM64
+    bool canUseOptimizedImpl = mayiuse(dnnl::impl::cpu::aarch64::asimd) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
+#endif
+
+#ifdef OPENVINO_ARCH_X86_64
     // TODO: Add EltwiseLog algorithm support for JIT implementation
     canUseOptimizedImpl &= !(one_of(getAlgorithm(), Algorithm::EltwiseLog) || isBitwise(getAlgorithm()));
 
     bool canUseOptimizedShapeAgnosticImpl = isDynamicNode() && canUseOptimizedImpl;
+#endif
 
     if (!canUseOptimizedImpl && !fusedWith.empty()) {
         OPENVINO_THROW("Unexpected: Eltwise node with name '",
@@ -2124,12 +2153,12 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
                     inputPrecisions.push_back(fusedNode->getOriginalInputPrecisionAtPort(i));
             }
         }
+#ifdef OPENVINO_ARCH_X86_64
         if (fusedNode->getType() == Type::FakeQuantize) {
             canUseOptimizedShapeAgnosticImpl = false;
         }
+#endif
     }
-    implType = canUseOptimizedShapeAgnosticImpl ? EltwiseImplType::optimizedShapeAgnostic :
-            canUseOptimizedImpl ? EltwiseImplType::optimized : EltwiseImplType::reference;
 
     if (inputPrecisions.size() != getParentEdges().size())
         OPENVINO_THROW("Eltwise node with name `", getName(), "` has invalid input precisions configuration.");
@@ -2138,6 +2167,10 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     if (!fusedWith.empty()) {
         outputPrecision = fusedWith[fusedWith.size() - 1]->getOriginalOutputPrecisionAtPort(0);
     }
+
+#if defined(OPENVINO_ARCH_X86_64)
+    implType = canUseOptimizedShapeAgnosticImpl ? EltwiseImplType::optimizedShapeAgnostic :
+            canUseOptimizedImpl ? EltwiseImplType::optimized : EltwiseImplType::reference;
 
     if (!mayiuse(avx512_core)) {
         bool hasBF16 = false;
@@ -2148,6 +2181,17 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         if (outputPrecision == ov::element::bf16 || hasBF16)
             OPENVINO_THROW("Eltwise node with name `", getName(), "` doesn't support BF16 precision on this target.");
     }
+#elif defined(OPENVINO_ARCH_ARM64)
+    const bool useJit = canUseOptimizedImpl &&
+                        executors::aarch64::JitEltwiseExecutor::isSupported(this, getAlpha(), getBeta(), getGamma());
+    if (!useJit) {
+        canUseOptimizedImpl = false;
+    }
+
+    implType = (useJit && canUseOptimizedImpl) ? EltwiseImplType::optimized : EltwiseImplType::reference;
+#else
+    IE_THROW() << "Unknow CPU architecture";
+#endif
 
 #if defined(OV_CPU_WITH_ACL)
     auto filterPrecision = [&](const ov::element::Type& prc, const ov::element::Type& forcedPrec) {
@@ -2160,6 +2204,8 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         return forcedPrec;
     };
 
+    const bool useAcl = !useJit;
+    if (useAcl) {
     // Use original output precision as a reference point since some eltwise algorithms have non-float inputs (i.e. EltwiseSelect)
     ov::element::Type forcedPrec = getOriginalOutputPrecisionAtPort(0) == ov::element::f16 ? ov::element::f16 : ov::element::f32;
     // ACL implementation supports only identical precisions on inputs/outputs so they are aligned it to highest one
@@ -2180,7 +2226,8 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         inputPrecisions[i] = filterPrecision(inputPrecisions[i], forcedPrec);
     }
     outputPrecision = filterPrecision(outputPrecision, forcedPrec);
-#else
+    } else {
+#endif
     auto filterPrecision = [&](const ov::element::Type& prc) {
         if (implType == EltwiseImplType::reference) {
             if (isBitwise(algorithm)) {
@@ -2207,6 +2254,8 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         inputPrecisions[i] = filterPrecision(inputPrecisions[i]);
     }
     outputPrecision = filterPrecision(outputPrecision);
+#if defined(OV_CPU_WITH_ACL)
+    }
 #endif
 
     // TODO: delete after new LPT (ngraph based) is merged
@@ -2247,7 +2296,13 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
             // bad accuracy for shape {1, 1, 4, 11}, {2, 5, 1, 1}
             // same for disabled collapse dims
             } else if (lt == Blocked && shape.getRank() != 1 && (shape.getMinDims()[1] != Shape::UNDEFINED_DIM && shape.getMinDims()[1] > 1)) {
+                #ifdef OPENVINO_ARCH_X86_64
                 size_t blockSize = mayiuse(x64::avx512_core) ? 16 : 8;
+                #endif
+
+                #ifdef OPENVINO_ARCH_ARM64
+                size_t blockSize = cpu_isa_traits<dnnl::impl::cpu::aarch64::asimd>::vlen / 4;
+                #endif
 
                 VectorDims blocks = dims;
                 VectorDims order(blocks.size());
@@ -2320,6 +2375,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         } else {
             impl_desc_type impl_type = impl_desc_type::ref;
             if (canUseOptimizedImpl) {
+                #ifdef OPENVINO_ARCH_X86_64
                 if (mayiuse(x64::avx512_core)) {
                     impl_type = impl_desc_type::jit_avx512;
                 } else if (mayiuse(x64::avx2)) {
@@ -2327,6 +2383,15 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
                 } else if (mayiuse(x64::sse41)) {
                     impl_type = impl_desc_type::jit_sse42;
                 }
+                #endif
+
+                #ifdef OPENVINO_ARCH_ARM64
+                if (mayiuse(dnnl::impl::cpu::aarch64::asimd)) {
+                    impl_type = impl_desc_type::jit_asimd;
+                } else {
+                    IE_THROW() << "not supported architecture";
+                }
+                #endif
             }
 
             return {config, impl_type};
@@ -2356,6 +2421,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     currentInBlkDims.resize(inputNum);
 
 #if defined (OV_CPU_WITH_ACL)
+    if (useAcl) {
     eltwiseAttrs = {algorithm, alpha, beta, gamma};
 
     auto addDesc = [&initDesc](std::vector<NodeDesc>& supportedPrimitiveDescriptors, const LayoutType layoutType) {
@@ -2378,6 +2444,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     canUseAclExecutor = !supportedPrimitiveDescriptors.empty();
     if (canUseAclExecutor)
         return;
+    }
 #endif
 
     if (isChannelsFirstApplicable)
@@ -2588,7 +2655,6 @@ void Eltwise::execute(dnnl::stream strm) {
             }
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
-
         execPtr->exec(args_ptrs, dims_out);
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
@@ -2861,8 +2927,26 @@ bool Eltwise::canFuse(const NodePtr& node) const {
         return true;
     };
 
+#ifdef OPENVINO_ARCH_X86_64
     if (!mayiuse(x64::sse41) || getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK)
         return false;
+#endif
+
+#ifdef OPENVINO_ARCH_ARM64
+    if (!mayiuse(dnnl::impl::cpu::aarch64::asimd) || (getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK))
+        return false;
+
+    if (!executors::aarch64::JitEltwiseExecutor::isSupported(this, getAlpha(), getBeta(), getGamma())) {
+        return false;
+    }
+    const auto eltwise = dynamic_cast<const Eltwise*>(node.get());
+    if ((eltwise == nullptr) || (!executors::aarch64::JitEltwiseExecutor::isSupported(eltwise,
+                                                                                      eltwise->getAlpha(),
+                                                                                      eltwise->getBeta(),
+                                                                                      eltwise->getGamma()))) {
+        return false;
+    }
+#endif
 
     // TODO: supported only via reference executor
     if (one_of(getAlgorithm(),
