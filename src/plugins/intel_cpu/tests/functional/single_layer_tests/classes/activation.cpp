@@ -102,7 +102,7 @@ void ActivationLayerCPUTest::SetUp() {
 
     inType  = FuncTestUtils::PrecisionUtils::convertIE2nGraphPrc(inPrecision);
     outType = FuncTestUtils::PrecisionUtils::convertIE2nGraphPrc(outPrecision);
-    selectedType = getPrimitiveType() + "_" + netPrecision.name();
+    selectedType = getPrimitiveType(activationType, inType, inputShapes) + "_" + netPrecision.name();
 
 #if defined(OPENVINO_ARCH_ARM) || defined(OPENVINO_ARCH_ARM64)
 #    if defined(OPENVINO_ARCH_ARM)

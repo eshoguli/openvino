@@ -142,13 +142,20 @@ INSTANTIATE_TEST_SUITE_P(smoke_CompareWithRefs_dynamic_large_upper_bound,
 
 
 std::vector<std::vector<ov::Shape>> inShapesSingleThread = {
-        {{1, 2, 3, 4}},
+        {{1, 1, 1, 2}},
+        {{1, 1, 1, 4}},
+        {{1, 1, 1, 6}},
+        {{1, 1, 1, 24}},
+        {{1, 1, 2, 4}},
+        {{1, 1, 2, 8}},
+        {{1, 4, 3, 4}},
         {{2, 2, 2, 2}},
         {{2, 1, 2, 1, 2, 2}},
 };
 
 std::vector<ngraph::helpers::EltwiseTypes> eltwiseOpTypesSingleThread = {
         ngraph::helpers::EltwiseTypes::ADD,
+        ngraph::helpers::EltwiseTypes::MULTIPLY,
         ngraph::helpers::EltwiseTypes::POWER,
 };
 

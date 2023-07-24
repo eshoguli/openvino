@@ -255,11 +255,67 @@ CPUTestsBase::CPUInfo CPUTestsBase::getCPUInfo() const {
     return makeCPUInfo(inFmts, outFmts, priority);
 }
 
-#if defined(OV_CPU_WITH_ACL)
-std::string CPUTestsBase::getPrimitiveType() const {
+#if defined(OPENVINO_ARCH_ARM64)
+std::string CPUTestsBase::getPrimitiveType(const ngraph::helpers::EltwiseTypes& eltwise_type,
+                                           const ov::element::Type_t& element_type,
+                                           const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) const {
+    if (element_type == ov::element::f32) {
+        const auto is_static = [](const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) {
+            return std::all_of(input_shapes.begin(),
+                               input_shapes.end(),
+                               [](const std::pair<ov::PartialShape, std::vector<ov::Shape>>& shape) { return shape.first.is_static(); });
+        };
+
+        if (is_static(input_shapes) &&
+            ((eltwise_type == ngraph::helpers::EltwiseTypes::ADD) ||
+             (eltwise_type == ngraph::helpers::EltwiseTypes::MULTIPLY) ||
+             (eltwise_type == ngraph::helpers::EltwiseTypes::SUBTRACT) ||
+             (eltwise_type == ngraph::helpers::EltwiseTypes::DIVIDE))) {
+            // TODO: jit_asimd
+            return "jit";
+        }
+    }
     return "acl";
 }
+
+std::string CPUTestsBase::getPrimitiveType(const ngraph::helpers::ActivationTypes& activation_type,
+                                           const ov::element::Type_t& element_type,
+                                           const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) const {
+    if (element_type == ov::element::f32) {
+        const auto is_static = [](const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) {
+            return std::all_of(input_shapes.begin(),
+                               input_shapes.end(),
+                               [](const std::pair<ov::PartialShape, std::vector<ov::Shape>>& shape) { return shape.first.is_static(); });
+        };
+
+        if (is_static(input_shapes) && (activation_type == ngraph::helpers::ActivationTypes::Relu)) {
+            // TODO: jit_asimd
+            return "jit";
+        }
+    }
+    return "acl";
+}
+
+std::string CPUTestsBase::getPrimitiveType() const {
+#if defined(OV_CPU_WITH_ACL)
+    return "acl";
 #else
+    return "ref";
+#endif
+}
+#else
+std::string CPUTestsBase::getPrimitiveType(const ngraph::helpers::EltwiseTypes& eltwise_type,
+                                           const ov::element::Type_t& element_type,
+                                           const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) const {
+    return getPrimitiveType();
+}
+
+std::string CPUTestsBase::getPrimitiveType(const ngraph::helpers::ActivationTypes& activation_type,
+                                           const ov::element::Type_t& element_type,
+                                           const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) const {
+    return getPrimitiveType();
+}
+
 std::string CPUTestsBase::getPrimitiveType() const {
     std::string isaType;
     if (InferenceEngine::with_cpu_x86_avx512f()) {

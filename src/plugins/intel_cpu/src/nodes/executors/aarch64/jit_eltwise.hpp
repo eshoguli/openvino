@@ -1,0 +1,52 @@
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+//
+
+#pragma once
+
+#include "../eltwise.hpp"
+
+namespace ov {
+namespace intel_cpu {
+namespace executors {
+namespace aarch64 {
+
+using namespace InferenceEngine;
+
+class JitEltwiseExecutor : public EltwiseExecutor {
+public:
+    explicit JitEltwiseExecutor(const ExecutorContext::CPtr context);
+    static bool isSupported(const Algorithm& algorithm);
+
+    bool init(const EltwiseAttrs& eltwiseAttrs,
+              const std::vector<MemoryDescPtr>& srcDescs,
+              const std::vector<MemoryDescPtr>& dstDescs,
+              const std::vector<EltwisePostOp>& postOps) override;
+
+    void exec(const std::vector<MemoryCPtr>& src,
+              const std::vector<MemoryPtr>& dst,
+              const void *post_ops_data_) override;
+
+    impl_desc_type getImplType() const override {
+        // TODO: limited by one platform: asimd
+        return impl_desc_type::asimd;
+    }
+private:
+    std::function<void()> exec_func;
+};
+
+class JitEltwiseExecutorBuilder : public EltwiseExecutorBuilder {
+public:
+    bool isSupported(const EltwiseAttrs& eltwiseAttrs,
+                     const std::vector<MemoryDescPtr>& srcDescs,
+                     const std::vector<MemoryDescPtr>& dstDescs) const override;
+
+    EltwiseExecutorPtr makeExecutor(const ExecutorContext::CPtr context) const override {
+        return std::make_shared<JitEltwiseExecutor>(context);
+    }
+};
+
+}   // namespace aarch64
+}   // namespace executors
+}   // namespace intel_cpu
+}   // namespace ov
