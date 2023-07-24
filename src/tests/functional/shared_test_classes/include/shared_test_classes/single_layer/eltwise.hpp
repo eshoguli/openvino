@@ -29,6 +29,8 @@ class EltwiseLayerTest : public testing::WithParamInterface<EltwiseTestParams>,
                          virtual public SubgraphBaseTest {
 protected:
     void SetUp() override;
+    // TODO: debug
+    //void generate_inputs(const std::vector<ov::Shape>& targetInputStaticShapes) override;
 
 public:
     static std::string getTestCaseName(const testing::TestParamInfo<EltwiseTestParams>& obj);
