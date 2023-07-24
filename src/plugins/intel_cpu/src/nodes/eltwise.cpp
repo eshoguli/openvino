@@ -47,11 +47,11 @@
 #include <functional>
 #include "memory_desc/dnnl_blocked_memory_desc.h"
 
-#if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
-#include "cpu/aarch64/cpu_isa_traits.hpp"
-#elif
-#include "cpu/x64/cpu_isa_traits.hpp"
-#endif
+// #if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
+// #include "cpu/aarch64/cpu_isa_traits.hpp"
+// #elif
+// #include "cpu/x64/cpu_isa_traits.hpp"
+// #endif
 
 using namespace InferenceEngine;
 using namespace dnnl::impl::utils;
@@ -1966,15 +1966,16 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         return;
 
     // if dim rank is greater than the maximum possible, we should use the reference execution
-    bool canUseOptimizedImpl =
-#if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
-        // TODO refactor: use macros once only
-        // TODO: asimd ?
-        aarch64::mayiuse(aarch64::cpu_isa_t::asimd) &&
-#elif
-        x64::mayiuse(x64::sse41) &&
-#endif
-        getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
+    bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
+//     bool canUseOptimizedImpl =
+// #if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
+//         // TODO refactor: use macros once only
+//         // TODO: asimd ?
+//         aarch64::mayiuse(aarch64::cpu_isa_t::asimd) &&
+// #elif
+//         x64::mayiuse(x64::sse41) &&
+// #endif
+//         getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
     // TODO: Add EltwiseLog algorithm support for JIT implementation
     canUseOptimizedImpl &= !one_of(getAlgorithm(), Algorithm::EltwiseLog);
     bool canUseOptimizedShapeAgnosticImpl = isDynamicNode() && canUseOptimizedImpl;
