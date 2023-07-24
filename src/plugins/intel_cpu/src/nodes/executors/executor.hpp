@@ -25,6 +25,13 @@ namespace intel_cpu {
 #define OV_CPU_INSTANCE_ACL(...)
 #endif
 
+#if defined(OPENVINO_ARCH_ARM64)
+#define OV_CPU_INSTANCE_ARCH_ARM64(...) \
+    {__VA_ARGS__},
+#else
+#define OV_CPU_INSTANCE_ARCH_ARM64(...)
+#endif
+
 #if defined(OV_CPU_WITH_DNNL)
 #define OV_CPU_INSTANCE_DNNL(...) \
     {__VA_ARGS__},
@@ -48,7 +55,8 @@ enum class ExecutorType {
     x64,
     Dnnl,
     Acl,
-    Mlas
+    Mlas,
+    Aarch64
 };
 
 class ExecutorContext {

@@ -504,6 +504,25 @@ void Graph::CreatePrimitivesAndExecConstants() const {
         {
             OV_ITT_SCOPE(FIRST_INFERENCE, itt::domains::intel_cpu_LT, node->profiling.createPrimitive);
             DEBUG_LOG(*node);
+
+// #ifdef DEBUG
+//             {
+//                 std::cout << "Graph::CreatePrimitivesAndExecConstants:" << std::endl;
+//                 std::cout << "\tgetName: " << node->getName() << std::endl;
+//                 std::cout << "\tgetTypeStr: " << node->getTypeStr() << std::endl;
+//                 std::cout << "\tgetParentEdges.getShape: ";
+//                 const auto& parentEdges = node->getParentEdges();
+//                 for (const auto& parentEdge : parentEdges) {
+//                     const auto& edge = parentEdge.lock();
+//                     const auto& portDesc = edge->getOutputPortDesc();
+//                     const auto& memDesc = portDesc->getMemDesc();
+//                     const auto& shape = memDesc->getShape().getDims();
+//                     for (const auto& d : shape) std::cout << d << ",";
+//                 }
+//                 std::cout << std::endl;
+//             }
+// #endif // DEBUG
+
             node->createPrimitive();
         }
 

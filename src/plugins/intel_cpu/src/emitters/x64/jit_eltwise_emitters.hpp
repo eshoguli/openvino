@@ -8,6 +8,8 @@
 
 namespace ov {
 namespace intel_cpu {
+// TODO: we need namespace here
+// namespace x64 {
 
 class jit_add_emitter : public jit_emitter {
 public:
