@@ -57,7 +57,7 @@ function(ov_add_onednn)
     endif()
 
     if(AARCH64 OR ARM)
-        set(DNNL_USE_ACL ON CACHE BOOL "Use ARM Conpute Library kernels in oneDNN" FORCE)
+        set(DNNL_USE_ACL OFF CACHE BOOL "Use ARM Conpute Library kernels in oneDNN" FORCE)
     endif()
 
     set(SDL_cmake_included ON)  ## to skip internal SDL flags. SDL flags are already set on IE level

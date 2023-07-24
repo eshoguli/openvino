@@ -44,6 +44,9 @@ if(OV_CPU_WITH_ACL)
     set(CMAKE_CXX_STANDARD 14)
 endif()
 
+message(DNNL_USE_ACL="${DNNL_USE_ACL}")
+message(OV_CPU_WITH_ACL="${OV_CPU_WITH_ACL}")
+
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp)
