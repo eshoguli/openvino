@@ -123,6 +123,8 @@
 #include "dnnl.hpp"
 #include <cpu/x64/cpu_isa_traits.hpp>
 
+#include <ngraph/pass/serialize.hpp>
+
 namespace ov {
 namespace intel_cpu {
 
@@ -157,6 +159,8 @@ bool Transformations::fuse_type_to_convert(const std::shared_ptr<ngraph::Node>& 
 }
 
 void Transformations::UpToCpuSpecificOpSet() {
+    //ngraph::pass::Serialize("svg/cpu.original.xml", "svg/cpu.original.bin").run_on_model(model);
+
     const bool useLpt = enableLpt &&
         ngraph::pass::low_precision::LowPrecision::isFunctionQuantized(model) &&
         CPU_DEBUG_CAP_IS_TRANSFORMATION_ENABLED(config.debugCaps, Lpt);
@@ -187,6 +191,8 @@ void Transformations::UpToCpuSpecificOpSet() {
 
     if (useSnippets)
         Snippets();
+
+    //ngraph::pass::Serialize("svg/cpu.transformed.xml", "svg/cpu.transformed.bin").run_on_model(model);
 }
 
 void Transformations::CpuSpecificOpSet(void) {
