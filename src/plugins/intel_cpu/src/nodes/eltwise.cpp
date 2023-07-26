@@ -82,7 +82,7 @@ using namespace dnnl::impl::cpu::aarch64;
 #endif
 //using namespace Xbyak;
 
-#define GET_OFF(field) offsetof(jit_eltwise_call_args_ptrs, field)
+#define GET_OFF(field) offsetof(node::jit_eltwise_call_args_ptrs, field)
 
 namespace ov {
 namespace intel_cpu {
@@ -1580,7 +1580,7 @@ public:
             _pKernel->create_ker();
     }
 
-    void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
+    void exec(const node::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
         if (!_pKernel)
             IE_THROW() << "Can't execute, kernel for eltwise node is not compiled";
 
@@ -1697,7 +1697,7 @@ public:
         }
     }
 
-    void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
+    void exec(const node::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
         if (_opData.algo == Algorithm::EltwiseLog) {
             const float* src_ptr_f = reinterpret_cast<const float*>(args_ptrs.src_ptr[0]);
             float* dst_ptr_f = reinterpret_cast<float*>(args_ptrs.dst_ptr);

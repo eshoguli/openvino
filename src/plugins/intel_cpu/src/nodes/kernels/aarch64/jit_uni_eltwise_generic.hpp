@@ -22,6 +22,8 @@
 #include "utils/general_utils.h"
 #include "utils/cpu_utils.hpp"
 
+#include "nodes/kernels/jit_eltwise_call_args_ptrs.hpp"
+
 namespace ov {
 namespace intel_cpu {
 namespace aarch64 {
@@ -52,26 +54,14 @@ struct jit_eltwise_params {
     bool use_runtime_ptrs;
 };
 
-struct jit_eltwise_call_args_ptrs {
-    const void *src_ptr[MAX_ELTWISE_INPUTS];
-    void *dst_ptr;
-    //ptr to array of post op inputs pointers (flat list)
-    const void** post_op_data;
-
-    // shape agnostic kernel
-    size_t work_amount;
-    const void *src_offsets[MAX_ELTWISE_INPUTS];
-    const void *dst_offsets;
-};
-
 struct jit_eltwise_call_args_indexes {
     size_t indexes[MAX_ELTWISE_DIM_RANK];
 };
 
 struct jit_uni_eltwise_kernel {
-    void (*ker_)(const jit_eltwise_call_args_ptrs*, const jit_eltwise_call_args_indexes*);
+    void (*ker_)(const node::jit_eltwise_call_args_ptrs*, const jit_eltwise_call_args_indexes*);
 
-    void operator()(const jit_eltwise_call_args_ptrs* const_args, const jit_eltwise_call_args_indexes* indexes) {
+    void operator()(const node::jit_eltwise_call_args_ptrs* const_args, const jit_eltwise_call_args_indexes* indexes) {
         assert(ker_);
         ker_(const_args, indexes);
     }
@@ -133,10 +123,20 @@ public:
         //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
         // }
 
+        // jit_generator::preamble
         preamble();
+
+
+        // mov(x0, x0);
+        // XReg param = param1;
+        // add_imm(X_TMP_0, param, GET_OFF(src), X_TMP_1);
+        // ldr(reg_src, ptr(X_TMP_0));
+        // add_imm(X_TMP_0, param, GET_OFF(dst), X_TMP_1);
+        // ldr(reg_dst, ptr(X_TMP_0));
 
         compute_eltwise_op();
 
+        // jit_generator::postamble
         postamble();
     }
 

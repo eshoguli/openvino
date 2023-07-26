@@ -11,6 +11,7 @@
 #include <memory>
 #include <caseless.hpp>
 #include "executors/eltwise_list.hpp"
+#include "nodes/kernels/jit_eltwise_call_args_ptrs.hpp"
 
 // #if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
 // #define OPENVINO_ARCH_ARM
@@ -52,18 +53,6 @@ struct jit_eltwise_params {
 
 #if defined(OPENVINO_ARCH_X86_64)
 
-struct jit_eltwise_call_args_ptrs {
-    const void *src_ptr[MAX_ELTWISE_INPUTS];
-    void *dst_ptr;
-    //ptr to array of post op inputs pointers (flat list)
-    const void** post_op_data;
-
-    // shape agnostic kernel
-    size_t work_amount;
-    const void *src_offsets[MAX_ELTWISE_INPUTS];
-    const void *dst_offsets;
-};
-
 struct jit_eltwise_call_args_indexes {
     size_t indexes[MAX_ELTWISE_DIM_RANK];
 };
@@ -71,9 +60,9 @@ struct jit_eltwise_call_args_indexes {
 class Eltwise;
 
 struct jit_uni_eltwise_kernel {
-    void (*ker_)(const jit_eltwise_call_args_ptrs*, const jit_eltwise_call_args_indexes*);
+    void (*ker_)(const node::jit_eltwise_call_args_ptrs*, const jit_eltwise_call_args_indexes*);
 
-    void operator()(const jit_eltwise_call_args_ptrs* const_args, const jit_eltwise_call_args_indexes* indexes) {
+    void operator()(const node::jit_eltwise_call_args_ptrs* const_args, const jit_eltwise_call_args_indexes* indexes) {
         assert(ker_);
         ker_(const_args, indexes);
     }
@@ -117,12 +106,7 @@ public:
     class IEltwiseExecutor {
     public:
         IEltwiseExecutor() = default;
-#if defined(OPENVINO_ARCH_X86_64)
-        virtual void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) = 0;
-#endif
-#if defined(OPENVINO_ARCH_ARM)
-        virtual void exec(const ov::intel_cpu::aarch64::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) = 0;
-#endif
+        virtual void exec(const node::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) = 0;
         virtual size_t getBatchDimIdx() const = 0;
         virtual const VectorDims& getOutDims() const = 0;
         virtual ~IEltwiseExecutor() = default;
