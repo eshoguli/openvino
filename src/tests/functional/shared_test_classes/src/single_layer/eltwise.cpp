@@ -103,7 +103,7 @@ void EltwiseLayerTest::SetUp() {
         secondaryInput = ngraph::builder::makeDynamicParams(netType, {shape_input_secondary}).front();
         parameters.push_back(std::dynamic_pointer_cast<ngraph::opset3::Parameter>(secondaryInput));
     } else {
-        ov::Shape shape = inputDynamicShapes.back().get_max_shape();
+        ov::Shape shape = shape_input_secondary.get_max_shape();
         switch (eltwiseType) {
             case ngraph::helpers::EltwiseTypes::DIVIDE:
             case ngraph::helpers::EltwiseTypes::MOD:
