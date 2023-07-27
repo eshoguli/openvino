@@ -26,6 +26,6 @@ include(cmake/openvino.cmake)
 add_subdirectory(common/preprocessing)
 add_subdirectory(bindings)
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTS OR ENABLE_FUNCTIONAL_TESTS)
     add_subdirectory(tests)
 endif()
