@@ -1564,7 +1564,9 @@ public:
         if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_512)) {
             _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_512>(jep, eltwise_data, ops_list, post_ops));
         } else if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_384)) {
-            _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_384>(jep, eltwise_data, ops_list, post_ops));
+            // not supported
+            //_pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_384>(jep, eltwise_data, ops_list, post_ops));
+            _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_256>(jep, eltwise_data, ops_list, post_ops));
         } else if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_256)) {
             _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_256>(jep, eltwise_data, ops_list, post_ops));
         } else if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_128)) {

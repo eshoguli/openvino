@@ -18,6 +18,19 @@
 #include <onednn/dnnl.h>
 #include <cpu/aarch64/cpu_isa_traits.hpp>
 #include <cpu/aarch64/jit_generator.hpp>
+//C:\projects\oneDNN\src\cpu\aarch64\cpu_isa_traits.hpp
+
+//C:\projects\oneDNN\src\cpu\aarch64\xbyak_aarch64\src\xbyak_aarch64_mnemonic.h
+
+namespace Xbyak_aarch64 {
+//C:\projects\oneDNN\src\cpu\aarch64\xbyak_aarch64\src\xbyak_aarch64_impl.h
+//#include <cpu/aarch64/xbyak_aarch64/src/err_impl.h>
+//#include <cpu/aarch64/xbyak_aarch64/src/xbyak_aarch64_impl.h>
+//#include <cpu/aarch64/xbyak_aarch64/src/xbyak_aarch64_mnemonic.h>
+}
+
+//C:\projects\oneDNN\src\cpu\aarch64\xbyak_aarch64\src\xbyak_aarch64_impl.h
+// #include <cpu/aarch64/xbyak_aarch64/src/xbyak_aarch64_impl.h>
 
 #include "utils/general_utils.h"
 #include "utils/cpu_utils.hpp"
@@ -29,6 +42,8 @@ namespace intel_cpu {
 namespace aarch64 {
 
 using namespace dnnl::impl::cpu;
+using namespace dnnl::impl::cpu::aarch64;
+using namespace Xbyak_aarch64;
 
 // TODO: not completed
 #define MAX_ELTWISE_INPUTS 7
@@ -63,6 +78,15 @@ struct jit_uni_eltwise_kernel {
 
     void operator()(const node::jit_eltwise_call_args_ptrs* const_args, const jit_eltwise_call_args_indexes* indexes) {
         assert(ker_);
+
+        // TODO: debug only
+        const auto src_ptr = static_cast<const float*>(const_args->src_ptr[0]);
+        std::cout << std::endl;
+        for (size_t i = 0; i < 16; i++) {
+            std::cout << src_ptr[i] << " ";
+        }
+        std::cout << std::endl;
+
         ker_(const_args, indexes);
     }
 
@@ -91,7 +115,7 @@ struct EltwiseData {
 };
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-struct jit_uni_eltwise_generic : public jit_uni_eltwise_kernel, dnnl::impl::cpu::aarch64::jit_generator {
+struct jit_uni_eltwise_generic : public jit_uni_eltwise_kernel, jit_generator {
 public:
     DECLARE_CPU_JIT_AUX_FUNCTIONS(jit_uni_eltwise_generic)
 
@@ -126,13 +150,15 @@ public:
         // jit_generator::preamble
         preamble();
 
+        XReg param = param1;
+        add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
+        ldr(reg_src, ptr(X_TMP_0));
+        add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
+        ldr(reg_dst, ptr(X_TMP_0));
 
-        // mov(x0, x0);
-        // XReg param = param1;
-        // add_imm(X_TMP_0, param, GET_OFF(src), X_TMP_1);
-        // ldr(reg_src, ptr(X_TMP_0));
-        // add_imm(X_TMP_0, param, GET_OFF(dst), X_TMP_1);
-        // ldr(reg_dst, ptr(X_TMP_0));
+        ldr(vmm_src, ptr(reg_src));
+
+        str(vmm_src, ptr(reg_dst));
 
         compute_eltwise_op();
 
@@ -141,6 +167,16 @@ public:
     }
 
 private:
+    //using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    using TReg = QReg;
+    // using TRegS = typename cpu_isa_traits<isa>::TRegS;
+
+    Xbyak_aarch64::XReg reg_src = x11;
+    Xbyak_aarch64::XReg reg_dst = x8;
+
+    Xbyak_aarch64::VReg4S xmm_src {1};
+    TReg vmm_src {1};
+
     struct EltwiseEmitterContext {
         std::shared_ptr<jit_emitter> emitter;
         dnnl::impl::cpu::aarch64::jit_generator *host;
