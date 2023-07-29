@@ -123,36 +123,36 @@ public:
         ker_ = (decltype(ker_))jit_ker();
     }
 
-    void generate() override {
-        // TODO: not implemented
+    // void generate() override {
+    //     // TODO: not implemented
 
-        // auto const exec_prc = eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
-        auto const exec_prc = InferenceEngine::Precision::FP32;
+    //     // auto const exec_prc = eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
+    //     auto const exec_prc = InferenceEngine::Precision::FP32;
 
-        eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
-        // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
-        //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
-        // }
+    //     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
+    //     // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
+    //     //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
+    //     // }
 
-        // jit_generator::preamble
-        preamble();
+    //     // jit_generator::preamble
+    //     preamble();
 
-        XReg param = param1;
-        add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
-        ldr(reg_src, ptr(X_TMP_0));
+    //     XReg param = param1;
+    //     add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
+    //     ldr(reg_src, ptr(X_TMP_0));
 
-        add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
-        ldr(reg_dst, ptr(X_TMP_0));
+    //     add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
+    //     ldr(reg_dst, ptr(X_TMP_0));
 
-        ldr(vmm_src, ptr(reg_src));
+    //     ldr(vmm_src, ptr(reg_src));
 
-        str(vmm_src, ptr(reg_dst));
+    //     str(vmm_src, ptr(reg_dst));
 
-        compute_eltwise_op();
+    //     compute_eltwise_op();
 
-        // jit_generator::postamble
-        postamble();
-    }
+    //     // jit_generator::postamble
+    //     postamble();
+    // }
 
     //void generate() override;
 
@@ -212,84 +212,92 @@ public:
     //     postamble();
     // }
 
-    // void generate() override {
-    //     // TODO: not implemented
+    void generate() override {
+        // TODO: not implemented
 
-    //     const auto get_precision = []() {
-    //         const auto exec_prc = InferenceEngine::Precision::FP32;
-    //         return exec_prc;
-    //     };
+        const auto get_precision = []() {
+            const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32;
+            return exec_prc;
+        };
 
-    //     const auto exec_prc = get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
-    //     //const auto exec_prc = InferenceEngine::Precision::FP32;
+        const auto exec_prc = get_precision();
+        //const auto exec_prc = InferenceEngine::Precision::FP32;
 
-    //     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
-    //     // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
-    //     //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
-    //     // }
+        eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
+        // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
+        //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
+        // }
 
-    //     // jit_generator::preamble
-    //     preamble();
+        // jit_generator::preamble
+        preamble();
 
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
+        mov(x0, x0);
+        mov(x0, x0);
+        mov(x0, x0);
 
-    //     XReg param = param1;
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
-    //     // ldr(reg_src, ptr(X_TMP_0));
+        XReg param = param1;
+        // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
+        // ldr(reg_src, ptr(X_TMP_0));
 
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + sizeof(size_t), X_TMP_1);
-    //     // ldr(reg_src1, ptr(X_TMP_0));
+        // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + sizeof(size_t), X_TMP_1);
+        // ldr(reg_src1, ptr(X_TMP_0));
 
-    //     for (size_t i = 0; i < jep_.inputs_number; i++) {
-    //         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t), X_TMP_1);
-    //         ldr(get_src_reg(i), ptr(X_TMP_0));
-    //     }
+        for (size_t i = 0; i < jep_.inputs_number; i++) {
+            add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t), X_TMP_1);
+            ldr(get_src_reg(i), ptr(X_TMP_0));
 
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[1]), X_TMP_1);
-    //     // ldr(reg_src1, ptr(X_TMP_0));
+            // TODO: explore
+            //tst(X_TMP_1, X_TMP_1);
+        }
 
-    //     add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
-    //     ldr(reg_dst, ptr(X_TMP_0));
+        // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[1]), X_TMP_1);
+        // ldr(reg_src1, ptr(X_TMP_0));
 
-    //     mov(reg_work_amount, jep_.work_amount);
+        add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
+        ldr(reg_dst, ptr(X_TMP_0));
 
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
+        mov(reg_work_amount, jep_.work_amount);
 
-    //     Label main_loop_label;
-    //     Label main_loop_end_label;
-    //     L(main_loop_label);
-    //     {
-    //         const size_t loop_step = cpu_isa_traits<isa>::vlen / exec_prc.size();
-    //         cmp(reg_work_amount, loop_step);
-    //         jl(main_loop_end_label, T_NEAR);
+        mov(x0, x0);
+        mov(x0, x0);
+        mov(x0, x0);
 
-    //         ldr(vmm_src, ptr(reg_src));
-    //         ldr(x_src1, ptr(reg_src1));
+        Label main_loop_label;
+        Label main_loop_end_label;
+        L(main_loop_label);
+        {
+            const size_t vlen = cpu_isa_traits<isa>::vlen;
+            const size_t exec_prc_size = exec_prc.size();
+            const size_t loop_step = vlen / exec_prc_size;
 
-    //         str(vmm_src, ptr(reg_dst));
+            cmp(reg_work_amount, loop_step);
+            tst(reg_work_amount, loop_step);
+            b(NE, main_loop_end_label);
+
+            ldr(vmm_src, ptr(reg_src));
+            ldr(x_src1, ptr(reg_src1));
+
+            str(vmm_src, ptr(reg_dst));
 
 
-    //         add(reg_dst, jep_.dst_prc.size() * loop_step);
-    //         sub(reg_work_amount, loop_step);
-    //         if (jep_.oc_size > 1)
-    //             add(reg_oc_off, loop_step * sizeof(float));
+            // TODO: just to test
+            const auto offset = jep_.dst_prc.size() * loop_step;
+            add(reg_dst, reg_dst, offset);
 
-    //         jmp(main_loop_label, T_NEAR);
-    //     }
-    //     L(main_loop_end_label);
+            sub(reg_work_amount, reg_work_amount, loop_step);
 
-    //     compute_eltwise_op();
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
+            b(AL, main_loop_label);
+        }
+        L(main_loop_end_label);
 
-    //     // jit_generator::postamble
-    //     postamble();
-    // }
+        compute_eltwise_op();
+        mov(x0, x0);
+        mov(x0, x0);
+        mov(x0, x0);
+
+        // jit_generator::postamble
+        postamble();
+    }
 
 private:
     //using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;

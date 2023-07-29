@@ -17,6 +17,10 @@ using namespace Xbyak_aarch64;
 
 // template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 // void jit_uni_eltwise_generic<isa>::generate() {
+// }
+
+// template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+// void jit_uni_eltwise_generic<isa>::generate() {
 //     // TODO: not implemented
 
 //     // auto const exec_prc = eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
