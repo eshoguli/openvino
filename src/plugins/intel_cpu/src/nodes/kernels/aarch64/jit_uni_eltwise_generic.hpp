@@ -18,19 +18,6 @@
 #include <onednn/dnnl.h>
 #include <cpu/aarch64/cpu_isa_traits.hpp>
 #include <cpu/aarch64/jit_generator.hpp>
-//C:\projects\oneDNN\src\cpu\aarch64\cpu_isa_traits.hpp
-
-//C:\projects\oneDNN\src\cpu\aarch64\xbyak_aarch64\src\xbyak_aarch64_mnemonic.h
-
-namespace Xbyak_aarch64 {
-//C:\projects\oneDNN\src\cpu\aarch64\xbyak_aarch64\src\xbyak_aarch64_impl.h
-//#include <cpu/aarch64/xbyak_aarch64/src/err_impl.h>
-//#include <cpu/aarch64/xbyak_aarch64/src/xbyak_aarch64_impl.h>
-//#include <cpu/aarch64/xbyak_aarch64/src/xbyak_aarch64_mnemonic.h>
-}
-
-//C:\projects\oneDNN\src\cpu\aarch64\xbyak_aarch64\src\xbyak_aarch64_impl.h
-// #include <cpu/aarch64/xbyak_aarch64/src/xbyak_aarch64_impl.h>
 
 #include "utils/general_utils.h"
 #include "utils/cpu_utils.hpp"
@@ -153,6 +140,7 @@ public:
         XReg param = param1;
         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
         ldr(reg_src, ptr(X_TMP_0));
+
         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
         ldr(reg_dst, ptr(X_TMP_0));
 
@@ -166,16 +154,160 @@ public:
         postamble();
     }
 
+    //void generate() override;
+
+    // void generate() override {
+    //     // TODO: not implemented
+
+    //     // auto const exec_prc = eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
+    //     auto const exec_prc = InferenceEngine::Precision::FP32;
+
+    //     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
+    //     // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
+    //     //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
+    //     // }
+
+    //     // jit_generator::preamble
+    //     preamble();
+
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+
+    //     XReg param = param1;
+    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
+    //     // ldr(reg_src, ptr(X_TMP_0));
+
+    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + sizeof(size_t), X_TMP_1);
+    //     // ldr(reg_src1, ptr(X_TMP_0));
+
+    //     for (size_t i = 0; i < jep_.inputs_number; i++) {
+    //         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t), X_TMP_1);
+    //         ldr(get_src_reg(i), ptr(X_TMP_0));
+    //     }
+
+    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[1]), X_TMP_1);
+    //     // ldr(reg_src1, ptr(X_TMP_0));
+
+    //     add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
+    //     ldr(reg_dst, ptr(X_TMP_0));
+
+    //     mov(x3, jep_.work_amount);
+
+    //     ldr(vmm_src, ptr(reg_src));
+    //     ldr(x_src1, ptr(reg_src1));
+
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+
+    //     str(vmm_src, ptr(reg_dst));
+
+    //     compute_eltwise_op();
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+
+    //     // jit_generator::postamble
+    //     postamble();
+    // }
+
+    // void generate() override {
+    //     // TODO: not implemented
+
+    //     const auto get_precision = []() {
+    //         const auto exec_prc = InferenceEngine::Precision::FP32;
+    //         return exec_prc;
+    //     };
+
+    //     const auto exec_prc = get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
+    //     //const auto exec_prc = InferenceEngine::Precision::FP32;
+
+    //     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
+    //     // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
+    //     //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
+    //     // }
+
+    //     // jit_generator::preamble
+    //     preamble();
+
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+
+    //     XReg param = param1;
+    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
+    //     // ldr(reg_src, ptr(X_TMP_0));
+
+    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + sizeof(size_t), X_TMP_1);
+    //     // ldr(reg_src1, ptr(X_TMP_0));
+
+    //     for (size_t i = 0; i < jep_.inputs_number; i++) {
+    //         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t), X_TMP_1);
+    //         ldr(get_src_reg(i), ptr(X_TMP_0));
+    //     }
+
+    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[1]), X_TMP_1);
+    //     // ldr(reg_src1, ptr(X_TMP_0));
+
+    //     add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
+    //     ldr(reg_dst, ptr(X_TMP_0));
+
+    //     mov(reg_work_amount, jep_.work_amount);
+
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+
+    //     Label main_loop_label;
+    //     Label main_loop_end_label;
+    //     L(main_loop_label);
+    //     {
+    //         const size_t loop_step = cpu_isa_traits<isa>::vlen / exec_prc.size();
+    //         cmp(reg_work_amount, loop_step);
+    //         jl(main_loop_end_label, T_NEAR);
+
+    //         ldr(vmm_src, ptr(reg_src));
+    //         ldr(x_src1, ptr(reg_src1));
+
+    //         str(vmm_src, ptr(reg_dst));
+
+
+    //         add(reg_dst, jep_.dst_prc.size() * loop_step);
+    //         sub(reg_work_amount, loop_step);
+    //         if (jep_.oc_size > 1)
+    //             add(reg_oc_off, loop_step * sizeof(float));
+
+    //         jmp(main_loop_label, T_NEAR);
+    //     }
+    //     L(main_loop_end_label);
+
+    //     compute_eltwise_op();
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+    //     mov(x0, x0);
+
+    //     // jit_generator::postamble
+    //     postamble();
+    // }
+
 private:
     //using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
     using TReg = QReg;
     // using TRegS = typename cpu_isa_traits<isa>::TRegS;
 
     Xbyak_aarch64::XReg reg_src = x11;
+    Xbyak_aarch64::XReg reg_src1 = x12;
+    //const XReg reg_src = x8;
+    //const XReg reg_src1 = x9;
+    const XReg reg_work_amount = x7;
     Xbyak_aarch64::XReg reg_dst = x8;
 
     Xbyak_aarch64::VReg4S xmm_src {1};
     TReg vmm_src {1};
+    TReg vmm_src0 {1};
+    TReg vmm_src1 {2};
+    XReg x_src1 {9};
 
     struct EltwiseEmitterContext {
         std::shared_ptr<jit_emitter> emitter;
@@ -191,6 +323,10 @@ private:
             ctx.emitter = std::make_shared<T>(ctx.host, ctx.host_isa, ctx.exec_prc);
         }
     };
+
+    XReg get_src_reg(int idx) {
+        return XReg(reg_src.getIdx() + idx);
+    }
 
     std::shared_ptr<jit_emitter> create_eltwise_emitter(const EltwiseData& data, InferenceEngine::Precision exec_prec) {
         EltwiseEmitterContext ctx = {
