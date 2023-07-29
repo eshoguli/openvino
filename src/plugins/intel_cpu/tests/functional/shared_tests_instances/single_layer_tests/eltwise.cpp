@@ -150,6 +150,7 @@ std::vector<std::vector<ov::Shape>> inShapesSingleThread = {
 
 std::vector<ngraph::helpers::EltwiseTypes> eltwiseOpTypesSingleThread = {
         ngraph::helpers::EltwiseTypes::ADD,
+        ngraph::helpers::EltwiseTypes::MULTIPLY,
         ngraph::helpers::EltwiseTypes::POWER,
 };
 

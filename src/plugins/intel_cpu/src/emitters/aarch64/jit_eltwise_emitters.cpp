@@ -68,10 +68,15 @@ void jit_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const st
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (exec_prc_ != Precision::FP32) {
+        IE_THROW() << "unsupported precision";
+    }
+
     using Vmm = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
     Vmm vmm_src0 = Vmm(in_vec_idxs[0]);
     Vmm vmm_src1 = Vmm(in_vec_idxs[1]);
     Vmm vmm_dst = Vmm(out_vec_idxs[0]);
+
     h->uni_fadd(vmm_dst.s, vmm_src0.s, vmm_src1.s);
 }
 
@@ -111,25 +116,16 @@ void jit_multiply_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, con
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    // using Vmm = typename conditional3<isa == x64::sse41, Xmm, isa == x64::avx2, Ymm, Zmm>::type;
-    // Vmm vmm_src0 = Vmm(in_vec_idxs[0]);
-    // Vmm vmm_src1 = Vmm(in_vec_idxs[1]);
-    // Vmm vmm_dst = Vmm(out_vec_idxs[0]);
+    if (exec_prc_ != Precision::FP32) {
+        IE_THROW() << "unsupported precision";
+    }
 
-    // auto uni_vmul = [this](Vmm vmm_dst, Vmm vmm_src0, Vmm vmm_src1) {
-    //     switch (exec_prc_) {
-    //         case Precision::FP32: h->uni_vmulps(vmm_dst, vmm_src0, vmm_src1); break;
-    //         case Precision::I32:  h->uni_vpmulld(vmm_dst, vmm_src0, vmm_src1); break;
-    //         default: assert(!"unsupported precision");
-    //     }
-    // };
+    using Vmm = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    Vmm vmm_src0 = Vmm(in_vec_idxs[0]);
+    Vmm vmm_src1 = Vmm(in_vec_idxs[1]);
+    Vmm vmm_dst = Vmm(out_vec_idxs[0]);
 
-    // if (isa == x64::sse41) {
-    //     h->uni_vmovups(vmm_dst, vmm_src0);
-    //     uni_vmul(vmm_dst, vmm_dst, vmm_src1);
-    // } else {
-    //     uni_vmul(vmm_dst, vmm_src0, vmm_src1);
-    // }
+    h->uni_fmul(vmm_dst.s, vmm_src0.s, vmm_src1.s);
 }
 
 std::set<std::vector<element::Type>> jit_multiply_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
