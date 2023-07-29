@@ -154,191 +154,16 @@ public:
     //     postamble();
     // }
 
-    //void generate() override;
-
-    // void generate() override {
-    //     // TODO: not implemented
-
-    //     // auto const exec_prc = eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
-    //     auto const exec_prc = InferenceEngine::Precision::FP32;
-
-    //     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
-    //     // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
-    //     //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
-    //     // }
-
-    //     // jit_generator::preamble
-    //     preamble();
-
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-
-    //     XReg param = param1;
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
-    //     // ldr(reg_src, ptr(X_TMP_0));
-
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + sizeof(size_t), X_TMP_1);
-    //     // ldr(reg_src1, ptr(X_TMP_0));
-
-    //     for (size_t i = 0; i < jep_.inputs_number; i++) {
-    //         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t), X_TMP_1);
-    //         ldr(get_src_reg(i), ptr(X_TMP_0));
-    //     }
-
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[1]), X_TMP_1);
-    //     // ldr(reg_src1, ptr(X_TMP_0));
-
-    //     add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
-    //     ldr(reg_dst, ptr(X_TMP_0));
-
-    //     mov(x3, jep_.work_amount);
-
-    //     ldr(vmm_src, ptr(reg_src));
-    //     ldr(x_src1, ptr(reg_src1));
-
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-
-    //     str(vmm_src, ptr(reg_dst));
-
-    //     compute_eltwise_op();
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-
-    //     // jit_generator::postamble
-    //     postamble();
-    // }
-
-    // void generate() override {
-    //     // TODO: not implemented
-
-    //     const auto get_precision = []() {
-    //         const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32;
-    //         return exec_prc;
-    //     };
-
-    //     const auto exec_prc = get_precision();
-    //     //const auto exec_prc = InferenceEngine::Precision::FP32;
-
-    //     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
-    //     // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
-    //     //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
-    //     // }
-
-    //     // jit_generator::preamble
-    //     preamble();
-
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-
-    //     XReg param = param1;
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
-    //     // ldr(reg_src, ptr(X_TMP_0));
-
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + sizeof(size_t), X_TMP_1);
-    //     // ldr(reg_src1, ptr(X_TMP_0));
-
-    //     for (size_t i = 0; i < jep_.inputs_number; i++) {
-    //         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t), X_TMP_1);
-    //         ldr(get_src_reg(i), ptr(X_TMP_0));
-
-    //         // TODO: explore
-    //         //tst(X_TMP_1, X_TMP_1);
-    //     }
-
-    //     // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[1]), X_TMP_1);
-    //     // ldr(reg_src1, ptr(X_TMP_0));
-
-    //     add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
-    //     ldr(reg_dst, ptr(X_TMP_0));
-
-    //     mov(reg_work_amount, jep_.work_amount);
-
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-
-    //     Label main_loop_label;
-    //     Label main_loop_end_label;
-    //     L(main_loop_label);
-    //     {
-    //         const size_t vlen = cpu_isa_traits<isa>::vlen;
-    //         const size_t exec_prc_size = exec_prc.size();
-    //         const size_t loop_step = vlen / exec_prc_size;
-
-    //         cmp(reg_work_amount, 0x0);
-    //         //tst(reg_work_amount, loop_step);
-    //         b(EQ, main_loop_end_label);
-
-    //         // TODO: just to test
-    //         const auto offset = jep_.dst_prc.size() * loop_step;
-
-    //         ldr(vmm_src, ptr(reg_src));
-    //         add(reg_src, reg_src, offset);
-
-
-
-
-
-    //         // TODO: move out of loop
-    //         ldr(x_src1, ptr(reg_src1));
-    //         //jit_io_helper_t<TReg>::broadcast(x_src1, 0, vmm_src1)
-    //         //ld1rw(vmm_src1, P_ALL_ONE / Xbyak_aarch64::T_z, Xbyak_aarch64::ptr(reg_src1));
-
-    //         // ZRegS dst_zs(1);
-    //         // ld1rw(dst_zs, P_ALL_ONE / Xbyak_aarch64::T_z, Xbyak_aarch64::ptr(reg_src1));
-
-    //         // QReg dst_q(1);
-    //         // ld1rh(dst_q, P_ALL_ONE / Xbyak_aarch64::T_z, Xbyak_aarch64::ptr(reg_src1));
-
-    //         //uni_fadd(vmm_dst.s, vmm_src0.s, vmm_src1.s);
-    //         //add(vmm_src, vmm_src, x_src1);
-
-
-
-
-
-    //         str(vmm_src, ptr(reg_dst));
-
-
-    //         add(reg_dst, reg_dst, offset);
-
-    //         sub(reg_work_amount, reg_work_amount, loop_step);
-
-    //         b(AL, main_loop_label);
-    //     }
-    //     L(main_loop_end_label);
-
-    //     compute_eltwise_op();
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-    //     mov(x0, x0);
-
-    //     // jit_generator::postamble
-    //     postamble();
-    // }
-
     void generate() override {
-        // TODO: not implemented
-
         const auto get_precision = []() {
             const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32;
             return exec_prc;
         };
 
         const auto exec_prc = get_precision();
-        //const auto exec_prc = InferenceEngine::Precision::FP32;
 
         eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
-        // for (size_t i = 1; i < eltwise_data_.size(); ++i) {
-        //     post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
-        // }
 
-        // jit_generator::preamble
         preamble();
 
         mov(x0, x0);
@@ -346,22 +171,10 @@ public:
         mov(x0, x0);
 
         XReg param = param1;
-        // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr), X_TMP_1);
-        // ldr(reg_src, ptr(X_TMP_0));
-
-        // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + sizeof(size_t), X_TMP_1);
-        // ldr(reg_src1, ptr(X_TMP_0));
-
         for (size_t i = 0; i < jep_.inputs_number; i++) {
             add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t), X_TMP_1);
             ldr(get_src_reg(i), ptr(X_TMP_0));
-
-            // TODO: explore
-            //tst(X_TMP_1, X_TMP_1);
         }
-
-        // add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[1]), X_TMP_1);
-        // ldr(reg_src1, ptr(X_TMP_0));
 
         add_imm(X_TMP_0, param, offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr), X_TMP_1);
         ldr(reg_dst, ptr(X_TMP_0));
@@ -383,17 +196,16 @@ public:
             cmp(reg_work_amount, 0x0);
             b(EQ, main_loop_end_label);
 
-            // TODO: just to test
             const auto offset = jep_.dst_prc.size() * loop_step;
 
-            uni_ldr(vmm_src, get_src_reg(0));
+            uni_ldr(get_vmm_reg(0), get_src_reg(0));
             add(get_src_reg(0), get_src_reg(0), offset);
 
-            uni_ld1rw(vmm_src1.s4, get_src_reg(1), 0);
+            uni_ld1rw(get_vmm_reg(1).s4, get_src_reg(1), 0);
 
-            uni_fadd(vmm_src.s4, vmm_src.s4, vmm_src1.s4);
+            compute_eltwise_op();
 
-            uni_str(vmm_src, reg_dst);
+            uni_str(vmm_dst, reg_dst);
 
 
             add(reg_dst, reg_dst, offset);
@@ -409,7 +221,6 @@ public:
         mov(x0, x0);
         mov(x0, x0);
 
-        // jit_generator::postamble
         postamble();
     }
 
@@ -436,6 +247,7 @@ private:
     TReg vmm_src {1};
     TReg vmm_src0 {1};
     TReg vmm_src1 {2};
+    TReg vmm_dst {9};
     XReg x_src1 {9};
 
     struct EltwiseEmitterContext {
@@ -457,6 +269,14 @@ private:
         return XReg(reg_src.getIdx() + idx);
     }
 
+    TReg get_vmm_reg(int idx) {
+        return TReg(1 + idx);
+    }
+
+    TReg get_aux_vmm(int idx) {
+        return TReg(10 + idx);
+    }
+
     std::shared_ptr<jit_emitter> create_eltwise_emitter(const EltwiseData& data, InferenceEngine::Precision exec_prec) {
         EltwiseEmitterContext ctx = {
             nullptr,
@@ -476,17 +296,15 @@ private:
     }
 
     inline void compute_eltwise_op() {
-        // TODO: not completed
-
         std::vector<size_t> in_idxs;
         std::vector<size_t> aux_idxs;
         for (size_t i = 0; i < eltwise_emitter->get_inputs_num(); i++)
-            in_idxs.push_back(i);
+            in_idxs.push_back(get_vmm_reg(i).getIdx());
         for (size_t i = 0; i < eltwise_emitter->aux_vecs_count(); i++)
-            aux_idxs.push_back(i);
+            aux_idxs.push_back(get_aux_vmm(i).getIdx());
 
         std::vector<size_t> out_idxs;
-        out_idxs.push_back(0);
+        out_idxs.push_back(vmm_dst.getIdx());
 
         eltwise_emitter->emit_code(in_idxs, out_idxs, aux_idxs);
     }
