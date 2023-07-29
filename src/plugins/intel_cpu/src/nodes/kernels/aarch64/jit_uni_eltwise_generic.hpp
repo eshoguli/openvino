@@ -270,9 +270,9 @@ public:
             const size_t exec_prc_size = exec_prc.size();
             const size_t loop_step = vlen / exec_prc_size;
 
-            cmp(reg_work_amount, loop_step);
-            tst(reg_work_amount, loop_step);
-            b(NE, main_loop_end_label);
+            cmp(reg_work_amount, 0x0);
+            //tst(reg_work_amount, loop_step);
+            b(EQ, main_loop_end_label);
 
             ldr(vmm_src, ptr(reg_src));
             ldr(x_src1, ptr(reg_src1));
