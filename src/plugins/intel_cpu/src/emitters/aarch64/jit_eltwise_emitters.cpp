@@ -5,10 +5,6 @@
 #include "jit_eltwise_emitters.hpp"
 #include "ie_ngraph_utils.hpp"
 
-#define CONST_1_F 0x3f800000 // 1.f
-#define INF_MASK  0x7F800000
-#define INF_NEG_MASK 0xFF800000
-
 namespace ov {
 namespace intel_cpu {
 namespace aarch64 {
@@ -71,12 +67,12 @@ void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
         IE_THROW() << "unsupported precision";
     }
 
-    using Vmm = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    Vmm vmm_src0 = Vmm(in_vec_idxs[0]);
-    Vmm vmm_src1 = Vmm(in_vec_idxs[1]);
-    Vmm vmm_dst = Vmm(out_vec_idxs[0]);
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    TReg src0 = TReg(in_vec_idxs[0]);
+    TReg src1 = TReg(in_vec_idxs[1]);
+    TReg dst = TReg(out_vec_idxs[0]);
 
-    h->uni_fadd(vmm_dst.s, vmm_src0.s, vmm_src1.s);
+    h->uni_fadd(dst.s, src0.s, src1.s);
 }
 
 std::set<std::vector<element::Type>> jit_add_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
@@ -117,27 +113,18 @@ void jit_mul_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, cons
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_mul_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    using Vmm = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    Vmm vmm_src0 = Vmm(in_vec_idxs[0]);
-    Vmm vmm_src1 = Vmm(in_vec_idxs[1]);
-    Vmm vmm_src2 = Vmm(in_vec_idxs[2]);
-    Vmm vmm_dst = Vmm(out_vec_idxs[0]);
-    Vmm vmm_dst2 = Vmm(4);
+    if (exec_prc_ != Precision::FP32) {
+        IE_THROW() << "unsupported precision";
+    }
 
-    h->uni_fmul(vmm_dst2.s, vmm_src0.s, vmm_src1.s);
-    h->uni_fadd(vmm_dst.s, vmm_dst2.s, vmm_src2.s);
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    TReg src0 = TReg(in_vec_idxs[0]);
+    TReg src1 = TReg(in_vec_idxs[1]);
+    TReg src2 = TReg(in_vec_idxs[2]);
+    TReg dst = TReg(out_vec_idxs[0]);
 
-    // //h->uni_fmad(vmm_dst.s, vmm_src0.s, vmm_src1.s, vmm_src2.s);
-    // //h->fmadd(vmm_dst.s, vmm_src0.s, vmm_src1.s, vmm_src2.s);
-
-    // Xbyak_aarch64::DReg vd{0};
-    // Xbyak_aarch64::DReg vn{1};
-    // Xbyak_aarch64::DReg vm{2};
-    // Xbyak_aarch64::DReg va{3};
-    // h->fmadd(vd, vn, vm, va);
-
-    // //Xbyak_aarch64::QReg qd{0};
-    // //h->fmadd(qd, vn, vm, va);
+    h->uni_fmul(dst.s, src0.s, src1.s);
+    h->uni_fadd(dst.s, dst.s, src2.s);
 }
 
 size_t jit_mul_add_emitter::aux_vecs_count() const {
@@ -184,12 +171,12 @@ void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, cons
         IE_THROW() << "unsupported precision";
     }
 
-    using Vmm = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    Vmm vmm_src0 = Vmm(in_vec_idxs[0]);
-    Vmm vmm_src1 = Vmm(in_vec_idxs[1]);
-    Vmm vmm_dst = Vmm(out_vec_idxs[0]);
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    TReg src0 = TReg(in_vec_idxs[0]);
+    TReg src1 = TReg(in_vec_idxs[1]);
+    TReg dst = TReg(out_vec_idxs[0]);
 
-    h->uni_fmul(vmm_dst.s, vmm_src0.s, vmm_src1.s);
+    h->uni_fmul(dst.s, src0.s, src1.s);
 }
 
 std::set<std::vector<element::Type>> jit_multiply_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
