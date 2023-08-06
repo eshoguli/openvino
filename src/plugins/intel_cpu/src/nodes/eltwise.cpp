@@ -13,9 +13,6 @@
 #include "cpu_types.h"
 #include "utils/bfloat16.hpp"
 #include "ie_ngraph_utils.hpp"
-#if defined(OPENVINO_ARCH_X86_64)
-#include <cpu/x64/injectors/jit_uni_quantization_injector.hpp>
-#endif
 #include <cpu/ref_eltwise.hpp>
 
 #include <onednn/dnnl.h>
@@ -26,10 +23,12 @@
 #include "common/cpu_convert.h"
 
 #if defined(OPENVINO_ARCH_X86_64)
+#include <cpu/x64/injectors/jit_uni_quantization_injector.hpp>
 #include "emitters/x64/jit_emitter.hpp"
 #include "emitters/x64/jit_eltwise_emitters.hpp"
 #include "emitters/x64/jit_dnnl_emitters.hpp"
 #include "emitters/x64/jit_bf16_emitters.hpp"
+typedef dnnl::impl::cpu::x64::mayiuse mayiuse
 #endif
 
 #include <selective_build.h>
@@ -52,10 +51,6 @@
 #include <functional>
 #include "memory_desc/dnnl_blocked_memory_desc.h"
 
-#if defined(OPENVINO_ARCH_X86_64)
-typedef dnnl::impl::cpu::x64::mayiuse mayiuse
-#endif
-
 #if defined(OPENVINO_ARCH_ARM64)
 #include "cpu/aarch64/cpu_isa_traits.hpp"
 #include "kernels/aarch64/jit_uni_eltwise_generic.hpp"
@@ -74,7 +69,6 @@ using namespace dnnl::impl::cpu::x64;
 using namespace ov::intel_cpu::aarch64;
 using namespace dnnl::impl::cpu::aarch64;
 #endif
-//using namespace Xbyak;
 
 #define GET_OFF(field) offsetof(node::jit_eltwise_call_args_ptrs, field)
 
@@ -1394,11 +1388,7 @@ public:
             IE_THROW() << "Can not make Eltwise executor from empty input dims members";
         }
 
-#if defined(OPENVINO_ARCH_ARM64)
-        ov::intel_cpu::aarch64::jit_eltwise_params jep = {};
-#else
         jit_eltwise_params jep = {};
-#endif
         size_t inputsNumber = inpDims.size();
 
         jep.use_runtime_ptrs = useRuntimePtrs;
@@ -1544,26 +1534,26 @@ public:
 
 #if defined(OPENVINO_ARCH_X86_64)
         if (mayiuse(x64::avx512_core)) {
-            _pKernel.reset(new ov::intel_cpu::jit_uni_eltwise_generic<x64::avx512_core>(jep, eltwise_data, ops_list, post_ops));
+            _pKernel.reset(new jit_uni_eltwise_generic<x64::avx512_core>(jep, eltwise_data, ops_list, post_ops));
         } else if (mayiuse(x64::avx2)) {
-            _pKernel.reset(new ov::intel_cpu::jit_uni_eltwise_generic<x64::avx2>(jep, eltwise_data, ops_list, post_ops));
+            _pKernel.reset(new jit_uni_eltwise_generic<x64::avx2>(jep, eltwise_data, ops_list, post_ops));
         } else if (mayiuse(x64::sse41)) {
-            _pKernel.reset(new ov::intel_cpu::jit_uni_eltwise_generic<x64::sse41>(jep, eltwise_data, ops_list, post_ops));
+            _pKernel.reset(new jit_uni_eltwise_generic<x64::sse41>(jep, eltwise_data, ops_list, post_ops));
         } else {
             IE_THROW() << "Can't create jit eltwise kernel";
         }
 #endif // OPENVINO_ARCH_X86_64
 
 #if defined(OPENVINO_ARCH_ARM64)
-        if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_512)) {
-            _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_512>(jep, eltwise_data, ops_list, post_ops));
-        } else if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_384) || // TODO: sve_384 is not supported
-                   dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_256)) {
-            _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_256>(jep, eltwise_data, ops_list, post_ops));
-        } else if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_128)) {
-            _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_128>(jep, eltwise_data, ops_list, post_ops));
-        } else if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::asimd)) {
-            _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::asimd>(jep, eltwise_data, ops_list, post_ops));
+        if (mayiuse(aarch64::sve_512)) {
+            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::sve_512>(jep, eltwise_data, ops_list, post_ops));
+        } else if (mayiuse(aarch64::sve_384) || aarch64::mayiuse(aarch64::sve_256)) {
+            // TODO: sve_384 is not supported
+            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::sve_256>(jep, eltwise_data, ops_list, post_ops));
+        } else if (mayiuse(aarch64::sve_128)) {
+            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::sve_128>(jep, eltwise_data, ops_list, post_ops));
+        } else if (mayiuse(aarch64::asimd)) {
+            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::asimd>(jep, eltwise_data, ops_list, post_ops));
         } else {
             IE_THROW() << "Can't create jit eltwise kernel";
         }
@@ -1573,7 +1563,7 @@ public:
             _pKernel->create_ker();
     }
 
-    void exec(const node::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
+    void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
         if (!_pKernel)
             IE_THROW() << "Can't execute, kernel for eltwise node is not compiled";
 
@@ -1632,13 +1622,7 @@ public:
     }
 
 private:
-#if defined(OPENVINO_ARCH_X86_64)
     std::unique_ptr<jit_uni_eltwise_kernel> _pKernel;
-#endif
-
-#if defined(OPENVINO_ARCH_ARM64)
-    std::unique_ptr<ov::intel_cpu::aarch64::jit_uni_eltwise_kernel> _pKernel;
-#endif
     size_t _schedulerWorkAmount = 0;
     size_t _batchDimIdx = 0;
 
@@ -1692,7 +1676,7 @@ public:
         }
     }
 
-    void exec(const node::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
+    void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) override {
         if (_opData.algo == Algorithm::EltwiseLog) {
             const float* src_ptr_f = reinterpret_cast<const float*>(args_ptrs.src_ptr[0]);
             float* dst_ptr_f = reinterpret_cast<float*>(args_ptrs.dst_ptr);
@@ -2185,8 +2169,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
                 #endif
 
                 #ifdef OPENVINO_ARCH_ARM64
-                // TODO: need exploration
-                size_t blockSize = mayiuse(dnnl::impl::cpu::aarch64::sve_512) ? 16 : 8;
+                size_t blockSize = cpu_isa_traits<dnnl::impl::cpu::aarch64::asimd>::vlen / 4;
                 #endif
 
                 VectorDims blocks = dims;
@@ -2241,7 +2224,23 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
 
         config.outConfs.push_back(portConfig);
 
-        {
+        if (useAclExecutor) {
+            impl_desc_type impl_type = impl_desc_type::undef;
+
+            std::vector<MemoryDescPtr> srcMemoryDescs;
+            for (size_t i = 0; i < config.inConfs.size(); i++) {
+                srcMemoryDescs.push_back(config.inConfs[i].getMemDesc());
+            }
+            std::vector<MemoryDescPtr> dstMemoryDescs;
+            for (size_t i = 0; i < config.outConfs.size(); i++) {
+                dstMemoryDescs.push_back(config.outConfs[i].getMemDesc());
+            }
+
+            auto factory = std::make_shared<EltwiseExecutorFactory>(eltwiseAttrs, srcMemoryDescs, dstMemoryDescs,
+                                                                    std::make_shared<ExecutorContext>(context, getImplPriority()));
+
+            return {config, impl_type, !factory->isEmpty() ? factory : nullptr};
+        } else {
             impl_desc_type impl_type = impl_desc_type::ref;
             if (canUseOptimizedImpl) {
                 #ifdef OPENVINO_ARCH_X86_64
@@ -2297,20 +2296,22 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
 
 #if defined(OPENVINO_ARCH_ARM64)
 #if defined(OV_CPU_WITH_ACL)
-    eltwiseAttrs = {algorithm, alpha, beta, gamma};
-    if (isChannelsFirstApplicable) {
-        auto channelFirstDesc = initDesc(ChannelsFirst, true);
-        if (channelFirstDesc.getExecutorFactory())
-            supportedPrimitiveDescriptors.emplace_back(channelFirstDesc);
+    if (useAcl) {
+        eltwiseAttrs = {algorithm, alpha, beta, gamma};
+        if (isChannelsFirstApplicable) {
+            auto channelFirstDesc = initDesc(ChannelsFirst, true);
+            if (channelFirstDesc.getExecutorFactory())
+                supportedPrimitiveDescriptors.emplace_back(channelFirstDesc);
+        }
+
+        auto planarDesc = initDesc(Planar, true);
+        if (planarDesc.getExecutorFactory())
+            supportedPrimitiveDescriptors.emplace_back(planarDesc);
+
+        canUseAclExecutor = !supportedPrimitiveDescriptors.empty();
+        if (canUseAclExecutor)
+            return;
     }
-
-    auto planarDesc = initDesc(Planar, true);
-    if (planarDesc.getExecutorFactory())
-        supportedPrimitiveDescriptors.emplace_back(planarDesc);
-
-    canUseAclExecutor = !supportedPrimitiveDescriptors.empty();
-    if (canUseAclExecutor)
-        return;
 #endif
 #endif
 

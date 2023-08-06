@@ -31,6 +31,8 @@ namespace node {
 #define MAX_ELTWISE_INPUTS 7
 #define MAX_ELTWISE_DIM_RANK 12
 
+#if defined(OPENVINO_ARCH_X86_64)
+
 struct jit_eltwise_params {
     size_t inputs_number;
     size_t input_size;
@@ -50,8 +52,6 @@ struct jit_eltwise_params {
     size_t work_amount;
     bool use_runtime_ptrs;
 };
-
-#if defined(OPENVINO_ARCH_X86_64)
 
 struct jit_eltwise_call_args_indexes {
     size_t indexes[MAX_ELTWISE_DIM_RANK];
