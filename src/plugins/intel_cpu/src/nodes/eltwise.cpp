@@ -70,7 +70,7 @@ using namespace ov::intel_cpu::aarch64;
 using namespace dnnl::impl::cpu::aarch64;
 #endif
 
-#define GET_OFF(field) offsetof(node::jit_eltwise_call_args_ptrs, field)
+#define GET_OFF(field) offsetof(jit_eltwise_call_args_ptrs, field)
 
 namespace ov {
 namespace intel_cpu {
@@ -270,7 +270,7 @@ template <cpu_isa_t isa>
 struct jit_uni_eltwise_generic : public jit_uni_eltwise_kernel, public jit_generator {
     DECLARE_CPU_JIT_AUX_FUNCTIONS(jit_uni_eltwise_generic)
 
-    explicit jit_uni_eltwise_generic(const ov::intel_cpu::x64::jit_eltwise_params& jep,
+    explicit jit_uni_eltwise_generic(const jit_eltwise_params& jep,
                                      const std::vector<EltwiseData>& eltwise_data,
                                      const std::vector<ov::intel_cpu::Type>& ops_list,
                                      const dnnl::post_ops& post_ops)
@@ -2077,7 +2077,8 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
 #if defined(OV_CPU_WITH_ACL)
 
 #if defined(OPENVINO_ARCH_ARM64)
-    const bool useAcl = !executors::aarch64::JitEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm());
+    const auto algorithm = getAlgorithm();
+    const bool useAcl = !executors::aarch64::JitEltwiseExecutor::isEltwiseAlgorithmSupported(algorithm);
 #else
     const bool useAcl = true;
 #endif // OPENVINO_ARCH_ARM64

@@ -35,16 +35,15 @@ InferenceEngine::Precision get_arithmetic_binary_exec_precision(const std::share
 } // namespace
 
 /// ADD ///
-jit_add_emitter::jit_add_emitter(
-    dnnl::impl::cpu::aarch64::jit_generator *host,
-    dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-    const std::shared_ptr<ov::Node>& node) : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
+jit_add_emitter::jit_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
+                                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                 const std::shared_ptr<ov::Node>& node)
+                                 : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
 }
 
-jit_add_emitter::jit_add_emitter(
-    dnnl::impl::cpu::aarch64::jit_generator *host,
-    dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-    Precision exec_prc) : jit_emitter(host, host_isa, exec_prc) {
+jit_add_emitter::jit_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
+                                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                 Precision exec_prc) : jit_emitter(host, host_isa, exec_prc) {
 }
 
 size_t jit_add_emitter::get_inputs_num() const { return 2; }
@@ -81,19 +80,84 @@ void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
 }
 
 std::set<std::vector<element::Type>> jit_add_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
-    return {{element::f32, element::f32}, {element::i32, element::i32}};
+    return {{element::f32, element::f32}};
+}
+
+/// MUL_ADD ///
+jit_mul_add_emitter::jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
+                                         dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                         const std::shared_ptr<ov::Node>& node)
+                                         : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
+}
+
+jit_mul_add_emitter::jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                         dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                         Precision exec_prc)
+                                         : jit_emitter(host, host_isa, exec_prc) {
+}
+
+size_t jit_mul_add_emitter::get_inputs_num() const { return 3; }
+
+void jit_mul_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::sve_512) {
+        emit_isa<dnnl::impl::cpu::aarch64::sve_512>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_384) {
+        // TODO: not supported
+        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_256) {
+        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_128) {
+        emit_isa<dnnl::impl::cpu::aarch64::sve_128>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
+    } else {
+        IE_THROW() << "Can't create jit eltwise kernel";
+    }
+}
+
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+void jit_mul_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    using Vmm = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    Vmm vmm_src0 = Vmm(in_vec_idxs[0]);
+    Vmm vmm_src1 = Vmm(in_vec_idxs[1]);
+    Vmm vmm_src2 = Vmm(in_vec_idxs[2]);
+    Vmm vmm_dst = Vmm(out_vec_idxs[0]);
+    Vmm vmm_dst2 = Vmm(4);
+
+    h->uni_fmul(vmm_dst2.s, vmm_src0.s, vmm_src1.s);
+    h->uni_fadd(vmm_dst.s, vmm_dst2.s, vmm_src2.s);
+
+    // //h->uni_fmad(vmm_dst.s, vmm_src0.s, vmm_src1.s, vmm_src2.s);
+    // //h->fmadd(vmm_dst.s, vmm_src0.s, vmm_src1.s, vmm_src2.s);
+
+    // Xbyak_aarch64::DReg vd{0};
+    // Xbyak_aarch64::DReg vn{1};
+    // Xbyak_aarch64::DReg vm{2};
+    // Xbyak_aarch64::DReg va{3};
+    // h->fmadd(vd, vn, vm, va);
+
+    // //Xbyak_aarch64::QReg qd{0};
+    // //h->fmadd(qd, vn, vm, va);
+}
+
+size_t jit_mul_add_emitter::aux_vecs_count() const {
+    return 1;
+}
+
+std::set<std::vector<element::Type>> jit_mul_add_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
+    return {{element::f32, element::f32, element::f32}};
 }
 
 /// MULTIPLY ///
-jit_multiply_emitter::jit_multiply_emitter(
-    dnnl::impl::cpu::aarch64::jit_generator *host,
-    dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-    const std::shared_ptr<ov::Node>& node) : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {}
+jit_multiply_emitter::jit_multiply_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                           dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                           const std::shared_ptr<ov::Node>& node)
+                                           : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {}
 
-jit_multiply_emitter::jit_multiply_emitter(
-    dnnl::impl::cpu::aarch64::jit_generator *host,
-    dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-    Precision exec_prc) : jit_emitter(host, host_isa, exec_prc) {}
+jit_multiply_emitter::jit_multiply_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                           dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                           Precision exec_prc)
+                                           : jit_emitter(host, host_isa, exec_prc) {}
 
 size_t jit_multiply_emitter::get_inputs_num() const { return 2; }
 
@@ -129,7 +193,7 @@ void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, cons
 }
 
 std::set<std::vector<element::Type>> jit_multiply_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
-    return {{element::f32, element::f32}, {element::i32, element::i32}};
+    return {{element::f32, element::f32}};
 }
 
 }   // namespace aarch64
