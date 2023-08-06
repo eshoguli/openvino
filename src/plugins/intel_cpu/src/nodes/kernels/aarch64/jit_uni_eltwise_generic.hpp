@@ -133,21 +133,21 @@ private:
     TReg vmm_dst {9};
 
     inline XReg get_src_reg(int idx) {
-        if (idx > 3) {
+        if (idx > MAX_ELTWISE_INPUTS) {
             IE_THROW(Unexpected) << "source vector ptr register " << idx << " is not supported";
         }
         return XReg(11 + idx);
     }
 
     inline TReg get_vmm_reg(int idx) {
-        if (idx > 3) {
+        if (idx > MAX_ELTWISE_INPUTS) {
             IE_THROW(Unexpected) << "source vector register " << idx << " is not supported";
         }
         return TReg(1 + idx);
     }
 
     inline SReg get_scl_reg(int idx) {
-        if (idx > 3) {
+        if (idx > MAX_ELTWISE_INPUTS) {
             IE_THROW(Unexpected) << "source scalar register " << idx << " is not supported";
         }
         return SReg(1 + idx);
@@ -157,6 +157,7 @@ private:
         if (idx > 2) {
             IE_THROW(Unexpected) << "aux vector register " << idx << " is not supported";
         }
+        // TODO: MAX_ELTWISE_INPUTS
         return TReg(10 + idx);
     }
 
@@ -168,12 +169,14 @@ private:
     std::shared_ptr<jit_emitter> create_eltwise_emitter(const EltwiseData& data, const Precision& exec_prec);
 
     void compute_eltwise_op();
+    void apply_post_ops();
 
     const std::vector<EltwiseData> eltwise_data_;
     const std::vector<ov::intel_cpu::Type> ops_list_;
     const dnnl::post_ops post_ops_;
 
     std::shared_ptr<jit_emitter> eltwise_emitter = nullptr;
+    std::vector<std::shared_ptr<jit_emitter>> post_op_emitters;
 };
 
 }   // namespace aarch64

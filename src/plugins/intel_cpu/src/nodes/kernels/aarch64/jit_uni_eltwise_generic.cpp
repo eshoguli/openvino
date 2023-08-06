@@ -69,13 +69,18 @@ jit_uni_eltwise_generic<isa>::jit_uni_eltwise_generic(const jit_eltwise_params& 
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::generate() {
-    preamble();
-
     const auto get_precision = []() {
         const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32;
         return exec_prc;
     };
     const auto exec_prc = get_precision();
+
+    eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
+    for (size_t i = 1; i < eltwise_data_.size(); ++i) {
+        post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
+    }
+
+    preamble();
 
     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
 
@@ -147,6 +152,8 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
         compute_eltwise_op();
 
+        apply_post_ops();
+
         uni_str(reg_dst, vmm_dst, exec_prc, jep_.dst_prc);
 
         for (size_t i = 0; i < jep_.inputs_number; i++) {
@@ -157,7 +164,6 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
         add(reg_dst, reg_dst, jep_.dst_prc.size() * loop_step);
 
-        // TODO: whilelo
         sub(reg_work_amount, reg_work_amount, loop_step);
 
         b(AL, main_loop_label);
@@ -170,34 +176,6 @@ void jit_uni_eltwise_generic<isa>::generate() {
 #endif // DEBUG
     }
     L(main_loop_end_label);
-
-    // TODO: debug only
-    // // tail_size = 2;
-    // // switch (tail_size) {
-    // //     case 0: pfalse(PRegB(p.getIdx())); return;
-    // //     case 1: ptrue(p, VL1); return;
-    // //     case 2: ptrue(p, VL2); return;
-    // //     case 3: ptrue(p, VL3); return;
-    // //     case 4: ptrue(p, VL4); return;
-    // //     case 5: ptrue(p, VL5); return;
-    // //     case 6: ptrue(p, VL6); return;
-    // //     case 7: ptrue(p, VL7); return;
-    // //     case 8: ptrue(p, VL8); return;
-    // //     case 16: ptrue(p, VL16); return;
-    // //     case 32: ptrue(p, VL32); return;
-    // //     case 64: ptrue(p, VL64); return;
-    // // }
-    // auto src_reg = get_src_reg(0);
-    // auto vmm_reg = get_vmm_reg(0);
-    // PReg mask {0};
-    // //ld1d(vmm_reg.d, mask / Xbyak_aarch64::T_z, Xbyak_aarch64::ptr(src_reg));
-    // ld1rd(vmm_reg.d, mask / Xbyak_aarch64::T_z, Xbyak_aarch64::ptr(src_reg));
-
-    // TODO: Contiguous Load instruction
-    // (vmm_reg.s, mask / Xbyak_aarch64::T_z, Xbyak_aarch64::ptr(src_reg));
-    // ld1rd: Load and broadcast doubleword to vector.
-    // ld1d:  Contiguous load doublewords to vector
-    //uni_ldr(get_vmm_reg(0), get_src_reg(0));
 
     Label tail_loop_label;
     Label tail_loop_end_label;
@@ -230,6 +208,8 @@ void jit_uni_eltwise_generic<isa>::generate() {
         //// ld1rd(get_vmm_reg(0).s, mask / Xbyak_aarch64::T_z, get_src_reg(0));
 
         compute_eltwise_op();
+
+        apply_post_ops();
 
         SReg sc_dst_reg{vmm_dst.getIdx()};
         uni_str(reg_dst, sc_dst_reg, exec_prc, jep_.dst_prc);
@@ -379,6 +359,33 @@ void jit_uni_eltwise_generic<isa>::compute_eltwise_op() {
     out_idxs.push_back(vmm_dst.getIdx());
 
     eltwise_emitter->emit_code(in_idxs, out_idxs, aux_idxs);
+}
+
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+void jit_uni_eltwise_generic<isa>::apply_post_ops() {
+    int input_idx = eltwise_emitter->get_inputs_num();
+    int eltwise_post_op_idx = 0;
+    for (size_t i = 1; i < ops_list_.size(); i++) {
+        // TODO: FakeQuantize is not supported
+        if (ops_list_[i] == ov::intel_cpu::Type::Eltwise) {
+            std::vector<size_t> in_idxs;
+            std::vector<size_t> aux_idxs;
+            in_idxs.push_back(vmm_dst.getIdx());
+            for (size_t j = 1; j < post_op_emitters[eltwise_post_op_idx]->get_inputs_num(); j++)
+                in_idxs.push_back(get_vmm_reg(input_idx++).getIdx());
+            for (size_t j = 0; j < post_op_emitters[eltwise_post_op_idx]->aux_vecs_count(); j++)
+                aux_idxs.push_back(get_aux_vmm(j).getIdx());
+
+            std::vector<size_t> out_idxs;
+            out_idxs.push_back(vmm_dst.getIdx());
+
+            post_op_emitters[eltwise_post_op_idx]->emit_code(in_idxs, out_idxs, aux_idxs);
+
+            eltwise_post_op_idx++;
+        } else {
+            IE_THROW(Unexpected) << "Eltwise jit kernel: unexpected operation type";
+        }
+    }
 }
 
 template struct jit_uni_eltwise_generic<cpu_isa_t::asimd>;

@@ -3,13 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-// #if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
-// #define OPENVINO_ARCH_ARM
-// #endif
-#if !defined(OPENVINO_ARCH_X86_64)
-#define OPENVINO_ARCH_ARM
-#endif
-
 #include "eltwise.h"
 
 #include <map>
@@ -63,9 +56,10 @@
 typedef dnnl::impl::cpu::x64::mayiuse mayiuse
 #endif
 
-#if defined(OPENVINO_ARCH_ARM)
+#if defined(OPENVINO_ARCH_ARM64)
 #include "cpu/aarch64/cpu_isa_traits.hpp"
 #include "kernels/aarch64/jit_uni_eltwise_generic.hpp"
+#include "executors/aarch64/jit_eltwise.hpp"
 #endif
 
 using namespace InferenceEngine;
@@ -76,7 +70,7 @@ using namespace dnnl::impl::cpu;
 using namespace dnnl::impl::cpu::x64;
 #endif
 
-#if defined(OPENVINO_ARCH_ARM)
+#if defined(OPENVINO_ARCH_ARM64)
 using namespace ov::intel_cpu::aarch64;
 using namespace dnnl::impl::cpu::aarch64;
 #endif
@@ -1400,7 +1394,7 @@ public:
             IE_THROW() << "Can not make Eltwise executor from empty input dims members";
         }
 
-#if defined(OPENVINO_ARCH_ARM)
+#if defined(OPENVINO_ARCH_ARM64)
         ov::intel_cpu::aarch64::jit_eltwise_params jep = {};
 #else
         jit_eltwise_params jep = {};
@@ -1560,7 +1554,7 @@ public:
         }
 #endif // OPENVINO_ARCH_X86_64
 
-#if defined(OPENVINO_ARCH_ARM)
+#if defined(OPENVINO_ARCH_ARM64)
         if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_512)) {
             _pKernel.reset(new ov::intel_cpu::aarch64::jit_uni_eltwise_generic<dnnl::impl::cpu::aarch64::sve_512>(jep, eltwise_data, ops_list, post_ops));
         } else if (dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::sve_384) || // TODO: sve_384 is not supported
@@ -1573,7 +1567,7 @@ public:
         } else {
             IE_THROW() << "Can't create jit eltwise kernel";
         }
-#endif // OPENVINO_ARCH_ARM
+#endif // OPENVINO_ARCH_ARM64
 
         if (_pKernel)
             _pKernel->create_ker();
@@ -1642,7 +1636,7 @@ private:
     std::unique_ptr<jit_uni_eltwise_kernel> _pKernel;
 #endif
 
-#if defined(OPENVINO_ARCH_ARM)
+#if defined(OPENVINO_ARCH_ARM64)
     std::unique_ptr<ov::intel_cpu::aarch64::jit_uni_eltwise_kernel> _pKernel;
 #endif
     size_t _schedulerWorkAmount = 0;
@@ -1995,6 +1989,16 @@ void Eltwise::getSupportedDescriptors() {
 }
 
 void Eltwise::initSupportedPrimitiveDescriptors() {
+#ifdef DEBUG
+#if defined(OPENVINO_ARCH_ARM64)
+    std::cout << "OPENVINO_ARCH_ARM64 is defined" << std::endl;
+#endif
+
+#if defined(OPENVINO_ARCH_ARM)
+    std::cout << "OPENVINO_ARCH_ARM is defined" << std::endl;
+#endif
+#endif // DEBUG
+
     std::vector<Precision> supportedPrecisions = {
             Precision::FP32,
             Precision::U8,
@@ -2014,7 +2018,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
 #endif
 
-#ifdef OPENVINO_ARCH_ARM
+#ifdef OPENVINO_ARCH_ARM64
     bool canUseOptimizedImpl = mayiuse(dnnl::impl::cpu::aarch64::asimd) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
 #endif
 
@@ -2081,31 +2085,42 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     }
 #endif
 
-#ifdef OPENVINO_ARCH_ARM
-    // TODO: ARM bf16
-#endif
-
+    // TODO: refactor
+#if defined(OPENVINO_ARCH_ARM64)
+    if (ov::intel_cpu::executors::aarch64::JitEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm())) {
+        outputPrecision = Precision::FP32;
+    }
 #if defined(OV_CPU_WITH_ACL)
-    Precision forcedPrec;
-    //ACL implementation supports only identical precisions on inputs/outputs so they are aligned it to highest one
-    if (AclEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm())) {
-        for (size_t i = 0; i < getParentEdges().size(); i++) {
-            if (!getParentEdgeAt(i)->getParent()->isConstant()) {
-                if (!forcedPrec || getOriginalInputPrecisionAtPort(i).size() > forcedPrec.size()) {
-                    forcedPrec = getOriginalInputPrecisionAtPort(i);
+
+#if defined(OPENVINO_ARCH_ARM64)
+    const bool useAcl = !executors::aarch64::JitEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm());
+#else
+    const bool useAcl = true;
+#endif // OPENVINO_ARCH_ARM64
+
+    if (useAcl) {
+        Precision forcedPrec;
+        //ACL implementation supports only identical precisions on inputs/outputs so they are aligned it to highest one
+        if (AclEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm())) {
+            for (size_t i = 0; i < getParentEdges().size(); i++) {
+                if (!getParentEdgeAt(i)->getParent()->isConstant()) {
+                    if (!forcedPrec || getOriginalInputPrecisionAtPort(i).size() > forcedPrec.size()) {
+                        forcedPrec = getOriginalInputPrecisionAtPort(i);
+                    }
                 }
             }
-        }
-        if (!forcedPrec.is_float()) {
+            if (!forcedPrec.is_float()) {
+                forcedPrec = Precision::FP32;
+            }
+        } else {
             forcedPrec = Precision::FP32;
         }
-    } else {
-        forcedPrec = Precision::FP32;
+        for (size_t i = 0; i < inputPrecisions.size(); i++) {
+            inputPrecisions[i] = forcedPrec;
+        }
+        outputPrecision = forcedPrec;
     }
-    for (size_t i = 0; i < inputPrecisions.size(); i++) {
-        inputPrecisions[i] = forcedPrec;
-    }
-    outputPrecision = forcedPrec;
+#endif // OV_CPU_WITH_ACL
 #else
     auto filterPrecision = [&](Precision& prc) {
         if (implType == EltwiseImplType::reference) {
@@ -2125,7 +2140,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         inputPrecisions[i] = filterPrecision(inputPrecisions[i]);
     }
     outputPrecision = filterPrecision(outputPrecision);
-#endif
+#endif // defined(OPENVINO_ARCH_ARM64)
 
     // TODO: delete after new LPT (ngraph based) is merged
     // WA is needed to handle bug in LPT that produces wrong precision after average pooling (I8/U8 instead of FP32)
@@ -2169,7 +2184,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
                 size_t blockSize = mayiuse(x64::avx512_core) ? 16 : 8;
                 #endif
 
-                #ifdef OPENVINO_ARCH_ARM
+                #ifdef OPENVINO_ARCH_ARM64
                 // TODO: need exploration
                 size_t blockSize = mayiuse(dnnl::impl::cpu::aarch64::sve_512) ? 16 : 8;
                 #endif
@@ -2239,7 +2254,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
                 }
                 #endif
 
-                #ifdef OPENVINO_ARCH_ARM
+                #ifdef OPENVINO_ARCH_ARM64
                 if (mayiuse(dnnl::impl::cpu::aarch64::sve_512)) {
                     impl_type = impl_desc_type::jit_sve_512;
                 } else if (mayiuse(dnnl::impl::cpu::aarch64::sve_384)) {
@@ -2280,7 +2295,8 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     inputNum = getParentEdges().size();
     currentInBlkDims.resize(inputNum);
 
-#if defined (OV_CPU_WITH_ACL)
+#if defined(OPENVINO_ARCH_ARM64)
+#if defined(OV_CPU_WITH_ACL)
     eltwiseAttrs = {algorithm, alpha, beta, gamma};
     if (isChannelsFirstApplicable) {
         auto channelFirstDesc = initDesc(ChannelsFirst, true);
@@ -2295,6 +2311,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     canUseAclExecutor = !supportedPrimitiveDescriptors.empty();
     if (canUseAclExecutor)
         return;
+#endif
 #endif
 
     if (isChannelsFirstApplicable)
@@ -2328,6 +2345,21 @@ void Eltwise::createPrimitive() {
 }
 
 void Eltwise::prepareParams() {
+    if (canUseAclExecutor) {
+        std::vector<MemoryDescPtr> srcMemoryDescs;
+        for (size_t i = 0; i < getParentEdges().size(); i++) {
+            srcMemoryDescs.push_back(getParentEdgeAt(i)->getMemoryPtr()->getDescPtr());
+        }
+        std::vector<MemoryDescPtr> dstMemoryDescs;
+        dstMemoryDescs.push_back(getChildEdgeAt(0)->getMemoryPtr()->getDescPtr());
+
+        auto selectedPD = getSelectedPrimitiveDescriptor();
+        aclExecPtr = selectedPD->getExecutorFactoryAs<EltwiseExecutorFactory>()->makeExecutor(eltwiseAttrs, srcMemoryDescs, dstMemoryDescs, {});
+        selectedPD->setImplementationType(aclExecPtr->getImplType());
+
+        return;
+    }
+
     auto outBlockingDesc = getChildEdgeAt(0)->getMemory().getDescWithType<BlockedMemoryDesc>();
     const auto &outOrder = outBlockingDesc->getOrder();
     const auto &currentOutBlkDims = outBlockingDesc->getBlockDims();
@@ -2793,7 +2825,7 @@ bool Eltwise::canFuse(const NodePtr& node) const {
         return false;
 #endif
 
-#ifdef OPENVINO_ARCH_ARM
+#ifdef OPENVINO_ARCH_ARM64
     if (!mayiuse(dnnl::impl::cpu::aarch64::asimd) || getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK)
         return false;
 #endif

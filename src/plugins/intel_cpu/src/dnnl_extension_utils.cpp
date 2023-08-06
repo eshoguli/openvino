@@ -253,7 +253,9 @@ dnnl::algorithm DnnlExtensionUtils::convertToDnnlAlgorithm(Algorithm alg) {
 }
 
 bool DnnlExtensionUtils::isUnarySupportedAsPostOp(Algorithm alg) {
-#if defined(OV_CPU_WITH_ACL)
+#if defined(OPENVINO_ARCH_ARM64)
+    return one_of(alg, Algorithm::EltwiseRelu);
+#elif defined(OV_CPU_WITH_ACL)
     return one_of(alg, Algorithm::EltwiseRelu,
                        Algorithm::EltwiseTanh,
                        Algorithm::EltwiseElu,
