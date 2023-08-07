@@ -22,14 +22,14 @@ void jit_uni_eltwise_kernel::operator()(
     const jit_eltwise_call_args_indexes* indexes) {
     assert(ker_);
 
-#ifdef DEBUG
-    const auto src_ptr = static_cast<const float*>(const_args->src_ptr[0]);
-    std::cout << "jit_uni_eltwise_kernel::operator(), src_ptr: " << std::endl;
-    for (size_t i = 0; i < 8; i++) {
-        std::cout << src_ptr[i] << " ";
-    }
-    std::cout << std::endl;
-#endif // DEBUG
+// #ifdef DEBUG
+//     const auto src_ptr = static_cast<const float*>(const_args->src_ptr[0]);
+//     std::cout << "jit_uni_eltwise_kernel::operator(), src_ptr: " << std::endl;
+//     for (size_t i = 0; i < 8; i++) {
+//         std::cout << src_ptr[i] << " ";
+//     }
+//     std::cout << std::endl;
+// #endif // DEBUG
 
     ker_(const_args, indexes);
 }
@@ -69,6 +69,11 @@ jit_uni_eltwise_generic<isa>::jit_uni_eltwise_generic(const jit_eltwise_params& 
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::generate() {
+    // const auto res = powf(2.f, 3.5f);
+    // if (res == 0.f) {
+    //     //
+    // }
+
     const auto get_precision = []() {
         const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32;
         return exec_prc;
@@ -339,7 +344,10 @@ std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitte
     OV_SWITCH(intel_cpu, EltwiseEmitter, ctx, data.algo,
     OV_CASE(Algorithm::EltwiseAdd, ov::intel_cpu::aarch64::jit_add_emitter),
     OV_CASE(Algorithm::EltwiseMulAdd, ov::intel_cpu::aarch64::jit_mul_add_emitter),
-    OV_CASE(Algorithm::EltwiseMultiply, ov::intel_cpu::aarch64::jit_multiply_emitter));
+    OV_CASE(Algorithm::EltwiseMultiply, ov::intel_cpu::aarch64::jit_multiply_emitter),
+    // TODO: to debug only: jit_power_emitter is used
+    OV_CASE(Algorithm::EltwiseTanh, ov::intel_cpu::aarch64::jit_power_emitter),
+    OV_CASE(Algorithm::EltwisePowerDynamic, ov::intel_cpu::aarch64::jit_power_emitter));
 
     if (!ctx.emitter)
         IE_THROW() << "Unsupported operation type '" << algToString(data.algo) << "' for Eltwise emitter";
