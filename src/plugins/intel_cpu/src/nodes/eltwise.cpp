@@ -76,6 +76,48 @@ namespace ov {
 namespace intel_cpu {
 namespace node {
 
+
+#ifdef OPENVINO_ARCH_ARM64
+namespace {
+// TODO: raw pointer
+// TODO: refactor
+bool is_supported(const Node* node) {
+    if (node->getAlgorithm() != Algorithm::EltwisePowerDynamic) {
+        return true;
+    }
+
+    const auto& input_shape = node->getInputShapeAtPort(1);
+    if (input_shape.getElementsCount() != 1) {
+        std::cout << node->getTypeStr() << ":" << node->getName() << " is not supported for fuse: not scalar" << std::endl;
+        return false;
+    }
+
+    const auto& valueEdge = node->getParentEdgeAt(1);
+    const auto& valueNode = valueEdge->getParent();
+    const auto& type = valueNode->getType();
+    if (type != Type::Input) {
+        std::cout << node->getTypeStr() << ":" << node->getName() << " is not supported for fuse: not input " << std::endl;
+        return false;
+    }
+    const auto& input = std::dynamic_pointer_cast<Input>(valueNode);
+    if (!input->isConstant()) {
+        std::cout << node->getTypeStr() << ":" << node->getName() << " is not supported for fuse: not constant" << std::endl;
+        return false;
+    }
+    const auto& memoryPtr = input->getMemoryPtr();
+    const auto values = static_cast<float*>(memoryPtr->getData());
+    const float value = values[0];
+    const auto is_supported_value = (value > 0.f) && (ceilf(value) == value);
+    if (is_supported_value) {
+        std::cout << node->getTypeStr() << ":" << node->getName() << " is supported for fuse: value=" << value << std::endl;
+    } else {
+        std::cout << node->getTypeStr() << ":" << node->getName() << " is not supported for fuse: value=" << value << std::endl;
+    }
+    return is_supported_value;
+}
+}  // namespace
+#endif
+
 #if defined(OPENVINO_ARCH_X86_64)
 
 template<typename T>
@@ -2070,7 +2112,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
 #endif
 
 #if defined(OPENVINO_ARCH_ARM64)
-    const bool useJit = ov::intel_cpu::executors::aarch64::JitEltwiseExecutor::isSupported(
+    const bool useJit = is_supported(this) && executors::aarch64::JitEltwiseExecutor::isSupported(
         getAlgorithm(),
         this->inputShapes,
         this->outputShapes);
@@ -2827,8 +2869,12 @@ bool Eltwise::canFuse(const NodePtr& node) const {
 #endif
 
 #ifdef OPENVINO_ARCH_ARM64
-    if (!mayiuse(dnnl::impl::cpu::aarch64::asimd) || getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK)
+    if (!mayiuse(dnnl::impl::cpu::aarch64::asimd) || (getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK))
         return false;
+
+    if (!is_supported(this) || (!is_supported(node.get()))) {
+        return false;
+    }
 #endif
 
     // TODO: EltwiseLog is supported only via reference executor

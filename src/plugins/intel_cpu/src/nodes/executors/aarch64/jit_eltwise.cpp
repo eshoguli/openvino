@@ -17,19 +17,11 @@ bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm,
     const auto is_supported = one_of(algorithm,
                                     Algorithm::EltwiseAdd,
                                     Algorithm::EltwiseMultiply,
-                                    Algorithm::EltwiseMulAdd);
-                                    //Algorithm::EltwisePowerDynamic);
+                                    Algorithm::EltwiseMulAdd,
+                                    Algorithm::EltwisePowerDynamic);
     if (!is_supported) {
         return false;
     }
-
-    // TODO: not completed
-    // if (algorithm == Algorithm::EltwisePowerDynamic) {
-    //     // TODO: fuse?
-    //     if ((input_shapes.size() != 2) || (input_shapes[1].isDynamic()) || (input_shapes[1].getElementsCount() != 1)) {
-    //         return false;
-    //     }
-    // }
 
     return true;
 }
@@ -64,7 +56,7 @@ bool JitEltwiseExecutorBuilder::isSupported(const EltwiseAttrs& eltwiseAttrs,
         case Algorithm::EltwiseAdd:
         case Algorithm::EltwiseMultiply:
         case Algorithm::EltwiseMulAdd:
-        //case Algorithm::EltwisePowerDynamic:
+        case Algorithm::EltwisePowerDynamic:
             if (!checkPrecision({Precision::FP32, Precision::FP32}, Precision::FP32)) {
                 return false;
             }
