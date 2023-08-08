@@ -2069,44 +2069,41 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     }
 #endif
 
-    // TODO: refactor
 #if defined(OPENVINO_ARCH_ARM64)
-    if (ov::intel_cpu::executors::aarch64::JitEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm())) {
+    const bool useJit = ov::intel_cpu::executors::aarch64::JitEltwiseExecutor::isSupported(
+        getAlgorithm(),
+        this->inputShapes,
+        this->outputShapes);
+    if (useJit) {
         outputPrecision = Precision::FP32;
     }
+#endif
+
 #if defined(OV_CPU_WITH_ACL)
-
-#if defined(OPENVINO_ARCH_ARM64)
-    const auto algorithm = getAlgorithm();
-    const bool useAcl = !executors::aarch64::JitEltwiseExecutor::isEltwiseAlgorithmSupported(algorithm);
-#else
-    const bool useAcl = true;
-#endif // OPENVINO_ARCH_ARM64
-
+    const bool useAcl = !useJit;
     if (useAcl) {
-        Precision forcedPrec;
-        //ACL implementation supports only identical precisions on inputs/outputs so they are aligned it to highest one
-        if (AclEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm())) {
-            for (size_t i = 0; i < getParentEdges().size(); i++) {
-                if (!getParentEdgeAt(i)->getParent()->isConstant()) {
-                    if (!forcedPrec || getOriginalInputPrecisionAtPort(i).size() > forcedPrec.size()) {
-                        forcedPrec = getOriginalInputPrecisionAtPort(i);
-                    }
+    Precision forcedPrec;
+    //ACL implementation supports only identical precisions on inputs/outputs so they are aligned it to highest one
+    if (AclEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm())) {
+        for (size_t i = 0; i < getParentEdges().size(); i++) {
+            if (!getParentEdgeAt(i)->getParent()->isConstant()) {
+                if (!forcedPrec || getOriginalInputPrecisionAtPort(i).size() > forcedPrec.size()) {
+                    forcedPrec = getOriginalInputPrecisionAtPort(i);
                 }
             }
-            if (!forcedPrec.is_float()) {
-                forcedPrec = Precision::FP32;
-            }
-        } else {
+        }
+        if (!forcedPrec.is_float()) {
             forcedPrec = Precision::FP32;
         }
-        for (size_t i = 0; i < inputPrecisions.size(); i++) {
-            inputPrecisions[i] = forcedPrec;
-        }
-        outputPrecision = forcedPrec;
+    } else {
+        forcedPrec = Precision::FP32;
     }
-#endif // OV_CPU_WITH_ACL
-#else
+    for (size_t i = 0; i < inputPrecisions.size(); i++) {
+        inputPrecisions[i] = forcedPrec;
+    }
+    outputPrecision = forcedPrec;
+    } else {
+#endif
     auto filterPrecision = [&](Precision& prc) {
         if (implType == EltwiseImplType::reference) {
             return Precision(Precision::FP32);
@@ -2125,7 +2122,9 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         inputPrecisions[i] = filterPrecision(inputPrecisions[i]);
     }
     outputPrecision = filterPrecision(outputPrecision);
-#endif // defined(OPENVINO_ARCH_ARM64)
+#if defined(OV_CPU_WITH_ACL)
+    }
+#endif
 
     // TODO: delete after new LPT (ngraph based) is merged
     // WA is needed to handle bug in LPT that produces wrong precision after average pooling (I8/U8 instead of FP32)
@@ -2295,25 +2294,23 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     inputNum = getParentEdges().size();
     currentInBlkDims.resize(inputNum);
 
-#if defined(OPENVINO_ARCH_ARM64)
-#if defined(OV_CPU_WITH_ACL)
+#if defined (OV_CPU_WITH_ACL)
     if (useAcl) {
-        eltwiseAttrs = {algorithm, alpha, beta, gamma};
-        if (isChannelsFirstApplicable) {
-            auto channelFirstDesc = initDesc(ChannelsFirst, true);
-            if (channelFirstDesc.getExecutorFactory())
-                supportedPrimitiveDescriptors.emplace_back(channelFirstDesc);
-        }
-
-        auto planarDesc = initDesc(Planar, true);
-        if (planarDesc.getExecutorFactory())
-            supportedPrimitiveDescriptors.emplace_back(planarDesc);
-
-        canUseAclExecutor = !supportedPrimitiveDescriptors.empty();
-        if (canUseAclExecutor)
-            return;
+    eltwiseAttrs = {algorithm, alpha, beta, gamma};
+    if (isChannelsFirstApplicable) {
+        auto channelFirstDesc = initDesc(ChannelsFirst, true);
+        if (channelFirstDesc.getExecutorFactory())
+            supportedPrimitiveDescriptors.emplace_back(channelFirstDesc);
     }
-#endif
+
+    auto planarDesc = initDesc(Planar, true);
+    if (planarDesc.getExecutorFactory())
+        supportedPrimitiveDescriptors.emplace_back(planarDesc);
+
+    canUseAclExecutor = !supportedPrimitiveDescriptors.empty();
+    if (canUseAclExecutor)
+        return;
+    }
 #endif
 
     if (isChannelsFirstApplicable)

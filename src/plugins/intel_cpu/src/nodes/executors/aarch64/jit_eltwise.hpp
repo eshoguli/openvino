@@ -16,7 +16,9 @@ using namespace InferenceEngine;
 class JitEltwiseExecutor : public EltwiseExecutor {
 public:
     explicit JitEltwiseExecutor(const ExecutorContext::CPtr context);
-    static bool isEltwiseAlgorithmSupported(Algorithm algorithm);
+    static bool isSupported(const Algorithm& algorithm,
+                            const std::vector<Shape>& input_shapes,
+                            const std::vector<Shape>& outputShapes);
 
     bool init(const EltwiseAttrs& eltwiseAttrs,
               const std::vector<MemoryDescPtr>& srcDescs,

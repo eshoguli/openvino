@@ -13,14 +13,7 @@
 #include "executors/eltwise_list.hpp"
 #include "nodes/kernels/jit_eltwise_call_args_ptrs.hpp"
 
-// #if defined(DNNL_AARCH64) && (DNNL_AARCH64 == 1) || defined(DNNL_ARM) && (DNNL_ARM == 1)
-// #define OPENVINO_ARCH_ARM
-// #endif
-#if !defined(OPENVINO_ARCH_X86_64)
-#define OPENVINO_ARCH_ARM
-#endif
-
-#if defined(OPENVINO_ARCH_ARM)
+#if defined(OPENVINO_ARCH_ARM64)
 #include "kernels/aarch64/jit_uni_eltwise_generic.hpp"
 #endif
 
@@ -106,7 +99,7 @@ public:
     class IEltwiseExecutor {
     public:
         IEltwiseExecutor() = default;
-        virtual void exec(const node::jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) = 0;
+        virtual void exec(const jit_eltwise_call_args_ptrs &args_ptrs, const VectorDims &dims_out) = 0;
         virtual size_t getBatchDimIdx() const = 0;
         virtual const VectorDims& getOutDims() const = 0;
         virtual ~IEltwiseExecutor() = default;
@@ -222,7 +215,7 @@ public:
                                                     #if defined(OPENVINO_ARCH_X86_64)
                                                     const std::vector<EltwiseData>& eltwise_data);
                                                     #endif
-                                                    #if defined(OPENVINO_ARCH_ARM)
+                                                    #if defined(OPENVINO_ARCH_ARM64)
                                                     const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data);
                                                     #endif
 

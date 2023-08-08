@@ -11,9 +11,27 @@ namespace intel_cpu {
 namespace executors {
 namespace aarch64 {
 
-bool JitEltwiseExecutor::isEltwiseAlgorithmSupported(Algorithm algorithm) {
-    return one_of(algorithm, Algorithm::EltwiseAdd,
-                             Algorithm::EltwiseMultiply);
+bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm,
+                                     const std::vector<Shape>& input_shapes,
+                                     const std::vector<Shape>& outputShapes) {
+    const auto is_supported = one_of(algorithm,
+                                    Algorithm::EltwiseAdd,
+                                    Algorithm::EltwiseMultiply,
+                                    Algorithm::EltwiseMulAdd);
+                                    //Algorithm::EltwisePowerDynamic);
+    if (!is_supported) {
+        return false;
+    }
+
+    // TODO: not completed
+    // if (algorithm == Algorithm::EltwisePowerDynamic) {
+    //     // TODO: fuse?
+    //     if ((input_shapes.size() != 2) || (input_shapes[1].isDynamic()) || (input_shapes[1].getElementsCount() != 1)) {
+    //         return false;
+    //     }
+    // }
+
+    return true;
 }
 
 JitEltwiseExecutor::JitEltwiseExecutor(const ExecutorContext::CPtr context) : EltwiseExecutor(context) {}
@@ -45,6 +63,8 @@ bool JitEltwiseExecutorBuilder::isSupported(const EltwiseAttrs& eltwiseAttrs,
     switch (eltwiseAttrs.algorithm) {
         case Algorithm::EltwiseAdd:
         case Algorithm::EltwiseMultiply:
+        case Algorithm::EltwiseMulAdd:
+        //case Algorithm::EltwisePowerDynamic:
             if (!checkPrecision({Precision::FP32, Precision::FP32}, Precision::FP32)) {
                 return false;
             }
