@@ -4,10 +4,6 @@
 
 #include "jit_uni_eltwise_generic.hpp"
 
-// TODO remove
-using namespace dnnl::impl;
-using namespace dnnl::impl::utils;
-
 namespace ov {
 namespace intel_cpu {
 namespace aarch64 {
@@ -290,8 +286,21 @@ struct EltwiseEmitterContext {
 
 template<typename T>
 struct EltwiseEmitter {
-    void operator()(EltwiseEmitterContext & ctx) {
+    void operator()(EltwiseEmitterContext& ctx) {
         ctx.emitter = std::make_shared<T>(ctx.host, ctx.host_isa, ctx.exec_prc);
+    }
+};
+
+template<>
+struct EltwiseEmitter<ov::intel_cpu::aarch64::jit_dnnl_emitter> {
+    void operator()(EltwiseEmitterContext& ctx) {
+        auto algKind = static_cast<dnnl_alg_kind_t>(ctx.opData.onednnAlgorithm);
+        ctx.emitter = std::make_shared<ov::intel_cpu::aarch64::jit_dnnl_emitter>(ctx.host,
+                                                                                     ctx.host_isa,
+                                                                                     algKind,
+                                                                                     ctx.opData.alpha,
+                                                                                     ctx.opData.beta,
+                                                                                     ctx.exec_prc);
     }
 };
 
@@ -309,7 +318,8 @@ std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitte
     OV_CASE(Algorithm::EltwiseAdd, ov::intel_cpu::aarch64::jit_add_emitter),
     OV_CASE(Algorithm::EltwiseMulAdd, ov::intel_cpu::aarch64::jit_mul_add_emitter),
     OV_CASE(Algorithm::EltwiseMultiply, ov::intel_cpu::aarch64::jit_multiply_emitter),
-    OV_CASE(Algorithm::EltwisePowerDynamic, ov::intel_cpu::aarch64::jit_power_emitter));
+    OV_CASE(Algorithm::EltwisePowerDynamic, ov::intel_cpu::aarch64::jit_power_emitter),
+    OV_CASE(Algorithm::EltwiseTanh, ov::intel_cpu::aarch64::jit_dnnl_emitter));
 
     if (!ctx.emitter)
         IE_THROW() << "Unsupported operation type '" << algToString(data.algo) << "' for Eltwise emitter";

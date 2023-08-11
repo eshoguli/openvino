@@ -53,9 +53,9 @@ struct jit_eltwise_call_args_indexes {
 class Eltwise;
 
 struct jit_uni_eltwise_kernel {
-    void (*ker_)(const node::jit_eltwise_call_args_ptrs*, const jit_eltwise_call_args_indexes*);
+    void (*ker_)(const jit_eltwise_call_args_ptrs*, const jit_eltwise_call_args_indexes*);
 
-    void operator()(const node::jit_eltwise_call_args_ptrs* const_args, const jit_eltwise_call_args_indexes* indexes) {
+    void operator()(const jit_eltwise_call_args_ptrs* const_args, const jit_eltwise_call_args_indexes* indexes) {
         assert(ker_);
         ker_(const_args, indexes);
     }

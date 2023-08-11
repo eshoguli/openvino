@@ -3,6 +3,8 @@
 //
 
 #include "jit_eltwise_emitters.hpp"
+
+#include <memory>
 #include "ie_ngraph_utils.hpp"
 
 namespace ov {
@@ -129,10 +131,6 @@ void jit_mul_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
     h->fadd(dst.s, dst.s, src2.s);
 }
 
-size_t jit_mul_add_emitter::aux_vecs_count() const {
-    return 1;
-}
-
 std::set<std::vector<element::Type>> jit_mul_add_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
     return {{element::f32, element::f32, element::f32}};
 }
@@ -257,40 +255,38 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
     h->uni_orr(dst, src0, src0);
 }
 
-// template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-// void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-//     //using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-//     // TODO: just to debug
-//     using TReg = Xbyak_aarch64::VReg;
-//     TReg src0 = TReg(in_vec_idxs[0]);
-//     TReg src1 = TReg(in_vec_idxs[1]);
-//     h->uni_fcvtzs(src1.s, src1.s);
-//     Xbyak_aarch64::VRegSElem s = src1.s[0];
-//     // TODO: 1?
-//     Xbyak_aarch64::WReg counter{1};
-//     h->mov(counter, s);
+jit_dnnl_emitter::jit_dnnl_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                           dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                           dnnl_alg_kind_t alg_kind,
+                                           float alpha,
+                                           float beta,
+                                           InferenceEngine::Precision exec_prc) : jit_emitter(host, host_isa, exec_prc) {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+        // eltwise_injector_asimd = std::make_shared<dnnl::impl::cpu::aarch64::jit_uni_eltwise_injector_f32<dnnl::impl::cpu::aarch64::asimd>>(
+        //     h,
+        //     alg_kind,
+        //     alpha,
+        //     beta,
+        //     1.f);
+    } else {
+        IE_THROW() << "Can't create jit eltwise kernel";
+    }
+}
 
-//     // TODO: workaround
-//     TReg aux0 = TReg(in_vec_idxs[1] + 1);
-//     TReg dst = TReg(out_vec_idxs[0]);
+size_t jit_dnnl_emitter::get_inputs_num() const {
+    return 1;
+}
 
-//     Xbyak_aarch64::Label loop_label;
-//     Xbyak_aarch64::Label loop_end_label;
-//     h->uni_orr(aux0, src0, src0);
-//     h->L(loop_label);
-//     {
-//         // TODO: unroll
-//         h->cmp(counter, 2);
-//         h->b(Xbyak_aarch64::LO, loop_end_label);
+void jit_dnnl_emitter::emit_impl(
+    const std::vector<size_t>& in_vec_idxs,
+    const std::vector<size_t>& out_vec_idxs) const {
+}
 
-//         h->uni_fmul(src0.s, src0.s, aux0.s);
-
-//         h->sub(counter, counter, 1);
-//         h->b(Xbyak_aarch64::AL, loop_label);
-//     }
-//     h->L(loop_end_label);
-//     h->uni_orr(dst, src0, src0);
-// }
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+void jit_dnnl_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    using TRegS = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TRegS;
+}
 
 }   // namespace aarch64
 }   // namespace intel_cpu
