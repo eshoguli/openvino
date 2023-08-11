@@ -19,7 +19,7 @@ void jit_uni_eltwise_kernel::operator()(
     assert(ker_);
 
 // #ifdef DEBUG
-//     // TODO: debug only
+//     // TODO: debug
 //     const auto src_ptr = static_cast<const float*>(const_args->src_ptr[0]);
 //     std::cout << "jit_uni_eltwise_kernel::operator(), src_ptr: " << std::endl;
 //     for (size_t i = 0; i < 8; i++) {
@@ -42,7 +42,7 @@ jit_uni_eltwise_generic<isa>::jit_uni_eltwise_generic(const jit_eltwise_params& 
                                                       ops_list_(ops_list),
                                                       post_ops_(post_ops) {
 // #ifdef DEBUG
-//     // TODO: debug only
+//     // TODO: debug
 //     std::cout << "\tjit_uni_eltwise_generic:" << std::endl;
 //     for (const auto& eltwise_data_item : eltwise_data) {
 //         std::cout << "\t\talgo: " << algToString(eltwise_data_item.algo) << std::endl;
@@ -98,7 +98,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
                 ldr(index_reg, ptr(param2, static_cast<int32_t>(j * sizeof(size_t))));
                 madd(pointer, offset_reg, index_reg, pointer);
 
-                // TODO: debug only
+                // TODO: debug
                 //std::cout << offsets[j] << " x " << j * sizeof(size_t) << std::endl;
             }
         }
@@ -410,8 +410,7 @@ std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitte
     OV_CASE(Algorithm::EltwiseAdd, ov::intel_cpu::aarch64::jit_add_emitter),
     OV_CASE(Algorithm::EltwiseMulAdd, ov::intel_cpu::aarch64::jit_mul_add_emitter),
     OV_CASE(Algorithm::EltwiseMultiply, ov::intel_cpu::aarch64::jit_multiply_emitter),
-    OV_CASE(Algorithm::EltwisePowerDynamic, ov::intel_cpu::aarch64::jit_power_emitter),
-    OV_CASE(Algorithm::EltwiseTanh, ov::intel_cpu::aarch64::jit_dnnl_emitter));
+    OV_CASE(Algorithm::EltwisePowerDynamic, ov::intel_cpu::aarch64::jit_power_emitter));
 
     if (!ctx.emitter)
         IE_THROW() << "Unsupported operation type '" << algToString(data.algo) << "' for Eltwise emitter";

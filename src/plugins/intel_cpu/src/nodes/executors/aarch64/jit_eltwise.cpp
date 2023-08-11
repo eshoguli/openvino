@@ -16,7 +16,8 @@ bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm) {
                                     Algorithm::EltwiseAdd,
                                     Algorithm::EltwiseMultiply,
                                     Algorithm::EltwiseMulAdd,
-                                    Algorithm::EltwisePowerDynamic);
+                                    Algorithm::EltwisePowerDynamic,
+                                    Algorithm::EltwisePowerStatic);
     if (!is_supported) {
         return false;
     }

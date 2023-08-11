@@ -82,7 +82,17 @@ namespace {
 // TODO: raw pointer
 // TODO: refactor
 bool is_supported(const Node* node) {
-    if (node->getAlgorithm() == Algorithm::EltwiseTanh) {
+    const auto& input_precisions = node->getOriginalInputPrecisions();
+    if (std::any_of(input_precisions.begin(),
+                    input_precisions.end(),
+                    [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
+        return false;
+    }
+
+    const auto& output_precisions = node->getOriginalOutputPrecisions();
+    if (std::any_of(output_precisions.begin(),
+                    output_precisions.end(),
+                    [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
         return false;
     }
 
@@ -1624,7 +1634,7 @@ public:
                                args.indexes[3] = i3;
                                args.indexes[4] = i4;
 
-                               // TODO: debug only
+                               // TODO: debug
                                //std::cout << "EltwiseJitExecutor::exec: " << i0 << ", " << i1 << ", " << i2 << ", " << i3 << ", " << i4 << std::endl;
                                (*_pKernel)(&args_ptrs, &args);
                            });
@@ -2109,12 +2119,16 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     const bool useJit = is_supported(this) && executors::aarch64::JitEltwiseExecutor::isSupported(getAlgorithm());
     if (useJit) {
         outputPrecision = Precision::FP32;
+        // TODO: debug
+        std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
     }
 #endif
 
 #if defined(OV_CPU_WITH_ACL)
     const bool useAcl = !useJit;
     if (useAcl) {
+    // TODO: debug
+    std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
     Precision forcedPrec;
     //ACL implementation supports only identical precisions on inputs/outputs so they are aligned it to highest one
     if (AclEltwiseExecutor::isEltwiseAlgorithmSupported(getAlgorithm())) {
@@ -2572,7 +2586,7 @@ void Eltwise::execute(dnnl::stream strm) {
 
 // #ifdef DEBUG
 //         {
-//             // TODO: just to debug
+//             // TODO: debug
 //             std::cout << std::endl << "output:" << std::endl;
 //             const auto size = memPtrs.back()->getSize();
 //             const size_t length = size / 4;

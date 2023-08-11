@@ -291,7 +291,7 @@ void compare(const ov::Tensor& expected,
                 "; rel errors count "  << rel_error.count  << "; rel mean " <<
                 rel_error.mean  << "; rel threshold "  << rel_threshold;
 
-        // TODO: just to debug
+        // TODO: debug
         // out_stream << "\nexpected values: ";
         // for (size_t i = 0; i < shape_size_cnt; ++i) {
         //     out_stream << expected_data[i] << ", ";

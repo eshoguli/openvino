@@ -223,7 +223,7 @@ void jit_power_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
     //using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    // TODO: just to debug
+    // TODO: debug
     using TReg = Xbyak_aarch64::VReg;
     TReg src0 = TReg(in_vec_idxs[0]);
     TReg src1 = TReg(in_vec_idxs[1]);
@@ -284,8 +284,8 @@ void jit_dnnl_emitter::emit_impl(
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_dnnl_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    using TRegS = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TRegS;
+    // using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    // using TRegS = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TRegS;
 }
 
 }   // namespace aarch64

@@ -127,23 +127,24 @@ void EltwiseLayerTest::SetUp() {
     function = std::make_shared<ngraph::Function>(eltwise, parameters, "Eltwise");
 }
 
-void EltwiseLayerTest::generate_inputs(const std::vector<ov::Shape>& targetInputStaticShapes) {
-    inputs.clear();
-    const auto& funcInputs = function->inputs();
-    for (int i = 0; i < funcInputs.size(); ++i) {
-        const auto& funcInput = funcInputs[i];
-        const auto element_type = funcInput.get_element_type();
-        const auto shape = targetInputStaticShapes[i];
-        auto tensor = ov::Tensor{element_type, shape};
-        const auto tensor_size = tensor.get_size();
-        float* tensor_data = tensor.data<float>();
-        for (size_t i = 0; i < tensor_size; ++i) {
-            tensor_data[i] = static_cast<float>(i + 1);
-        }
+// TODO: debug
+// void EltwiseLayerTest::generate_inputs(const std::vector<ov::Shape>& targetInputStaticShapes) {
+//     inputs.clear();
+//     const auto& funcInputs = function->inputs();
+//     for (int i = 0; i < funcInputs.size(); ++i) {
+//         const auto& funcInput = funcInputs[i];
+//         const auto element_type = funcInput.get_element_type();
+//         const auto shape = targetInputStaticShapes[i];
+//         auto tensor = ov::Tensor{element_type, shape};
+//         const auto tensor_size = tensor.get_size();
+//         float* tensor_data = tensor.data<float>();
+//         for (size_t i = 0; i < tensor_size; ++i) {
+//             tensor_data[i] = static_cast<float>(i + 1);
+//         }
 
-        inputs.insert({funcInput.get_node_shared_ptr(), tensor});
-    }
-}
+//         inputs.insert({funcInput.get_node_shared_ptr(), tensor});
+//     }
+// }
 
 } //  namespace subgraph
 } //  namespace test
