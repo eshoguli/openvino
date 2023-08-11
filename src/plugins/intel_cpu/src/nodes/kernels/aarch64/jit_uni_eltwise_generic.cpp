@@ -78,12 +78,14 @@ void jit_uni_eltwise_generic<isa>::generate() {
         post_op_emitters.push_back(create_eltwise_emitter(eltwise_data_[i], exec_prc));
     }
 
+    const auto &jep = jep_;
+
     preamble();
 
     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
 
     XReg param2 = abi_param2;
-    const int offset_count = jep_.input_size - 1;
+    const int offset_count = jep.input_size - 1;
 
     auto init_ptrs_with_offsets = [this, offset_count, param2](XReg pointer, const std::vector<size_t>& offsets) {
         for (int j = 0; j < offset_count; j++) {
@@ -102,59 +104,139 @@ void jit_uni_eltwise_generic<isa>::generate() {
         }
     };
 
-    for (size_t i = 0; i < jep_.inputs_number; i++) {
+    for (size_t i = 0; i < jep.inputs_number; i++) {
         ldr(get_src_reg(i), ptr(param1, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, src_ptr) + i * sizeof(size_t))));
 
-        init_ptrs_with_offsets(get_src_reg(i), jep_.src_offsets[i]);
+        init_ptrs_with_offsets(get_src_reg(i), jep.src_offsets[i]);
     }
 
     ldr(reg_dst, ptr(param1, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr))));
-    init_ptrs_with_offsets(reg_dst, jep_.dst_offsets);
+    init_ptrs_with_offsets(reg_dst, jep.dst_offsets);
 
-    mov(reg_work_amount, jep_.work_amount);
+    mov(reg_work_amount, jep.work_amount);
 
-    for (size_t i = 0; i < jep_.inputs_number; i++) {
-        if (jep_.src_size[i] == 1) {
-            uni_ldr(get_vmm_reg(i), get_src_reg(i), jep_.src_prc[i], exec_prc, true);
+    for (size_t i = 0; i < jep.inputs_number; i++) {
+        if (jep.src_size[i] == 1) {
+            uni_ldr(get_vmm_reg(i), get_src_reg(i), jep.src_prc[i], exec_prc, true);
         }
     }
 
-    Label main_loop_label;
-    Label main_loop_end_label;
-    L(main_loop_label);
-    {
-        const size_t vlen = cpu_isa_traits<isa>::vlen;
-        const size_t exec_prc_size = exec_prc.size();
-        const size_t loop_step = vlen / exec_prc_size;
-
-        cmp(reg_work_amount, loop_step);
-        b(LO, main_loop_end_label);
-
-        for (size_t i = 0; i < jep_.inputs_number; i++) {
-            if (jep_.src_size[i] != 1) {
-                uni_ldr(get_vmm_reg(i), get_src_reg(i), jep_.src_prc[i], exec_prc, false);
-            }
-        }
-
-        compute_eltwise_op();
-
-        apply_post_ops();
-
-        uni_str(reg_dst, vmm_dst, exec_prc, jep_.dst_prc);
-
-        for (size_t i = 0; i < jep_.inputs_number; i++) {
-            if (jep_.src_size[i] != 1) {
-                add(get_src_reg(i), get_src_reg(i), jep_.src_prc[i].size() * loop_step);
-            }
-        }
-
-        add(reg_dst, reg_dst, jep_.dst_prc.size() * loop_step);
-
-        sub(reg_work_amount, reg_work_amount, loop_step);
-
-        b(AL, main_loop_label);
+    size_t min_src_size = jep.dst_size;
+    for (size_t i = 0; i < jep.inputs_number; i++) {
+        if (jep.src_size[i] != 1)
+            min_src_size = std::min(min_src_size, jep.src_size[i]);
     }
-    L(main_loop_end_label);
+
+    if (min_src_size != jep.dst_size) {
+        bool is_valid_configuration = true;
+        if (jep.dst_size % min_src_size != 0)
+            is_valid_configuration = false;
+
+        for (size_t i = 0; i < jep.inputs_number; i++) {
+            if (jep.src_size[i] != 1 && jep.src_size[i] != min_src_size && jep.src_size[i] != jep.dst_size)
+                is_valid_configuration = false;
+        }
+
+        if (jep.oc_size > 1 && jep.oc_size != min_src_size && jep.oc_size != jep.dst_size)
+            is_valid_configuration = false;
+
+        if (!is_valid_configuration)
+            IE_THROW() << "Eltwise jitter has invalid configuration for Eltwise node";
+
+
+        Label unroll_loop_label;
+        Label unroll_loop_end_label;
+        L(unroll_loop_label);
+        {
+            const size_t loop_step = min_src_size;
+            const size_t vec_step = cpu_isa_traits<isa>::vlen / exec_prc.size();
+
+            cmp(reg_work_amount, loop_step);
+            b(LO, unroll_loop_end_label);
+
+            for (size_t j = 0; j < min_src_size / vec_step; j++) {
+                for (size_t i = 0; i < jep.inputs_number; i++) {
+                    if (jep.src_size[i] != 1) {
+                        uni_ldr(get_vmm_reg(i), get_src_reg(i), jep.src_prc[i], exec_prc, false, j * vec_step * jep.src_prc[i].size());
+                    }
+                }
+
+                compute_eltwise_op();
+
+                // TODO: not completed
+                //apply_post_ops(false, jep.oc_size > 1 ? j * vec_step * sizeof(float) : 0);
+
+                uni_str(reg_dst, vmm_dst, exec_prc, jep.dst_prc, j * vec_step * jep.dst_prc.size());
+            }
+
+            size_t tail_start = min_src_size - min_src_size % vec_step;
+            for (size_t j = tail_start; j < min_src_size; j++) {
+                for (size_t i = 0; i < jep.inputs_number; i++) {
+                    if (jep.src_size[i] != 1) {
+                        uni_ldr(get_scl_reg(i), get_src_reg(i), jep.src_prc[i], exec_prc, j * jep.src_prc[i].size());
+                    }
+                }
+
+                compute_eltwise_op();
+
+                // TODO: not completed
+                //apply_post_ops(true, jep.oc_size > 1 ? j * sizeof(float) : 0);
+
+                // TODO: TRegS
+                SReg sc_dst_reg{vmm_dst.getIdx()};
+                uni_str(reg_dst, sc_dst_reg, exec_prc, jep.dst_prc, j * jep.dst_prc.size());
+            }
+
+            for (size_t i = 0; i < jep.inputs_number; i++)
+                if (jep.src_size[i] == jep.dst_size)
+                    add(get_src_reg(i), get_src_reg(i), jep.src_prc[i].size() * loop_step);
+
+            add(reg_dst, reg_dst, jep.dst_prc.size() * loop_step);
+            sub(reg_work_amount, reg_work_amount, loop_step);
+
+            b(AL, unroll_loop_label);
+        }
+
+        L(unroll_loop_end_label);
+    }
+
+    if (min_src_size == jep.dst_size) {
+        Label main_loop_label;
+        Label main_loop_end_label;
+        L(main_loop_label);
+        {
+            const size_t vlen = cpu_isa_traits<isa>::vlen;
+            const size_t exec_prc_size = exec_prc.size();
+            const size_t loop_step = vlen / exec_prc_size;
+
+            cmp(reg_work_amount, loop_step);
+            b(LO, main_loop_end_label);
+
+            for (size_t i = 0; i < jep.inputs_number; i++) {
+                if (jep.src_size[i] != 1) {
+                    uni_ldr(get_vmm_reg(i), get_src_reg(i), jep.src_prc[i], exec_prc, false);
+                }
+            }
+
+            compute_eltwise_op();
+
+            apply_post_ops();
+
+            uni_str(reg_dst, vmm_dst, exec_prc, jep.dst_prc);
+
+            for (size_t i = 0; i < jep.inputs_number; i++) {
+                if (jep.src_size[i] != 1) {
+                    add(get_src_reg(i), get_src_reg(i), jep.src_prc[i].size() * loop_step);
+                }
+            }
+
+            add(reg_dst, reg_dst, jep.dst_prc.size() * loop_step);
+            sub(reg_work_amount, reg_work_amount, loop_step);
+
+            b(AL, main_loop_label);
+        }
+        L(main_loop_end_label);
+    }
 
     Label tail_loop_label;
     Label tail_loop_end_label;
@@ -165,35 +247,26 @@ void jit_uni_eltwise_generic<isa>::generate() {
         cmp(reg_work_amount, 0x0);
         b(EQ, tail_loop_end_label);
 
-        // load scalar
-        ////mov(get_vmm_reg(0).s, P_ALL_ONE / Xbyak_aarch64::T_z, 0x0);
-        //ldr(get_scl_reg(0), ptr(get_src_reg(0)));
-        for (size_t i = 0; i < jep_.inputs_number; i++) {
-            if (jep_.src_size[i] != 1) {
-                uni_ldr(get_scl_reg(i), get_src_reg(i), jep_.src_prc[i], exec_prc);
+        for (size_t i = 0; i < jep.inputs_number; i++) {
+            if (jep.src_size[i] != 1) {
+                uni_ldr(get_scl_reg(i), get_src_reg(i), jep.src_prc[i], exec_prc);
             }
         }
-
-        //// ldr(get_vmm_reg(0).s, ptr(get_src_reg(0)));
-
-        //// vmm_reg.d, mask / Xbyak_aarch64::T_z, Xbyak_aarch64::ptr(src_reg)
-        //// ld1rd(get_vmm_reg(0).s, mask / Xbyak_aarch64::T_z, get_src_reg(0));
 
         compute_eltwise_op();
 
         apply_post_ops();
 
         SReg sc_dst_reg{vmm_dst.getIdx()};
-        uni_str(reg_dst, sc_dst_reg, exec_prc, jep_.dst_prc);
+        uni_str(reg_dst, sc_dst_reg, exec_prc, jep.dst_prc);
 
-        for (size_t i = 0; i < jep_.inputs_number; i++) {
-            if (jep_.src_size[i] != 1) {
-                add(get_src_reg(i), get_src_reg(i), jep_.src_prc[i].size() * loop_step);
+        for (size_t i = 0; i < jep.inputs_number; i++) {
+            if (jep.src_size[i] != 1) {
+                add(get_src_reg(i), get_src_reg(i), jep.src_prc[i].size() * loop_step);
             }
         }
 
-        add(reg_dst, reg_dst, jep_.dst_prc.size() * loop_step);
-
+        add(reg_dst, reg_dst, jep.dst_prc.size() * loop_step);
         // TODO: whilelo
         sub(reg_work_amount, reg_work_amount, loop_step);
 
@@ -205,7 +278,12 @@ void jit_uni_eltwise_generic<isa>::generate() {
 }
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-void jit_uni_eltwise_generic<isa>::uni_ldr(const TReg& data, const XReg& ptr, const Precision& src_prc, const Precision& dst_prc, const bool broadcast) {
+void jit_uni_eltwise_generic<isa>::uni_ldr(const TReg& data,
+                                           const XReg& ptr,
+                                           const Precision& src_prc,
+                                           const Precision& dst_prc,
+                                           const bool broadcast,
+                                           const int32_t offset) {
     if (src_prc != dst_prc) {
         IE_THROW(Unexpected) << "src_prc != dst_prc is not supported";
     }
@@ -213,9 +291,9 @@ void jit_uni_eltwise_generic<isa>::uni_ldr(const TReg& data, const XReg& ptr, co
     switch (dst_prc) {
         case Precision::FP32: {
             if (broadcast) {
-                jit_generator::uni_ld1rw(data.s, ptr, 0);
+                jit_generator::uni_ld1rw(data.s, ptr, offset);
             } else {
-                jit_generator::uni_ldr(data, ptr);
+                jit_generator::uni_ldr(data, ptr, offset);
             }
             break;
         }
@@ -226,14 +304,18 @@ void jit_uni_eltwise_generic<isa>::uni_ldr(const TReg& data, const XReg& ptr, co
 }
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-void jit_uni_eltwise_generic<isa>::uni_ldr(const SReg& data, const XReg& ptr, const Precision& src_prc, const Precision& dst_prc) {
+void jit_uni_eltwise_generic<isa>::uni_ldr(const SReg& data,
+                                           const XReg& ptr,
+                                           const Precision& src_prc,
+                                           const Precision& dst_prc,
+                                           const int32_t offset) {
     if (src_prc != dst_prc) {
         IE_THROW(Unexpected) << "src_prc != dst_prc is not supported";
     }
 
     switch (dst_prc) {
         case Precision::FP32: {
-            ldr(data, Xbyak_aarch64::ptr(ptr));
+            ldr(data, Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
         default: {
@@ -243,14 +325,20 @@ void jit_uni_eltwise_generic<isa>::uni_ldr(const SReg& data, const XReg& ptr, co
 }
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-void jit_uni_eltwise_generic<isa>::uni_str(const XReg& ptr, const TReg& data, const Precision& src_prc, const Precision& dst_prc) {
+void jit_uni_eltwise_generic<isa>::uni_str(const XReg& ptr,
+                                           const TReg& data,
+                                           const Precision& src_prc,
+                                           const Precision& dst_prc,
+                                           const int32_t offset) {
     if (src_prc != dst_prc) {
         IE_THROW(Unexpected) << "src_prc != dst_prc is not supported";
     }
 
     switch (dst_prc) {
         case Precision::FP32: {
-            jit_generator::uni_str(data, ptr);
+            //jit_generator::uni_str(data, ptr);
+            // TODO: TRegS
+            str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
         default: {
@@ -260,14 +348,18 @@ void jit_uni_eltwise_generic<isa>::uni_str(const XReg& ptr, const TReg& data, co
 }
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-void jit_uni_eltwise_generic<isa>::uni_str(const XReg& ptr, const SReg& data, const Precision& src_prc, const Precision& dst_prc) {
+void jit_uni_eltwise_generic<isa>::uni_str(const XReg& ptr,
+                                           const SReg& data,
+                                           const Precision& src_prc,
+                                           const Precision& dst_prc,
+                                           const int32_t offset) {
     if (src_prc != dst_prc) {
         IE_THROW(Unexpected) << "uni_str: src_prc != dst_prc is not supported";
     }
 
     switch (dst_prc) {
         case Precision::FP32: {
-            str(data, Xbyak_aarch64::ptr(ptr));
+            str(data, Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
         default: {

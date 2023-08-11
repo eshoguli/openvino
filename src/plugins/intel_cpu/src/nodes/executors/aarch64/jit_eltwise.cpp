@@ -11,9 +11,7 @@ namespace intel_cpu {
 namespace executors {
 namespace aarch64 {
 
-bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm,
-                                     const std::vector<Shape>& input_shapes,
-                                     const std::vector<Shape>& outputShapes) {
+bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm) {
     const auto is_supported = one_of(algorithm,
                                     Algorithm::EltwiseAdd,
                                     Algorithm::EltwiseMultiply,

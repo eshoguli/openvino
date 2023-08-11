@@ -157,10 +157,31 @@ private:
         return TReg(10 + idx);
     }
 
-    void uni_ldr(const TReg& data, const XReg& ptr, const Precision& src_prc, const Precision& dst_prc, const bool broadcast);
-    void uni_ldr(const SReg& data, const XReg& ptr, const Precision& src_prc, const Precision& dst_prc);
-    void uni_str(const XReg& ptr, const TReg& data, const Precision& src_prc, const Precision& dst_prc);
-    void uni_str(const XReg& ptr, const SReg& data, const Precision& src_prc, const Precision& dst_prc);
+    // TODO: SReg = TRegS
+    void uni_ldr(const TReg& data,
+                 const XReg& ptr,
+                 const Precision& src_prc,
+                 const Precision& dst_prc,
+                 const bool broadcast,
+                 const int32_t offset = 0);
+
+    void uni_ldr(const SReg& data,
+                 const XReg& ptr,
+                 const Precision& src_prc,
+                 const Precision& dst_prc,
+                 const int32_t offset = 0);
+
+    void uni_str(const XReg& ptr,
+                 const TReg& data,
+                 const Precision& src_prc,
+                 const Precision& dst_prc,
+                 const int32_t offset = 0);
+
+    void uni_str(const XReg& ptr,
+                 const SReg& data,
+                 const Precision& src_prc,
+                 const Precision& dst_prc,
+                 const int32_t offset = 0);
 
     std::shared_ptr<jit_emitter> create_eltwise_emitter(const EltwiseData& data, const Precision& exec_prec);
 

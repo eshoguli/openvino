@@ -2106,10 +2106,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
 #endif
 
 #if defined(OPENVINO_ARCH_ARM64)
-    const bool useJit = is_supported(this) && executors::aarch64::JitEltwiseExecutor::isSupported(
-        getAlgorithm(),
-        this->inputShapes,
-        this->outputShapes);
+    const bool useJit = is_supported(this) && executors::aarch64::JitEltwiseExecutor::isSupported(getAlgorithm());
     if (useJit) {
         outputPrecision = Precision::FP32;
     }
@@ -2866,7 +2863,10 @@ bool Eltwise::canFuse(const NodePtr& node) const {
     if (!mayiuse(dnnl::impl::cpu::aarch64::asimd) || (getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK))
         return false;
 
-    if (!is_supported(this) || (!is_supported(node.get()))) {
+    if (!is_supported(this) ||
+        !executors::aarch64::JitEltwiseExecutor::isSupported(this->getAlgorithm()) ||
+        !is_supported(node.get()) ||
+        !executors::aarch64::JitEltwiseExecutor::isSupported(node->getAlgorithm())) {
         return false;
     }
 #endif
