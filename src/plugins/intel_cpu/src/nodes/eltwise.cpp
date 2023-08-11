@@ -82,18 +82,32 @@ namespace {
 // TODO: raw pointer
 // TODO: refactor
 bool is_supported(const Node* node) {
-    const auto& input_precisions = node->getOriginalInputPrecisions();
-    if (std::any_of(input_precisions.begin(),
-                    input_precisions.end(),
-                    [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
-        return false;
+    {
+        const auto& input_precisions = node->getOriginalInputPrecisions();
+        if (std::any_of(input_precisions.begin(),
+                        input_precisions.end(),
+                        [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
+            return false;
+        }
+        for (size_t i = 0; i < input_precisions.size(); ++i) {
+            if (node->getInputShapeAtPort(i).isDynamic()) {
+                return false;
+            }
+        }
     }
 
-    const auto& output_precisions = node->getOriginalOutputPrecisions();
-    if (std::any_of(output_precisions.begin(),
-                    output_precisions.end(),
-                    [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
-        return false;
+    {
+        const auto& output_precisions = node->getOriginalOutputPrecisions();
+        if (std::any_of(output_precisions.begin(),
+                        output_precisions.end(),
+                        [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
+            return false;
+        }
+        for (size_t i = 0; i < output_precisions.size(); ++i) {
+            if (node->getOutputShapeAtPort(i).isDynamic()) {
+                return false;
+            }
+        }
     }
 
     if (node->getAlgorithm() != Algorithm::EltwisePowerDynamic) {
