@@ -82,10 +82,12 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
     preamble();
 
-    eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
-
     XReg param2 = abi_param2;
     const int offset_count = jep.input_size - 1;
+
+    // TODO: not implemented
+    // ptrs initializing
+    // if (jep.use_runtime_ptrs)
 
     auto init_ptrs_with_offsets = [this, offset_count, param2](XReg pointer, const std::vector<size_t>& offsets) {
         for (int j = 0; j < offset_count; j++) {
@@ -163,8 +165,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
                 compute_eltwise_op();
 
-                // TODO: not completed
-                //apply_post_ops(false, jep.oc_size > 1 ? j * vec_step * sizeof(float) : 0);
+                apply_post_ops();
 
                 uni_str(reg_dst, vmm_dst, exec_prc, jep.dst_prc, j * vec_step * jep.dst_prc.size());
             }
@@ -179,8 +180,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
                 compute_eltwise_op();
 
-                // TODO: not completed
-                //apply_post_ops(true, jep.oc_size > 1 ? j * sizeof(float) : 0);
+                apply_post_ops();
 
                 // TODO: TRegS
                 SReg sc_dst_reg{vmm_dst.getIdx()};

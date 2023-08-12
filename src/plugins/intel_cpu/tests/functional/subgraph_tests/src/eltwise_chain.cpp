@@ -76,7 +76,7 @@ public:
         }
     }
 
-    // TODO: to debug issue with MulAdd
+    // TODO: debug
     // void generate_inputs(const std::vector<ov::Shape>& targetInputStaticShapes) override {
     //     inputs.clear();
     //     float value = 1.f;
@@ -88,8 +88,8 @@ public:
     //         auto tensor = ov::Tensor{element_type, shape};
     //         const auto tensor_size = tensor.get_size();
     //         float* tensor_data = tensor.data<float>();
-    //         for (size_t i = 0; i < tensor_size; ++i) {
-    //             tensor_data[i] = value;
+    //         for (size_t j = 0; j < tensor_size; ++j) {
+    //             tensor_data[j] = value;
     //             value += 1;
     //         }
 
@@ -124,10 +124,14 @@ protected:
                 ngraphInputs.push_back(ngraph::builder::makeConstant(inputPrecisions[i], targetStaticShapes[0][i],
                                                                      ngraphInput1Data, true));
 
-                // TODO: to debug issue with MulAdd
+                // TODO: debug
+                // std::vector<float> ngraphInput1Data(ngraph::shape_size(targetStaticShapes[0][i]));
+                // for (size_t const_i = 0; const_i < ngraphInput1Data.size(); ++const_i) {
+                //     ngraphInput1Data[const_i] = static_cast<float>(const_i + i + 1);
+                // }
                 // ngraphInputs.push_back(ngraph::builder::makeConstant(inputPrecisions[i],
                 //                                                      targetStaticShapes[0][i],
-                //                                                      std::vector<float>{10.f * i, 20.f * i, 30.f * i},
+                //                                                      ngraphInput1Data,
                 //                                                      false));
             }
         }

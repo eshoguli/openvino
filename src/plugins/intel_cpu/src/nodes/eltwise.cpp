@@ -2581,7 +2581,7 @@ void Eltwise::execute(dnnl::stream strm) {
 
 // #ifdef DEBUG
 //         {
-//             // TODO: just to debug
+//             // TODO: debug
 //             std::cout << std::endl << "input:" << std::endl;
 //             for (size_t source_i = 0; source_i < memPtrs.size() - 1; source_i++) {
 //                 std::cout << "src_ptr[" << source_i << "]" << std::endl;
