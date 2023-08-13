@@ -48,16 +48,7 @@ jit_add_emitter::jit_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
 size_t jit_add_emitter::get_inputs_num() const { return 2; }
 
 void jit_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::sve_512) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_512>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_384) {
-        // TODO: not supported
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_256) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_128) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_128>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
         emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
     } else {
         IE_THROW() << "Can't create jit eltwise kernel";
@@ -98,16 +89,7 @@ jit_mul_add_emitter::jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator
 size_t jit_mul_add_emitter::get_inputs_num() const { return 3; }
 
 void jit_mul_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::sve_512) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_512>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_384) {
-        // TODO: not supported
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_256) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_128) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_128>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
         emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
     } else {
         IE_THROW() << "Can't create jit eltwise kernel";
@@ -149,16 +131,7 @@ jit_multiply_emitter::jit_multiply_emitter(dnnl::impl::cpu::aarch64::jit_generat
 size_t jit_multiply_emitter::get_inputs_num() const { return 2; }
 
 void jit_multiply_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::sve_512) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_512>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_384) {
-        // TODO: not supported
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_256) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_128) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_128>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
         emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
     } else {
         IE_THROW() << "Can't create jit eltwise kernel";
@@ -206,16 +179,7 @@ std::set<std::vector<element::Type>> jit_power_emitter::get_supported_precisions
 }
 
 void jit_power_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::sve_512) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_512>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_384) {
-        // TODO: not supported
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_256) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_256>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::sve_128) {
-        emit_isa<dnnl::impl::cpu::aarch64::sve_128>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
         emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
     } else {
         IE_THROW() << "Can't create jit eltwise kernel";
@@ -224,10 +188,7 @@ void jit_power_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const 
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    // TODO: uncomment when not supported instruction set will be removed
-    //using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    // TODO: debug
-    using TReg = Xbyak_aarch64::VReg;
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
 
     // TODO: if the second input is scalar then it can be hardcoded and easily unrolled
     TReg src0 = TReg(in_vec_idxs[0]);
@@ -245,7 +206,6 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
     Xbyak_aarch64::Label loop_end_label;
     h->L(loop_label);
     {
-        // TODO: unroll
         h->cmp(counter, 2);
         h->b(Xbyak_aarch64::LO, loop_end_label);
 

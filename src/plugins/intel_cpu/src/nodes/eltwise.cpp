@@ -1615,14 +1615,7 @@ public:
 #endif // OPENVINO_ARCH_X86_64
 
 #if defined(OPENVINO_ARCH_ARM64)
-        if (mayiuse(aarch64::sve_512)) {
-            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::sve_512>(jep, eltwise_data, ops_list, post_ops));
-        } else if (mayiuse(aarch64::sve_384) || aarch64::mayiuse(aarch64::sve_256)) {
-            // TODO: sve_384 is not supported
-            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::sve_256>(jep, eltwise_data, ops_list, post_ops));
-        } else if (mayiuse(aarch64::sve_128)) {
-            _pKernel.reset(new jit_uni_eltwise_generic<aarch64::sve_128>(jep, eltwise_data, ops_list, post_ops));
-        } else if (mayiuse(aarch64::asimd)) {
+        if (mayiuse(aarch64::asimd)) {
             _pKernel.reset(new jit_uni_eltwise_generic<aarch64::asimd>(jep, eltwise_data, ops_list, post_ops));
         } else {
             IE_THROW() << "Can't create jit eltwise kernel";
@@ -2315,16 +2308,10 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
                 #endif
 
                 #ifdef OPENVINO_ARCH_ARM64
-                if (mayiuse(dnnl::impl::cpu::aarch64::sve_512)) {
-                    impl_type = impl_desc_type::jit_sve512;
-                } else if (mayiuse(dnnl::impl::cpu::aarch64::sve_384)) {
-                    impl_type = impl_desc_type::jit_sve384;
-                } else if (mayiuse(dnnl::impl::cpu::aarch64::sve_256)) {
-                    impl_type = impl_desc_type::jit_sve256;
-                } else if (mayiuse(dnnl::impl::cpu::aarch64::sve_128)) {
-                    impl_type = impl_desc_type::jit_sve128;
-                } else if (mayiuse(dnnl::impl::cpu::aarch64::asimd)) {
+                if (mayiuse(dnnl::impl::cpu::aarch64::asimd)) {
                     impl_type = impl_desc_type::jit_asimd;
+                } else {
+                    IE_THROW() << "not supported isa";
                 }
                 #endif
             }

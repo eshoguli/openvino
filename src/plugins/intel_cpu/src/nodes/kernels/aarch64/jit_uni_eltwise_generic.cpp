@@ -466,12 +466,12 @@ void jit_uni_eltwise_generic<isa>::apply_post_ops() {
     }
 }
 
-// TODO: Advanced SIMD is supported only, other has to be commented
 template struct jit_uni_eltwise_generic<cpu_isa_t::asimd>;
-template struct jit_uni_eltwise_generic<cpu_isa_t::sve_128>;
-template struct jit_uni_eltwise_generic<cpu_isa_t::sve_256>;
+// TODO: Advanced SIMD is supported only
+//template struct jit_uni_eltwise_generic<cpu_isa_t::sve_128>;
+//template struct jit_uni_eltwise_generic<cpu_isa_t::sve_256>;
 //template struct jit_uni_eltwise_generic<cpu_isa_t::sve_384>;
-template struct jit_uni_eltwise_generic<cpu_isa_t::sve_512>;
+//template struct jit_uni_eltwise_generic<cpu_isa_t::sve_512>;
 
 }  // namespace aarch64
 }  // namespace intel_cpu
