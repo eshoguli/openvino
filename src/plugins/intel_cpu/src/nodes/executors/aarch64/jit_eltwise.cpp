@@ -17,7 +17,8 @@ bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm) {
                                     Algorithm::EltwiseMultiply,
                                     Algorithm::EltwiseMulAdd,
                                     Algorithm::EltwisePowerDynamic,
-                                    Algorithm::EltwisePowerStatic);
+                                    Algorithm::EltwisePowerStatic,
+                                    Algorithm::EltwiseRelu);
     if (!is_supported) {
         return false;
     }
@@ -51,12 +52,18 @@ bool JitEltwiseExecutorBuilder::isSupported(const EltwiseAttrs& eltwiseAttrs,
         return true;
     };
 
+    // TODO: should we check precision here?
     switch (eltwiseAttrs.algorithm) {
         case Algorithm::EltwiseAdd:
         case Algorithm::EltwiseMultiply:
         case Algorithm::EltwiseMulAdd:
         case Algorithm::EltwisePowerDynamic:
             if (!checkPrecision({Precision::FP32, Precision::FP32}, Precision::FP32)) {
+                return false;
+            }
+            break;
+        case Algorithm::EltwiseRelu:
+            if (!checkPrecision({Precision::FP32}, Precision::FP32)) {
                 return false;
             }
             break;

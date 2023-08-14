@@ -381,6 +381,13 @@ fill_data_random_float(InferenceEngine::Blob::Ptr &blob, const uint32_t range, i
             rawBlobDataPtr[i] = static_cast<T>(value);
         }
     }
+
+    // TODO: debug
+    // float value = -1.f;
+    // for (size_t i = 0; i < blob->size(); i++) {
+    //     rawBlobDataPtr[i] = static_cast<T>(value);
+    //     value += 1.f;
+    // }
 }
 
 template<typename T>

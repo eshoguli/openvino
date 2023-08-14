@@ -188,6 +188,10 @@ void jit_power_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const 
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (exec_prc_ != Precision::FP32) {
+        IE_THROW() << "unsupported precision";
+    }
+
     using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
 
     // TODO: if the second input is scalar then it can be hardcoded and easily unrolled
@@ -215,6 +219,51 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
         h->b(Xbyak_aarch64::AL, loop_label);
     }
     h->L(loop_end_label);
+}
+
+/// RELU ///
+jit_relu_emitter::jit_relu_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                   dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                   const std::shared_ptr<ov::Node>& node,
+                                   Precision exec_prc)
+                                   : jit_emitter(host, host_isa, node, exec_prc) {
+}
+
+jit_relu_emitter::jit_relu_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                   dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                   Precision exec_prc)
+                                   : jit_emitter(host, host_isa, exec_prc) {
+}
+
+size_t jit_relu_emitter::get_inputs_num() const { return 1; }
+
+size_t jit_relu_emitter::aux_vecs_count() const { return 1; }
+
+std::set<std::vector<element::Type>> jit_relu_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
+    return {{element::f32}};
+}
+
+void jit_relu_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
+    } else {
+        IE_THROW() << "Can't create jit eltwise kernel";
+    }
+}
+
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (exec_prc_ != Precision::FP32) {
+        IE_THROW() << "unsupported precision";
+    }
+
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    TReg src = TReg(in_vec_idxs[0]);
+    TReg mask = TReg(aux_vec_idxs[1]);
+    TReg dst = TReg(out_vec_idxs[0]);
+
+    h->fcmgt(mask.s, src.s, 0.0);
+    h->and_(dst.b, src.b, mask.b);
 }
 
 jit_dnnl_emitter::jit_dnnl_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
