@@ -258,12 +258,21 @@ void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
     }
 
     using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    TReg src = TReg(in_vec_idxs[0]);
-    TReg mask = TReg(aux_vec_idxs[1]);
-    TReg dst = TReg(out_vec_idxs[0]);
+    TReg tmp = TReg(aux_vec_idxs[1]);
+    h->sub(tmp.s, tmp.s, tmp.s);
 
-    h->fcmgt(mask.s, src.s, 0.0);
-    h->and_(dst.b, src.b, mask.b);
+    TReg src = TReg(in_vec_idxs[0]);
+    TReg dst = TReg(out_vec_idxs[0]);
+    h->fmaxnm(dst.s, src.s, tmp.s);
+
+    // TODO: just another option to avoid memory usage
+    // Xbyak_aarch64::WReg sc_reg{0};
+    // h->mov(sc_reg, 0ull);
+    // h->dup(tmp.s, sc_reg);
+
+    // TODO: just another option to avoid memory usage
+    // h->fcmgt(mask.s, src.s, 0.0);
+    // h->and_(dst.b, src.b, mask.b);
 }
 
 jit_dnnl_emitter::jit_dnnl_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
