@@ -6,6 +6,7 @@
 
 #include <memory>
 #include "ie_ngraph_utils.hpp"
+#include "jit_uni_eltwise_injector.hpp"
 
 namespace ov {
 namespace intel_cpu {
@@ -273,6 +274,54 @@ void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
     // TODO: just another option to avoid memory usage
     // h->fcmgt(mask.s, src.s, 0.0);
     // h->and_(dst.b, src.b, mask.b);
+}
+
+/// EXP ///
+jit_exp_emitter::jit_exp_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                 const std::shared_ptr<ov::Node>& node,
+                                 Precision exec_prc)
+                                 : jit_emitter(host, host_isa, node, exec_prc) {
+}
+
+jit_exp_emitter::jit_exp_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
+                                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                 Precision exec_prc)
+                                 : jit_emitter(host, host_isa, exec_prc) {
+}
+
+size_t jit_exp_emitter::get_inputs_num() const { return 1; }
+
+size_t jit_exp_emitter::aux_vecs_count() const { return 2; }
+
+std::set<std::vector<element::Type>> jit_exp_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
+    return {{element::f32}};
+}
+
+void jit_exp_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
+    } else {
+        IE_THROW() << "Can't create jit eltwise kernel";
+    }
+}
+
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (exec_prc_ != Precision::FP32) {
+        IE_THROW() << "unsupported precision";
+    }
+
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    TReg src = TReg(in_vec_idxs[0]);
+    TReg aux1 = TReg(aux_vec_idxs[0]);
+    TReg aux2 = TReg(aux_vec_idxs[1]);
+    TReg dst = TReg(out_vec_idxs[0]);
+
+    // TODO: temporary use directly
+    auto injector = std::make_shared<jit_uni_eltwise_injector_f32<isa>>(h, dnnl::impl::alg_kind_t::dnnl_eltwise_exp, 0.f, 0.f);
+    injector->register_table_entries();
+    injector->exp_compute_vector_fwd(src, dst, aux1, aux2);
 }
 
 jit_dnnl_emitter::jit_dnnl_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,

@@ -12,6 +12,7 @@ namespace executors {
 namespace aarch64 {
 
 bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm) {
+    // TODO: should we check precision here?
     const auto is_supported = one_of(algorithm,
                                     Algorithm::EltwiseAdd,
                                     Algorithm::EltwiseMultiply,
@@ -19,6 +20,8 @@ bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm) {
                                     Algorithm::EltwisePowerDynamic,
                                     Algorithm::EltwisePowerStatic,
                                     Algorithm::EltwiseRelu);
+                                    // TODO: debug: wip
+                                    //Algorithm::EltwiseExp);
     if (!is_supported) {
         return false;
     }
@@ -63,6 +66,8 @@ bool JitEltwiseExecutorBuilder::isSupported(const EltwiseAttrs& eltwiseAttrs,
             }
             break;
         case Algorithm::EltwiseRelu:
+        // TODO: debug: wip
+        //case Algorithm::EltwiseExp:
             if (!checkPrecision({Precision::FP32}, Precision::FP32)) {
                 return false;
             }
