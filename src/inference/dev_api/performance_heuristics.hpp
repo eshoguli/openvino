@@ -7,6 +7,7 @@
 #include <cfloat>
 
 #include "ngraph/ngraph.hpp"
+#include "ngraph/pass/serialize.hpp"
 
 namespace ov {
 struct MemBandwidthPressure {
@@ -39,6 +40,9 @@ static MemBandwidthPressure MemBandwidthPressureTolerance(
         return (type == ngraph::element::bf16) || (type == ngraph::element::f16);
     };
 
+    ngraph::pass::Serialize("svg/cpu.util.1.xml", "svg/cpu.util.1.bin").run_on_model(nGraphFunc);
+    ngraph::pass::VisualizeTree("svg/cpu.util.1.svg").run_on_model(nGraphFunc);
+
     float worst_case = MemBandwidthPressure::UNKNOWN;
     // Traverse nGraph Function in topological order
     for (auto& node : nGraphFunc->get_ordered_ops()) {
@@ -68,6 +72,10 @@ static MemBandwidthPressure MemBandwidthPressureTolerance(
                 const auto& shapeInput0 = input0.get_shape();
                 const auto& shapeInput1 = input1.get_shape();
                 const auto non_const = !ov::op::util::is_on_constant_path(node->input_value(1));
+                const auto mat_mul_cons = ov::get_constant_from_source(node->input_value(1));
+                if (mat_mul_cons != nullptr) {
+                    //
+                }
                 const auto& shapeOutput = output.get_shape();
                 const auto dataSizeInput0 =
                     std::accumulate(shapeInput0.begin(), shapeInput0.end(), size_t(1), std::multiplies<size_t>());
@@ -133,6 +141,10 @@ static MemBandwidthPressure MemBandwidthPressureTolerance(
             }
         }
     }
+
+    ngraph::pass::Serialize("svg/cpu.util.2.xml", "svg/cpu.util.2.bin").run_on_model(nGraphFunc);
+    ngraph::pass::VisualizeTree("svg/cpu.util.2.svg").run_on_model(nGraphFunc);
+
     MemBandwidthPressure res;
     res.max_mem_tolerance = worst_case;
     res.ratio_mem_limited_convs = total_convs ? static_cast<float>(mem_limited_convs) / total_convs : 0;
