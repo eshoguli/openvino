@@ -59,10 +59,7 @@ protected:
 
         init_input_shapes({shapes});
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(inputPrecision, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(inputPrecision, inputDynamicShapes);
         auto axisNode = ngraph::opset1::Constant::create(ngraph::element::i32, ngraph::Shape{}, std::vector<int64_t>{axis})->output(0);
         auto cumSum = std::make_shared<opset3::CumSum>(params[0], axisNode, exclusive, reverse);
 

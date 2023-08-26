@@ -84,10 +84,7 @@ protected:
         size_t convOutChannels;
         std::tie(kernel, stride, padBegin, padEnd, dilation, convOutChannels, padType) = convParams;
 
-        ov::ParameterVector inputParams;
-        for (auto&& shape : inputDynamicShapes) {
-            inputParams.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto inputParams = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
         auto paramOuts = ngraph::helpers::convert2OutputVector(ngraph::helpers::castOps2Nodes<ngraph::op::Parameter>(inputParams));
 
         auto convolutionNode = ngraph::builder::makeConvolution(paramOuts.front(), netType, kernel, stride, padBegin,

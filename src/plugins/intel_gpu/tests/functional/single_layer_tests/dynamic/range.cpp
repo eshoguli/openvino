@@ -129,7 +129,7 @@ protected:
         std::vector<float> inputValues;
         ElementType netType;
         std::map<std::string, std::string> additionalConfig;
-        ov::ParameterVector params;
+        ngraph::ParameterVector params;
         std::tie(inputShapes, inputValues, netType, targetDevice, additionalConfig) = basicParamsSet;
 
         input_values = inputValues;
@@ -139,15 +139,10 @@ protected:
 
         if (netType == ElementType::undefined) {
             std::vector<element::Type> types = { ElementType::f32, ElementType::i32, ElementType::f32 };
-            for (size_t i = 0; i < types.size(); i++) {
-                auto paramNode = std::make_shared<ov::op::v0::Parameter>(types[i], inputDynamicShapes[i]);
-                params.push_back(paramNode);
-            }
+            params = builder::makeDynamicParams(types, inputDynamicShapes);
             netType = ElementType::f32;
         } else {
-            for (auto&& shape : inputDynamicShapes) {
-                params.push_back(std::make_shared<ov::op::v0::Parameter>(netType, shape));
-            }
+            params = builder::makeDynamicParams(netType, inputDynamicShapes);
         }
         const auto range = std::make_shared<ngraph::opset8::Range>(params[0], params[1], params[2], netType);
 

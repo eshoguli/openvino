@@ -42,10 +42,7 @@ protected:
         ov::test::InputShape input_shape{{}, {{1, 3, 3, 3}}};
         init_input_shapes({input_shape});
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(precision, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(precision, inputDynamicShapes);
         auto split = ngraph::builder::makeSplit(params.front(), precision, 3, 1);
         auto add_const = ngraph::builder::makeConstant(precision, {1}, std::vector<float>({1.0f}));
         auto add_1 = ngraph::builder::makeEltwise(split->output(0), add_const, ngraph::helpers::EltwiseTypes::ADD);

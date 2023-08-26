@@ -94,10 +94,7 @@ protected:
             targetShapes.push_back({padsEnd.size()});
             targetShapes.push_back({});
         }
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(dataType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(dataType, inputDynamicShapes);
         std::shared_ptr<ov::Node> pad;
         if (secondaryInputType == ngraph::helpers::InputLayerType::PARAMETER) {
             ov::Shape inShape = {padsBegin.size()};

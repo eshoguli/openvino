@@ -36,10 +36,7 @@ public:
         InputShape inpShape0 = {{}, {{56}}};
         InputShape inpShape1 = {{-1, -1, 768}, {{1, 544, 768}}};
         init_input_shapes({inpShape0, inpShape1});
-        ov::ParameterVector inputParams;
-        for (auto&& shape : inputDynamicShapes) {
-            inputParams.push_back(std::make_shared<ov::op::v0::Parameter>(ov::element::f32, shape));
-        }
+        auto inputParams = builder::makeDynamicParams(element::f32, inputDynamicShapes);
         auto end = builder::makeConstant(element::i64, {1}, std::vector<int64_t>{2147483647});
         auto stride  = builder::makeConstant(element::i64, {1}, std::vector<int64_t>{1});
         auto indices = builder::makeConstant(element::i64, {1}, std::vector<int64_t>{1});

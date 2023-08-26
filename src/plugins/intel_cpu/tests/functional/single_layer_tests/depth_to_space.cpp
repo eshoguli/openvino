@@ -71,10 +71,7 @@ protected:
         targetDevice = ov::test::utils::DEVICE_CPU;
         init_input_shapes({shapes});
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
         auto d2s = ngraph::builder::makeDepthToSpace(params[0], mode, blockSize);
         function = makeNgraphFunction(inType, params, d2s, "DepthToSpace");
     }

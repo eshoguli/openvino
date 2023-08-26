@@ -65,10 +65,7 @@ protected:
         targetDevice = ov::test::utils::DEVICE_CPU;
         init_input_shapes({shapes});
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
         auto shuffleChannels = std::dynamic_pointer_cast<ngraph::opset3::ShuffleChannels>(
                 ngraph::builder::makeShuffleChannels(params[0], axis, group));
         function = makeNgraphFunction(inType, params, shuffleChannels, "ShuffleChannels");

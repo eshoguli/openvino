@@ -208,7 +208,7 @@ protected:
         std::string cpuNodeType = "FullyConnected";
         selectedType = makeSelectedTypeStr(selectedType, outType);
 
-        ov::ParameterVector params{std::make_shared<ov::op::v0::Parameter>(inType, inShapeA)};
+        auto params = builder::makeDynamicParams(inType, {inShapeA});
         auto paramOuts = helpers::convert2OutputVector(helpers::castOps2Nodes<opset1::Parameter>(params));
         std::shared_ptr<Node> inputB = builder::makeConstant<float>(weiConstElemType, inShapeB.get_shape(), {}, true);
         if (weiConstElemType == ElementType::f16) {
@@ -490,10 +490,7 @@ protected:
         std::string cpuNodeType = "FullyConnected";
         selectedType = makeSelectedTypeStr(selectedType, outType);
 
-        ov::ParameterVector params;
-        for (auto&& shape : {inShapeFC0, inShapeFC1}) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto params = builder::makeDynamicParams(inType, {inShapeFC0, inShapeFC1});
         auto paramOuts = helpers::convert2OutputVector(helpers::castOps2Nodes<opset1::Parameter>(params));
         std::shared_ptr<Node> inputWeights = builder::makeConstant<float>(weiConstElemType, inShapeWeights.get_shape(), {}, true);
         if (weiConstElemType == ElementType::f16) {

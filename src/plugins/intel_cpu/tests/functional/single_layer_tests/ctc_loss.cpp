@@ -96,11 +96,7 @@ protected:
         std::vector<ngraph::element::Type> types{fPrecision, iPrecision, iPrecision, iPrecision};
         std::vector<ov::PartialShape> partialShapes{inputDynamicShapesValues, shapeN, shapeNT, shapeN};
 
-        ov::ParameterVector params;
-        for (size_t i = 0; i < types.size(); i++) {
-            auto param_node = std::make_shared<ov::op::v0::Parameter>(types[i], partialShapes[i]);
-            params.push_back(param_node);
-        }
+        auto params = ngraph::builder::makeDynamicParams(types, partialShapes);
         auto bankNode = ngraph::op::Constant::create(ngraph::element::i64, ngraph::Shape{ }, {blank});
 
         auto ctcLoss = std::make_shared<ngraph::opset4::CTCLoss>(params[0], params[1], params[2],

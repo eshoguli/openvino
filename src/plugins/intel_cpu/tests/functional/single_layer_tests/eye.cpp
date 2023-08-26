@@ -84,10 +84,7 @@ protected:
     }
 
     std::shared_ptr<ngraph::Function> createFunction() {
-        ov::ParameterVector inputParams;
-        for (auto&& shape : inputDynamicShapes) {
-            inputParams.push_back(std::make_shared<ov::op::v0::Parameter>(ov::element::i32, shape));
-        }
+        auto inputParams = ngraph::builder::makeDynamicParams(ngraph::element::i32, inputDynamicShapes);
         auto rowsPar = inputParams[0];
         rowsPar->set_friendly_name("rows");
         auto colsPar = inputParams[1];

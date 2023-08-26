@@ -90,10 +90,7 @@ protected:
           init_input_shapes(inputShapes);
           const auto AllZeroData = inputDynamicShapes[0];
           const auto ConcatInputData = inputDynamicShapes[1];
-          ov::ParameterVector params;
-          for (auto&& shape : {AllZeroData, ConcatInputData}) {
-              params.push_back(std::make_shared<ov::op::v0::Parameter>(netType, shape));
-          }
+          auto params = builder::makeDynamicParams(netType, {AllZeroData, ConcatInputData});
           auto paramOuts =
               helpers::convert2OutputVector(ngraph::helpers::castOps2Nodes<ngraph::opset3::Parameter>(params));
           const ElementType intInputsPrecision = ElementType::i32;

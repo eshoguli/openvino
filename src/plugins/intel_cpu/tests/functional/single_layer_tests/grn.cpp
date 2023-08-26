@@ -67,10 +67,8 @@ protected:
 
         init_input_shapes({inputShape});
 
-        ov::ParameterVector paramsIn;
-        for (auto&& shape : inputDynamicShapes) {
-            paramsIn.push_back(std::make_shared<ov::op::v0::Parameter>(netPrecision, shape));
-        }
+        const auto paramsIn = ngraph::builder::makeDynamicParams(netPrecision, inputDynamicShapes);
+
         const auto paramsOut = ngraph::helpers::convert2OutputVector(ngraph::helpers::castOps2Nodes<ngraph::op::Parameter>(paramsIn));
         const auto grn = std::make_shared<ngraph::opset1::GRN>(paramsOut[0], bias);
         const ngraph::ResultVector results{std::make_shared<ngraph::opset1::Result>(grn)};

@@ -69,10 +69,7 @@ protected:
         init_input_shapes(inputShapes);
         flattened = std::get<0>(flatOrAxis);
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(dataPrecision, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(dataPrecision, inputDynamicShapes);
         params[0]->set_friendly_name("data");
         auto paramOuts =
             ngraph::helpers::convert2OutputVector(ngraph::helpers::castOps2Nodes<ov::op::v0::Parameter>(params));

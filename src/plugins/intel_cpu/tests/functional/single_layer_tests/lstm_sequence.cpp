@@ -111,10 +111,7 @@ protected:
             selectedType = makeSelectedTypeStr(selectedType, netPrecision);
         }
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(netPrecision, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(netPrecision, inputDynamicShapes);
         const size_t batchSize = inputDynamicShapes[0][0].is_static() ? inputDynamicShapes[0][0].get_length() :
             inputDynamicShapes[1][0].is_static() ? inputDynamicShapes[1][0].get_length() :
             inputDynamicShapes[2][0].is_static() ? inputDynamicShapes[2][0].get_length() :

@@ -214,7 +214,8 @@ protected:
 
         init_input_shapes(inputShapes);
 
-        ov::ParameterVector params{std::make_shared<ov::op::v0::Parameter>(ngPrc, inputDynamicShapes.front())};
+        auto params = ngraph::builder::makeDynamicParams(ngPrc, {inputDynamicShapes.front()});
+
         std::shared_ptr<ov::Node> sizesInput, scalesInput;
         if (shapeCalcMode == ov::op::v11::Interpolate::ShapeCalcMode::SCALES) {
             if (shapeInputType == ngraph::helpers::InputLayerType::PARAMETER) {

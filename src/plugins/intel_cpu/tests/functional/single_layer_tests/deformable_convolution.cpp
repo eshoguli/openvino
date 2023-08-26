@@ -156,10 +156,8 @@ protected:
         bool withBilinearInterpolationPad, withModulation;
         std::tie(withBilinearInterpolationPad, withModulation, offsetType) = dcSpecificParams;
         auto ngPrc = FuncTestUtils::PrecisionUtils::convertIE2nGraphPrc(netPrecision);
-        ov::ParameterVector inputParams;
-        for (auto&& shape : inputDynamicShapes) {
-            inputParams.push_back(std::make_shared<ov::op::v0::Parameter>(ngPrc, shape));
-        }
+        auto inputParams = ngraph::builder::makeDynamicParams(ngPrc, inputDynamicShapes);
+
         auto data = inputParams[0];
         data->set_friendly_name("a_data");
         auto offset_vals = inputParams[1];

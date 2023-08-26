@@ -21,10 +21,8 @@ protected:
         init_input_shapes({inputShapes});
 
         auto ngPrc = ngraph::element::f32;
-        ov::ParameterVector inputParams;
-        for (auto&& shape : inputDynamicShapes) {
-            inputParams.push_back(std::make_shared<ov::op::v0::Parameter>(ngPrc, shape));
-        }
+        auto inputParams = ngraph::builder::makeDynamicParams(ngPrc, inputDynamicShapes);
+
         auto splitAxisOp = std::make_shared<ngraph::opset3::Constant>(ngraph::element::i64, ngraph::Shape{}, std::vector<int64_t>{0});
         std::vector<int> splitLenght = {1, 0, 6};
         auto splitLengthsOp = std::make_shared<ngraph::opset3::Constant>(ngraph::element::i32, ngraph::Shape{splitLenght.size()}, splitLenght);

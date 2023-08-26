@@ -57,10 +57,7 @@ void IsInfLayerTest::SetUp() {
     init_input_shapes(shapes);
     configuration.insert(additionalConfig.begin(), additionalConfig.end());
 
-    ov::ParameterVector parameters;
-    for (auto&& shape : inputDynamicShapes) {
-        parameters.push_back(std::make_shared<ov::op::v0::Parameter>(dataPrc, shape));
-    }
+    auto parameters = ngraph::builder::makeDynamicParams(dataPrc, inputDynamicShapes);
     parameters[0]->set_friendly_name("Data");
     auto paramOuts = ngraph::helpers::convert2OutputVector(ngraph::helpers::castOps2Nodes<ov::op::v0::Parameter>(parameters));
 

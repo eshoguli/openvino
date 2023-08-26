@@ -101,10 +101,7 @@ protected:
         std::tie(inType, inputShape) = this->GetParam();
 
         init_input_shapes({inputShape});
-        ov::ParameterVector inputParams;
-        for (auto&& shape : inputDynamicShapes) {
-            inputParams.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto inputParams = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
         auto paramOuts = ngraph::helpers::convert2OutputVector(ngraph::helpers::castOps2Nodes<ov::op::v0::Parameter>(inputParams));
         auto customOp = std::make_shared<CustomOpI64>(paramOuts);
 

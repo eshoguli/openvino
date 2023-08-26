@@ -95,10 +95,8 @@ protected:
         targetDevice = ov::test::utils::DEVICE_CPU;
         init_input_shapes(shapes);
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(netType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(netType, inputDynamicShapes);
+
         // Set up the cell body, a function from (Xi, Yi) -> (Zo)
         // Body parameters
         const std::vector<ngraph::PartialShape> body_params_shapes(shapes.size(), ngraph::PartialShape::dynamic());
@@ -179,10 +177,8 @@ protected:
         for (auto& target : targetStaticShapes)
             target.insert(target.begin(), ngraph::Shape{});
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
+
         // Body parameters
         const std::vector<ngraph::PartialShape> body_params_shapes(shapes.size(), ngraph::PartialShape::dynamic());
         ngraph::ParameterVector body_params = { std::make_shared<ngraph::opset1::Parameter>(ngraph::element::i64, ngraph::Shape{}) };
@@ -250,10 +246,8 @@ protected:
         targetDevice = ov::test::utils::DEVICE_CPU;
         init_input_shapes(shapes);
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
+
         // Set up the cell body, a function from (Xi, Yi) -> (Zo)
         // Body parameters
         const std::vector<ngraph::PartialShape> body_params_shapes(shapes.size(), ngraph::PartialShape::dynamic());
@@ -323,16 +317,12 @@ protected:
         targetDevice = ov::test::utils::DEVICE_CPU;
         init_input_shapes(shapes);
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
+
         // Body parameters
         const std::vector<ngraph::PartialShape> body_params_shapes(shapes.size(), ngraph::PartialShape::dynamic());
-        ov::ParameterVector body_params;
-        for (auto&& shape : inputDynamicShapes) {
-            body_params.push_back(std::make_shared<ov::op::v0::Parameter>(inType, shape));
-        }
+        auto body_params = ngraph::builder::makeDynamicParams(inType, inputDynamicShapes);
+
         auto body_condition_const = std::make_shared<ngraph::opset5::Constant>(ngraph::element::boolean, ngraph::Shape{1}, true);
         auto exec_condition = std::make_shared<ngraph::opset5::Constant>(ngraph::element::boolean, ngraph::Shape{1}, exec_cond);
         std::shared_ptr<ngraph::Node> trip_count_input;

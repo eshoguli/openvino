@@ -51,12 +51,10 @@ protected:
 
         init_input_shapes({inputShape});
 
+        inType = ov::element::Type(netPrecision);
         outType = ElementType::i32;
 
-        ov::ParameterVector functionParams;
-        for (auto&& shape : inputDynamicShapes) {
-            functionParams.push_back(std::make_shared<ov::op::v0::Parameter>(netPrecision, shape));
-        }
+        auto functionParams = builder::makeDynamicParams(inType, inputDynamicShapes);
         auto paramOuts = helpers::convert2OutputVector(helpers::castOps2Nodes<opset3::Parameter>(functionParams));
         auto shapeOfOp = std::make_shared<opset3::ShapeOf>(paramOuts[0], element::i32);
 

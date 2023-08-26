@@ -159,15 +159,14 @@ protected:
         init_input_shapes(inputShapes);
 
         auto ngPrc = FuncTestUtils::PrecisionUtils::convertIE2nGraphPrc(prc);
-        ov::ParameterVector inputs{std::make_shared<ov::op::v0::Parameter>(ngPrc, inputDynamicShapes.front())};
+        auto inputs = ngraph::builder::makeDynamicParams(ngPrc, {inputDynamicShapes.front()});
         auto dataInput = inputs.front();
         dataInput->set_friendly_name("param_1");
         std::shared_ptr<ngraph::Node> secondaryInput;
         if (secondType == ngraph::helpers::InputLayerType::PARAMETER) {
-            auto param = std::make_shared<ov::op::v0::Parameter>(secondInPrc, inputDynamicShapes.back());
-            param->set_friendly_name("param_2");
-            secondaryInput = param;
-            inputs.push_back(param);
+            secondaryInput = ngraph::builder::makeDynamicParams(secondInPrc, {inputDynamicShapes.back()}).front();
+            secondaryInput->set_friendly_name("param_2");
+            inputs.push_back(std::dynamic_pointer_cast<ngraph::opset3::Parameter>(secondaryInput));
         } else {
             secondaryInput = ngraph::builder::makeConstant(secondInPrc, {inpDesc.data[0].size()}, inpDesc.data[0]);
         }

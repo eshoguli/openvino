@@ -83,10 +83,7 @@ protected:
         init_input_shapes(inputShapes);
         const auto inShapeShapeOf = inputDynamicShapes[0];
         const auto inShapeElt = inputDynamicShapes[1];
-        ov::ParameterVector params;
-        for (auto&& shape : {inShapeShapeOf, inShapeElt}) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(netType, shape));
-        }
+        auto params = builder::makeDynamicParams(netType, {inShapeShapeOf, inShapeElt});
         auto paramOuts = helpers::convert2OutputVector(ngraph::helpers::castOps2Nodes<ngraph::opset3::Parameter>(params));
 
         auto addOp1 = ngraph::builder::makeEltwise(paramOuts[1], paramOuts[1], ngraph::helpers::EltwiseTypes::ADD);

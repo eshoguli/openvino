@@ -103,10 +103,7 @@ protected:
             targetShapes.push_back({ssParams.strides.size()});
         }
 
-        ov::ParameterVector params;
-        for (auto&& shape : inputDynamicShapes) {
-            params.push_back(std::make_shared<ov::op::v0::Parameter>(dataType, shape));
-        }
+        auto params = ngraph::builder::makeDynamicParams(dataType, inputDynamicShapes);
         std::shared_ptr<ngraph::Node> ss;
         if (secondaryInputType == ngraph::helpers::InputLayerType::PARAMETER) {
             ov::Shape inShape = {ssParams.begin.size()};
