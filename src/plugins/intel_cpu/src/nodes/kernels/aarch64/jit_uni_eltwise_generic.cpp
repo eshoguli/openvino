@@ -355,6 +355,18 @@ struct EltwiseEmitter {
     }
 };
 
+template<>
+struct EltwiseEmitter<jit_power_emitter> {
+    void operator()(EltwiseEmitterContext & ctx) {
+        ctx.emitter = std::make_shared<jit_power_emitter>(ctx.host,
+                                                          ctx.host_isa,
+                                                          ctx.opData.alpha,
+                                                          ctx.opData.beta,
+                                                          ctx.opData.gamma,
+                                                          ctx.exec_prc);
+    }
+};
+
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitter(const EltwiseData& data, const Precision& exec_prec) {
     EltwiseEmitterContext ctx = {
@@ -369,7 +381,6 @@ std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitte
     OV_CASE(Algorithm::EltwiseAdd, ov::intel_cpu::aarch64::jit_add_emitter),
     OV_CASE(Algorithm::EltwiseMulAdd, ov::intel_cpu::aarch64::jit_mul_add_emitter),
     OV_CASE(Algorithm::EltwiseMultiply, ov::intel_cpu::aarch64::jit_multiply_emitter),
-    OV_CASE(Algorithm::EltwisePowerDynamic, ov::intel_cpu::aarch64::jit_power_emitter),
     OV_CASE(Algorithm::EltwisePowerStatic, ov::intel_cpu::aarch64::jit_power_emitter));
 
     if (!ctx.emitter)

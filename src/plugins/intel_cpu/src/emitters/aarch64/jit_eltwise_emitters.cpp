@@ -166,19 +166,28 @@ std::set<std::vector<element::Type>> jit_multiply_emitter::get_supported_precisi
 /// POWER ///
 jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                                      dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                     const std::shared_ptr<ov::Node>& node,
-                                     const float alpha)
-                                     : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node), alpha) {
+                                     const std::shared_ptr<ov::Node>& node)
+                                     : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
+    const auto power_node = ov::as_type_ptr<ov::snippets::op::PowerStatic>(node);
+    if (power_node == nullptr) {
+        IE_THROW() << "Can't cast to snippets::op::PowerStatic";
+    }
+
+    power = power_node->get_power();
+    scale = 1.f;
+    shift = 0.f;
 }
 
 jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                                      dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                     const Precision exec_prc,
-                                     const float alpha)
-                                     : jit_emitter(host, host_isa, exec_prc, alpha) {
+                                     const float power,
+                                     const float scale,
+                                     const float shift,
+                                     const Precision exec_prc)
+                                     : jit_emitter(host, host_isa, exec_prc), power(power), scale(scale), shift(shift) {
 }
 
-size_t jit_power_emitter::get_inputs_count() const { return 2; }
+size_t jit_power_emitter::get_inputs_count() const { return 1; }
 
 size_t jit_power_emitter::get_aux_vecs_count() const { return 1; }
 
@@ -204,21 +213,61 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
 
     using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
 
-    // TODO: if the second input is scalar then it can be hardcoded and easily unrolled
     TReg src0 = TReg(in_vec_idxs[0]);
-    TReg src1 = TReg(in_vec_idxs[1]);
-
-    TReg exp = TReg(aux_vec_idxs[0]);
-    h->uni_fcvtzs(exp.s, src1.s);
-    Xbyak_aarch64::WReg counter{aux_gpr_idxs[0]};
-    h->mov(counter, exp.s[0]);
-
     TReg dst = TReg(out_vec_idxs[0]);
+
+    // if ((shift != 0.f) && (scale != 1.f)) {
+        // fma
+    // } else {
+    //     if (shift != 0.f) {
+    //         TReg aux = TReg(out_vec_idxs[0]);
+    //         // TODO: debug: is it really possible?
+    //         h->fmov(aux.s, shift);
+    //         h->fadd(src0.s, src0.s, aux.s);
+    //     }
+
+    //     if (scale != 1.f) {
+    //         TReg aux = TReg(out_vec_idxs[0]);
+    //         // TODO: debug: is it really possible?
+    //         h->fmov(aux.s, scale);
+    //         h->fmul(src0.s, src0.s, aux.s);
+    //     }
+    // }
+
+    if (shift != 0.f) {
+        TReg aux = TReg(out_vec_idxs[0]);
+        // TODO: debug: is it really possible?
+        h->fmov(aux.s, shift);
+        h->fadd(src0.s, src0.s, aux.s);
+    }
+
+    if (scale != 1.f) {
+        TReg aux = TReg(out_vec_idxs[0]);
+        // TODO: debug: is it really possible?
+        h->fmov(aux.s, scale);
+        h->fmul(src0.s, src0.s, aux.s);
+    }
+
+    if (power == 1.f) {
+        if (src0.getIdx() != dst.getIdx()) {
+            h->mov(dst.b16, src0.b16);
+        }
+        return;
+    }
+
+    if (power == 0.f) {
+        Xbyak_aarch64::WReg zero(aux_gpr_idxs[0]);
+        h->mov(zero, 1);
+        h->dup(dst.s, zero);
+        return;
+    }
+
+    Xbyak_aarch64::WReg counter{aux_gpr_idxs[0]};
+    h->mov(counter, power);
     h->uni_orr(dst, src0, src0);
 
     Xbyak_aarch64::Label loop_label;
     Xbyak_aarch64::Label loop_end_label;
-    // TODO: refactor
     h->L(loop_label);
     {
         h->cmp(counter, 2);

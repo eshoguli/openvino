@@ -111,30 +111,13 @@ bool is_supported(const Node* node) {
         }
     }
 
-    if ((node->getAlgorithm() != Algorithm::EltwisePowerDynamic) &&
-        (node->getAlgorithm() != Algorithm::EltwisePowerStatic)) {
+    const auto eltwise = dynamic_cast<const PowerStaticNode*>(node);
+    if (eltwise == nullptr) {
         return true;
     }
 
-    const auto& input_shape = node->getInputShapeAtPort(1);
-    if (input_shape.getElementsCount() != 1) {
-        return false;
-    }
-
-    const auto& valueEdge = node->getParentEdgeAt(1);
-    const auto& valueNode = valueEdge->getParent();
-    const auto& type = valueNode->getType();
-    if (type != Type::Input) {
-        return false;
-    }
-    const auto& input = std::dynamic_pointer_cast<Input>(valueNode);
-    if (!input->isConstant()) {
-        return false;
-    }
-    const auto& memoryPtr = input->getMemoryPtr();
-    const auto values = static_cast<float*>(memoryPtr->getData());
-    const float value = values[0];
-    const auto is_supported_value = (value > 0.f) && (ceilf(value) == value);
+    const auto power = eltwise->get_power();
+    const auto is_supported_value = (power >= 0.f) && (ceilf(power) == power);
     return is_supported_value;
 }
 }  // namespace

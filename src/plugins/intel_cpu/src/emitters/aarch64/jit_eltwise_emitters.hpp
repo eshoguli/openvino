@@ -83,13 +83,14 @@ class jit_power_emitter : public jit_emitter {
 public:
     jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                       dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                      const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
-                      const float alpha = 0.f);
+                      const float power,
+                      const float scale,
+                      const float shift,
+                      const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32);
 
     jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                       dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                      const std::shared_ptr<ov::Node>& node,
-                      const float alpha = 0.f);
+                      const std::shared_ptr<ov::Node>& node);
 
     size_t get_inputs_count() const override;
 
@@ -100,6 +101,10 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ngraph::Node>& node = nullptr);
 
 private:
+    float power;
+    float scale;
+    float shift;
+
     void emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const override;
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
