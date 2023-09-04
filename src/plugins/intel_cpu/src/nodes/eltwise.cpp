@@ -113,6 +113,13 @@ bool is_supported(const Node* node) {
         }
     }
 
+    if (node->getAlgorithm() == Algorithm::EltwiseRelu) {
+        const auto eltwise = dynamic_cast<const Eltwise*>(node);
+        if ((eltwise->getAlpha() != 0.f) || (eltwise->getBeta() != 0.f) || (eltwise->getGamma() != 0.f)) {
+            return false;
+        }
+    }
+
     if (node->getAlgorithm() != Algorithm::EltwisePowerDynamic) {
         return true;
     }
@@ -2550,14 +2557,14 @@ void Eltwise::execute(dnnl::stream strm) {
         // }
 
         // TODO: debug
-        // if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
-        //     std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
-        // } else if ((std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
-        //            (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
-        //      std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
-        // } else {
-        //     std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
-        // }
+        if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
+            std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        } else if ((std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
+                   (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
+             std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        } else {
+            std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        }
         execPtr->exec(args_ptrs, dims_out);
 
         // {
@@ -2580,7 +2587,7 @@ void Eltwise::execute(dnnl::stream strm) {
         dstMemory.push_back(getChildEdgeAt(0)->getMemoryPtr());
 
         // TODO: debug
-        // std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
         aclExecPtr->exec(srcMemory, dstMemory, fqDataPtrs.data());
     } else {
         IE_THROW() << "Can't execute eltwise node with name: " << getName() << ". Primitive isn't created";

@@ -19,9 +19,9 @@ bool JitEltwiseExecutor::isSupported(const Algorithm& algorithm) {
                                     Algorithm::EltwiseMulAdd,
                                     // TODO: debug: temporary uncommented: CPU tests don't support enabled case
                                     Algorithm::EltwisePowerDynamic,
-                                    Algorithm::EltwisePowerStatic);
+                                    Algorithm::EltwisePowerStatic,
                                     // TODO: debug: PRelu is not implemented
-                                    //Algorithm::EltwiseRelu);
+                                    Algorithm::EltwiseRelu);
                                     // TODO: debug: wip
                                     //Algorithm::EltwiseExp);
     if (!is_supported) {

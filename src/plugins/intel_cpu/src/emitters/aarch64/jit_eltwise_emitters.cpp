@@ -252,6 +252,9 @@ jit_relu_emitter::jit_relu_emitter(dnnl::impl::cpu::aarch64::jit_generator* host
                                    const Precision exec_prc,
                                    const float alpha)
                                    : jit_emitter(host, host_isa, exec_prc, alpha) {
+    if (alpha != 0.f) {
+        IE_THROW() << "not zero alpha is not supported";
+    }
     // TODO: debug
     // if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
     //     // TODO: debug: table register 0 is used
@@ -325,10 +328,12 @@ void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
     if (alpha == 0.f) {
         // TODO: debug: no memory usage
         // TODO: debug: register index hardcode
-        Xbyak_aarch64::WReg sc_reg{0};
-        h->mov(sc_reg, 0ull);
+        //Xbyak_aarch64::WReg sc_reg{0};
+        //h->mov(sc_reg, 0ull);
         TReg tmp = TReg(aux_vec_idxs[0]);
-        h->dup(tmp.s, sc_reg);
+        //h->fmov(tmp.s, 0.0);
+        h->movi(tmp.s, 0);
+        //h->dup(tmp.s, sc_reg);
 
         h->fmaxnm(dst.s, src.s, tmp.s);
     } else {

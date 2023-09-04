@@ -297,19 +297,18 @@ std::string CPUTestsBase::getPrimitiveType(const ngraph::helpers::EltwiseTypes& 
 std::string CPUTestsBase::getPrimitiveType(const ngraph::helpers::ActivationTypes& activation_type,
                                            const ov::element::Type_t& element_type,
                                            const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) const {
-    // if (element_type == ov::element::f32) {
-    //     const auto is_static = [](const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) {
-    //         return std::all_of(input_shapes.begin(),
-    //                            input_shapes.end(),
-    //                            [](const std::pair<ov::PartialShape, std::vector<ov::Shape>>& shape) { return shape.first.is_static(); });
-    //     };
+    if (element_type == ov::element::f32) {
+        const auto is_static = [](const std::vector<std::pair<ov::PartialShape, std::vector<ov::Shape>>>& input_shapes) {
+            return std::all_of(input_shapes.begin(),
+                               input_shapes.end(),
+                               [](const std::pair<ov::PartialShape, std::vector<ov::Shape>>& shape) { return shape.first.is_static(); });
+        };
 
-    //     if (is_static(input_shapes) &&
-    //         ((activation_type == ngraph::helpers::ActivationTypes::Relu) || (activation_type == ngraph::helpers::ActivationTypes::PReLu))) {
-    //         // TODO: jit_asimd
-    //         return "jit";
-    //     }
-    // }
+        if (is_static(input_shapes) && (activation_type == ngraph::helpers::ActivationTypes::Relu)) {
+            // TODO: jit_asimd
+            return "jit";
+        }
+    }
 
     if (activation_type == ngraph::helpers::ActivationTypes::Mish) {
         // operation is decomposed and executed by different kernels
