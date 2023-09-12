@@ -114,7 +114,7 @@ void EltwiseLayerTest::SetUp() {
                 break;
             }
             case ngraph::helpers::EltwiseTypes::POWER:
-                secondaryInput = ngraph::builder::makeConstant<float>(netType, shape, {}, true, 3);
+                secondaryInput = ngraph::builder::makeConstant<float>(netType, shape, {}, true, 3.5);
                 break;
             default:
                 secondaryInput = ngraph::builder::makeConstant<float>(netType, shape, {}, true);

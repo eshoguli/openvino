@@ -196,6 +196,13 @@ void jit_power_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const 
     }
 }
 
+namespace {
+extern "C" float my_function(float v1, float v2);
+float pow_f32(float v1, float v2) {
+    return pow(v1, v2);
+}
+} // namespace
+
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
     if (exec_prc_ != Precision::FP32) {
@@ -218,17 +225,37 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
         return;
     }
 
-    h->fmov(dst.s, 1.);
+    if (std::floor(power) == power && power > 0) {
+        h->fmov(dst.s, 1.);
 
-    auto current_power = static_cast<size_t>(power);
-    while (current_power > 0) {
-        if (current_power & 1) {
-            h->fmul(dst.s, dst.s, src.s);
+        auto current_power = static_cast<size_t>(power);
+        while (current_power > 0) {
+            if (current_power & 1) {
+                h->fmul(dst.s, dst.s, src.s);
+            }
+            if (current_power > 1) {
+                h->fmul(src.s, src.s, src.s);
+            }
+            current_power = current_power >> 1;
         }
-        if (current_power > 1) {
-            h->fmul(src.s, src.s, src.s);
+    } else {
+        auto pow_f32_addr = reinterpret_cast<uintptr_t>(pow_f32);
+
+        Xbyak_aarch64::XReg x8(8);
+        h->mov(x8, pow_f32_addr);
+
+        Xbyak_aarch64::SReg s0(0);
+        Xbyak_aarch64::SReg s1(1);
+
+        for (auto i = 0; i < 4; i++) {
+            h->mov(s0, src.s[i]);
+            h->fmov(s1, power);
+            h->blr(x8);
+
+            Xbyak_aarch64::WReg w0(0);
+            h->fmov(w0, s0);
+            h->mov(dst.s[i], w0);
         }
-        current_power = current_power >> 1;
     }
 }
 
