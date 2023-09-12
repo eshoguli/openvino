@@ -193,6 +193,7 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isSupported(const std::share
     static std::unordered_set<std::string> supportedOps = {
         { name<opset1::Add>() },
         { name<opset1::AvgPool>() },
+        { name<opset2::BatchToSpace>() },
         { name<opset1::Clamp>() },
         { name<opset1::Concat>() },
         // ?
@@ -220,6 +221,7 @@ bool ngraph::pass::low_precision::MarkupPrecisions::isSupported(const std::share
         { name<opset1::Relu>() },
         // TODO: there are conditions
         { name<opset1::Reshape>() },
+        { name<opset2::SpaceToBatch>() },
         { name<opset1::Squeeze>() },
         { name<opset1::ShuffleChannels>() },
         { name<opset1::Split>() },
