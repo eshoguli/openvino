@@ -7,6 +7,7 @@
 #include "cpu_types.h"
 #include "../executor.hpp"
 #include "../eltwise.hpp"
+#include <node.h>
 
 namespace ov {
 namespace intel_cpu {
@@ -18,7 +19,12 @@ using namespace InferenceEngine;
 class JitEltwiseExecutor : public EltwiseExecutor {
 public:
     explicit JitEltwiseExecutor(const ExecutorContext::CPtr context);
-    static bool isSupported(const Algorithm& algorithm);
+
+    static bool isSupported(
+        const Node* node,
+        const float alpha,
+        const float beta,
+        const float gamma);
 
     bool init(const EltwiseAttrs& eltwiseAttrs,
               const std::vector<MemoryDescPtr>& srcDescs,

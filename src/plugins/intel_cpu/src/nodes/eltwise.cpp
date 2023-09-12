@@ -79,76 +79,6 @@ namespace ov {
 namespace intel_cpu {
 namespace node {
 
-
-#if defined(OPENVINO_ARCH_ARM64)
-namespace {
-bool is_supported(const Node* node) {
-    {
-        const auto& input_precisions = node->getOriginalInputPrecisions();
-        if (std::any_of(input_precisions.begin(),
-                        input_precisions.end(),
-                        [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
-            return false;
-        }
-        for (size_t i = 0; i < input_precisions.size(); ++i) {
-            if (node->getInputShapeAtPort(i).isDynamic()) {
-                return false;
-            }
-        }
-    }
-
-    {
-        const auto& output_precisions = node->getOriginalOutputPrecisions();
-        if (std::any_of(output_precisions.begin(),
-                        output_precisions.end(),
-                        [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
-            return false;
-        }
-        for (size_t i = 0; i < output_precisions.size(); ++i) {
-            if (node->getOutputShapeAtPort(i).isDynamic()) {
-                return false;
-            }
-        }
-    }
-
-    if (node->getAlgorithm() == Algorithm::EltwiseRelu) {
-        const auto eltwise = dynamic_cast<const Eltwise*>(node);
-        if ((eltwise == nullptr) || (eltwise->getAlpha() != 0.f) || (eltwise->getBeta() != 0.f) || (eltwise->getGamma() != 0.f)) {
-            return false;
-        }
-    }
-
-    if ((node->getAlgorithm() != Algorithm::EltwisePowerDynamic) &&
-        (node->getAlgorithm() != Algorithm::EltwisePowerStatic)) {
-        return true;
-    }
-
-    const auto& input_shape = node->getInputShapeAtPort(1);
-    if (input_shape.getElementsCount() != 1) {
-        return false;
-    }
-
-    const auto& valueEdge = node->getParentEdgeAt(1);
-    const auto& valueNode = valueEdge->getParent();
-    const auto& type = valueNode->getType();
-    if (type != Type::Input) {
-        return false;
-    }
-
-    const auto& input = std::dynamic_pointer_cast<Input>(valueNode);
-    if (!input->isConstant()) {
-        return false;
-    }
-
-    const auto& memoryPtr = input->getMemoryPtr();
-    const auto values = static_cast<float*>(memoryPtr->getData());
-    const float value = values[0];
-    const auto is_supported_value = (value >= 0.f) && (ceilf(value) == value);
-    return is_supported_value;
-}
-}  // namespace
-#endif
-
 #if defined(OPENVINO_ARCH_X86_64)
 
 template<typename T>
@@ -2108,8 +2038,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     }
 #elif defined(OPENVINO_ARCH_ARM64)
     const bool useJit = canUseOptimizedImpl &&
-                        is_supported(this) &&
-                        executors::aarch64::JitEltwiseExecutor::isSupported(getAlgorithm());
+                        executors::aarch64::JitEltwiseExecutor::isSupported(this, getAlpha(), getBeta(), getGamma());
     if (useJit) {
         outputPrecision = Precision::FP32;
     } else {
@@ -2554,7 +2483,44 @@ void Eltwise::execute(dnnl::stream strm) {
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
 
+        {
+            // TODO: debug
+            std::cout << std::endl << "input:" << std::endl;
+            for (size_t source_i = 0; source_i < memPtrs.size() - 1; source_i++) {
+                std::cout << "src_ptr[" << source_i << "]" << std::endl;
+                const size_t size = memPtrs[source_i]->getSize();
+                const size_t length = size > 256 ? 64 : (size / 4);
+                const float* src_ptr = static_cast<const float*>(args_ptrs.src_ptr[source_i]);
+                for (size_t i = 0; i < length; i++) {
+                    std::cout << src_ptr[i] << " ";
+                }
+                std::cout << std::endl << std::endl;
+            }
+        }
+
+        // TODO: debug
+        if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
+            std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        } else if ((std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
+                   (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
+             std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        } else {
+            std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        }
+
         execPtr->exec(args_ptrs, dims_out);
+
+        {
+            // TODO: debug
+            std::cout << std::endl << "output:" << std::endl;
+            const auto size = memPtrs.back()->getSize();
+            const size_t length = size > 256 ? 64 : (size / 4);
+            const float* src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
+            for (size_t i = 0; i < length; i++) {
+                std::cout << src_ptr[i] << " ";
+            }
+            std::cout << std::endl << std::endl;
+        }
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
         for (size_t i = 0; i < getParentEdges().size(); i++) {
@@ -2563,6 +2529,8 @@ void Eltwise::execute(dnnl::stream strm) {
         std::vector<MemoryPtr> dstMemory;
         dstMemory.push_back(getChildEdgeAt(0)->getMemoryPtr());
 
+        // TODO: debug
+        std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
         aclExecPtr->exec(srcMemory, dstMemory, fqDataPtrs.data());
     } else {
         IE_THROW() << "Can't execute eltwise node with name: " << getName() << ". Primitive isn't created";
@@ -2835,10 +2803,14 @@ bool Eltwise::canFuse(const NodePtr& node) const {
     if (!mayiuse(dnnl::impl::cpu::aarch64::asimd) || (getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK))
         return false;
 
-    if (!is_supported(this) ||
-        !executors::aarch64::JitEltwiseExecutor::isSupported(this->getAlgorithm()) ||
-        !is_supported(node.get()) ||
-        !executors::aarch64::JitEltwiseExecutor::isSupported(node->getAlgorithm())) {
+    if (!executors::aarch64::JitEltwiseExecutor::isSupported(this, getAlpha(), getBeta(), getGamma())) {
+        return false;
+    }
+    const auto eltwise = dynamic_cast<const Eltwise*>(node.get());
+    if ((eltwise == nullptr) || (!executors::aarch64::JitEltwiseExecutor::isSupported(eltwise,
+                                                                                      eltwise->getAlpha(),
+                                                                                      eltwise->getBeta(),
+                                                                                      eltwise->getGamma()))) {
         return false;
     }
 #endif

@@ -167,14 +167,14 @@ private:
         if (idx > MAX_ELTWISE_INPUTS) {
             IE_THROW(Unexpected) << "source vector register " << idx << " is not supported";
         }
-        return TReg(1 + idx);
+        return TReg(16 + idx);
     }
 
     inline SReg get_scl_reg(const uint32_t idx) {
         if (idx > MAX_ELTWISE_INPUTS) {
             IE_THROW(Unexpected) << "source scalar register " << idx << " is not supported";
         }
-        return SReg(1 + idx);
+        return SReg(16 + idx);
     }
 
     inline TReg get_aux_vmm(const uint32_t idx) {
