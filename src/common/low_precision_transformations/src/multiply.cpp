@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018-2023 Intel Corporation
+﻿// Copyright (C) 2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -44,7 +44,6 @@ bool MultiplyTransformation::transform(TransformationContext& context, ov::pass:
         return false;
     }
 
-    // TODO: normalizeDequantization + fold_fake_quantizes + foldDequantization <= ???
     NetworkHelper::normalizeDequantization(NetworkHelper::getDequantization(multiply, defaultPrecisions, 0));
     NetworkHelper::normalizeDequantization(NetworkHelper::getDequantization(multiply, defaultPrecisions, 1));
 
@@ -65,12 +64,8 @@ bool MultiplyTransformation::transform(TransformationContext& context, ov::pass:
     fold_fake_quantizes(multiply, 1ul);
 
     const auto dequantization1 = NetworkHelper::foldDequantization(multiply, 0, defaultPrecisions);
-    if (dequantization1.multiplyConstant == nullptr) {
-        return false;
-    }
-
     const auto dequantization2 = NetworkHelper::foldDequantization(multiply, 1, defaultPrecisions);
-    if (dequantization2.multiplyConstant == nullptr) {
+    if ((dequantization1.multiplyConstant == nullptr) && (dequantization2.multiplyConstant == nullptr)) {
         return false;
     }
 
@@ -79,7 +74,50 @@ bool MultiplyTransformation::transform(TransformationContext& context, ov::pass:
     //         X1` = X1 - SH1
     //         X2` = X2 - SH2
     //         SC1' = SC1 * SC2
+
+    if ((dequantization1.empty() && (ov::is_type<ov::opset1::Constant>(dequantization1.data.get_node()))) ||
+        (dequantization2.empty() && (ov::is_type<ov::opset1::Constant>(dequantization2.data.get_node())))) {
+        // one input is constant
+        auto new_scales_values = fold<ov::opset1::Multiply>(
+            dequantization1.empty() ? dequantization1.data : dequantization1.multiplyConstant,
+            dequantization2.empty() ? dequantization2.data : dequantization2.multiplyConstant);
+
+        if (!ov::is_type<ov::opset1::Constant>(new_scales_values)) {
+            return false;
+        }
+
+        const Output<Node> in1 = dequantization1.empty() ?
+            new_scales_values :
+            dequantization1.subtract == nullptr ?
+                dequantization1.data :
+                NetworkHelper::optimizeSubtract(dequantization1.subtract);
+
+        const Output<Node> in2 = dequantization2.empty() ?
+            new_scales_values :
+            dequantization2.subtract == nullptr ?
+                dequantization2.data :
+                NetworkHelper::optimizeSubtract(dequantization2.subtract);
+
+        auto const new_multiply = (in1.get_element_type() == multiply->get_output_element_type(0)) &&
+                                  (in2.get_element_type() == multiply->get_output_element_type(0)) ?
+            std::make_shared<ov::opset1::Multiply>(in1, in2) :
+            std::make_shared<ov::op::TypeRelaxed<ov::opset1::Multiply>>(
+                std::vector<ov::element::Type>{ deqPrecision, deqPrecision },
+                std::vector<ov::element::Type>{ multiply->get_output_element_type(0) },
+                ov::op::TemporaryReplaceOutputType(in1, deqPrecision).get(),
+                ov::op::TemporaryReplaceOutputType(in2, deqPrecision).get());
+
+        replace_node(multiply, new_multiply);
+        updateOutput(context, new_multiply, multiply);
+
+        return true;
+    }
+
     auto new_scales_values = fold<ov::opset1::Multiply>(dequantization1.multiplyConstant, dequantization2.multiplyConstant);
+    if (!ov::is_type<ov::opset1::Constant>(new_scales_values)) {
+        return false;
+    }
+
     const Output<Node> in1 = dequantization1.subtract == nullptr ?
         dequantization1.data :
         NetworkHelper::optimizeSubtract(dequantization1.subtract);
@@ -89,19 +127,23 @@ bool MultiplyTransformation::transform(TransformationContext& context, ov::pass:
         NetworkHelper::optimizeSubtract(dequantization2.subtract);
 
     // in1 & in2 can have different input types
-    auto const new_multiply = std::make_shared<ov::op::TypeRelaxed<ov::opset1::Multiply>>(
-        std::vector<ov::element::Type>{ element::f32, element::f32 },
-        std::vector<ov::element::Type>{ element::f32 },
-        ov::op::TemporaryReplaceOutputType(in1, element::f32).get(),
-        ov::op::TemporaryReplaceOutputType(in2, element::f32).get());
+    const auto new_multiply = (in1.get_element_type() == deqPrecision) &&
+                              (in2.get_element_type() == deqPrecision) ?
+        std::make_shared<ov::opset1::Multiply>(in1, in2) :
+        std::make_shared<ov::op::TypeRelaxed<ov::opset1::Multiply>>(
+            std::vector<ov::element::Type>{ deqPrecision, deqPrecision },
+            std::vector<ov::element::Type>{ deqPrecision },
+            ov::op::TemporaryReplaceOutputType(in1, deqPrecision).get(),
+            ov::op::TemporaryReplaceOutputType(in2, deqPrecision).get());
 
     NetworkHelper::copyInfo(multiply, newMultiply);
 
-    auto new_scales = new_multiply->get_output_element_type(0) != multiply->get_output_element_type(0) ?
+    auto new_scales = (new_multiply->get_output_element_type(0) == multiply->get_output_element_type(0)) &&
+                      (new_scales_values->get_output_element_type(0) == multiply->get_output_element_type(0)) ?
+        std::make_shared<ov::opset1::Multiply>(new_multiply, new_scales_values) :
         std::make_shared<ov::op::TypeRelaxed<ov::opset1::Multiply>>(
             ov::opset1::Multiply(new_multiply, new_scales_values),
-            multiply->get_output_element_type(0)) :
-        std::make_shared<ov::opset1::Multiply>(new_multiply, new_scales_values);
+            multiply->get_output_element_type(0));
 
     replace_node(multiply, new_scales);
     updateOutput(context, new_scales, multiply);

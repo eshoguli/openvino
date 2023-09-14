@@ -4,6 +4,8 @@
 
 #include "lpt_ngraph_functions/multiply_partial_function.hpp"
 
+#include <memory>
+
 #include <ngraph/opsets/opset1.hpp>
 #include <ov_ops/type_relaxed.hpp>
 #include "ngraph_functions/subgraph_builders.hpp"
@@ -18,6 +20,7 @@ namespace ngraph {
 namespace builder {
 namespace subgraph {
 
+namespace multiply_partial_function {
 struct BranchNodes {
     std::shared_ptr<Node> input;
     std::shared_ptr<Node> dequantization;
@@ -34,6 +37,7 @@ BranchNodes getBranch(const MultiplyPartialBranch& branch) {
     const auto dequantization = makeDequantization(parent, branch.dequantization);
     return {parent, dequantization};
 }
+} // namespace multiply_partial_function
 
 std::shared_ptr<ngraph::Function> MultiplyPartialFunction::get(
     const element::Type precision,
@@ -45,8 +49,8 @@ std::shared_ptr<ngraph::Function> MultiplyPartialFunction::get(
     branch2Structure.precisionBeforeDequantization = precision;
     branch2Structure.dequantization.multiply.outPrecision = precision;
 
-    const BranchNodes branchNodes1 = getBranch(actualValues.branch1);
-    const BranchNodes branchNodes2 = getBranch(actualValues.branch2);
+    const auto branchNodes1 = multiply_partial_function::getBranch(actualValues.branch1);
+    const auto branchNodes2 = multiply_partial_function::getBranch(actualValues.branch2);
 
     auto multiplyOriginal = opset1::Multiply(
         ov::op::TemporaryReplaceOutputType(branchNodes1.dequantization, element::f32).get(),

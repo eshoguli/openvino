@@ -4,6 +4,8 @@
 
 #include "lpt_ngraph_functions/multiply_function.hpp"
 
+#include <memory>
+
 #include <ngraph/opsets/opset1.hpp>
 #include <ov_ops/type_relaxed.hpp>
 #include "ngraph_functions/subgraph_builders.hpp"
@@ -18,6 +20,7 @@ namespace ngraph {
 namespace builder {
 namespace subgraph {
 
+namespace multiply_function {
 struct BranchNodes {
     std::shared_ptr<Node> input;
     std::shared_ptr<Node> dequantization;
@@ -34,10 +37,11 @@ BranchNodes makeBranch(const MultiplyBranch& branch) {
     const auto dequantization = makeDequantization(parent, branch.dequantization);
     return {parent, dequantization};
 }
+} // namespace multiply_function
 
 std::shared_ptr<ngraph::Function> MultiplyFunction::get(const element::Type model_precision, const MultiplyValues& actualValues) {
-    const BranchNodes branchNodes1 = makeBranch(actualValues.branch1);
-    const BranchNodes branchNodes2 = makeBranch(actualValues.branch2);
+    const auto branchNodes1 = multiply_function::makeBranch(actualValues.branch1);
+    const auto branchNodes2 = multiply_function::makeBranch(actualValues.branch2);
 
     // branchNodes1.dequantization & branchNodes2.dequantization can have different input types
     std::shared_ptr<ngraph::Node> parent = std::make_shared<ov::op::TypeRelaxed<ov::opset1::Multiply>>(
