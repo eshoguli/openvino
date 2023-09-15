@@ -50,7 +50,7 @@
                             <tab type="user" title="GroupConvolutionTransformation" url="@ref openvino_docs_OV_UG_lpt_GroupConvolutionTransformation"/>
                             <tab type="user" title="MatMulTransformation" url="@ref openvino_docs_OV_UG_lpt_MatMulTransformation"/>
                             <tab type="user" title="MaxPoolTransformation" url="@ref openvino_docs_OV_UG_lpt_MaxPoolTransformation"/>
-                            <tab type="user" title="MultiplyTransformation" url="@ref openvino_docs_OV_UG_lpt_MultiplyTransformation"/>
+                            <tab type="user" title="MultiplyPartialTransformation" url="@ref openvino_docs_OV_UG_lpt_MultiplyPartialTransformation"/>
                             <tab type="user" title="MVNTransformation" url="@ref openvino_docs_OV_UG_lpt_MVNTransformation"/>
                             <tab type="user" title="NormalizeL2Transformation" url="@ref openvino_docs_OV_UG_lpt_NormalizeL2Transformation"/>
                             <tab type="user" title="PadTransformation" url="@ref openvino_docs_OV_UG_lpt_PadTransformation"/>

@@ -33,7 +33,7 @@ Main transformations are the majority of low precision transformations. Transfor
 * :doc:`GatherTransformation <openvino_docs_OV_UG_lpt_GatherTransformation>` 
 * :doc:`MatMulTransformation <openvino_docs_OV_UG_lpt_MatMulTransformation>` 
 * :doc:`MaxPoolTransformation <openvino_docs_OV_UG_lpt_MaxPoolTransformation>` 
-* :doc:`MultiplyTransformation <openvino_docs_OV_UG_lpt_MultiplyTransformation>` 
+* :doc:`MultiplyPartialTransformation <openvino_docs_OV_UG_lpt_MultiplyPartialTransformation>` 
 * :doc:`MVNTransformation <openvino_docs_OV_UG_lpt_MVNTransformation>` 
 * :doc:`NormalizeL2Transformation <openvino_docs_OV_UG_lpt_NormalizeL2Transformation>` 
 * :doc:`PReluTransformation <openvino_docs_OV_UG_lpt_PReluTransformation>` 
