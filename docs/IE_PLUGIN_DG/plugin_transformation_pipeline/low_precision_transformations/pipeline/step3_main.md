@@ -16,6 +16,7 @@ Main transformations are the majority of low precision transformations. Transfor
 
    BatchToSpaceTransformation <openvino_docs_OV_UG_lpt_BatchToSpaceTransformation>
    SpaceToBatchTransformation <openvino_docs_OV_UG_lpt_SpaceToBatchTransformation>
+   SpaceToBatchTransformation <openvino_docs_OV_UG_lpt_MultiplyPartialTransformation>
    
    
 * :doc:`AddTransformation <openvino_docs_OV_UG_lpt_AddTransformation>` 
