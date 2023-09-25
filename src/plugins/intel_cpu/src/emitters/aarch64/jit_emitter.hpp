@@ -38,7 +38,7 @@ public:
                 InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
                 const float alpha = 0.f,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec) :
-                Emitter(nullptr), h(host), host_isa_(host_isa), exec_prc_(exec_prc), alpha(alpha), in_out_type_(in_out_type) {
+                Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc), alpha(alpha), in_out_type_(in_out_type) {
     }
 
     jit_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
@@ -47,7 +47,7 @@ public:
                 InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
                 const float alpha = 0.f,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec) :
-                Emitter(n), h(host), host_isa_(host_isa), exec_prc_(exec_prc), alpha(alpha), in_out_type_(in_out_type) {
+                Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc), alpha(alpha), in_out_type_(in_out_type) {
     }
 
     void emit_code(
