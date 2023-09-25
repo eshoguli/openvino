@@ -33,11 +33,6 @@ bool JitEltwiseExecutor::isSupported(
                         [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
             return false;
         }
-        for (size_t i = 0; i < input_precisions.size(); ++i) {
-            if (node->getInputShapeAtPort(i).isDynamic()) {
-                return false;
-            }
-        }
     }
 
     {
@@ -46,11 +41,6 @@ bool JitEltwiseExecutor::isSupported(
                         output_precisions.end(),
                         [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
             return false;
-        }
-        for (size_t i = 0; i < output_precisions.size(); ++i) {
-            if (node->getOutputShapeAtPort(i).isDynamic()) {
-                return false;
-            }
         }
     }
 
