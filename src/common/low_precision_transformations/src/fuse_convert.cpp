@@ -12,8 +12,9 @@
 
 #include "low_precision/common/ie_lpt_exception.hpp"
 #include "low_precision/network_helper.hpp"
+#include "low_precision/rt_info/disable_cleanup_attribute.hpp"
+
 #include "itt.hpp"
-#include "low_precision/rt_info/skip_cleanup_attribute.hpp"
 
 namespace ov {
 namespace pass {
@@ -114,7 +115,7 @@ bool FuseConvertTransformation::transform(TransformationContext& context, ov::pa
 }
 
 bool FuseConvertTransformation::canBeTransformed(const TransformationContext& context, std::shared_ptr<Node> op) const {
-    if (!getAttribute<SkipCleanupAttribute>(op).empty()) {
+    if (!getAttribute<DisableCleanupAttribute>(op).empty()) {
         return false;
     }
 
