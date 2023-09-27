@@ -22,6 +22,15 @@ const auto precision_for_fused_cases = ov::element::undefined;
 const std::vector<LayerTestsDefinitions::MultiplyTestValues> params = {
     {
         false,
+        { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { -1.28f }, { 2.55f }, { -1.28f }, { 2.55f } },
+        false,
+        { 256ul, ngraph::Shape {}, { -1.28f }, { 1.27f }, { -1.28f }, { 1.27f } },
+        { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { -1.28f }, { 1.27f }, { -1.28f }, { 1.27f } },
+        precision_for_fused_cases,
+        true
+    },
+    {
+        false,
         { 256ul, ngraph::Shape { 1, 1, 1, 1 }, { 0.f }, { 2.55f }, { 0.f }, { 2.55f } },
         false,
         { 256ul, ngraph::Shape {}, { -1.28f }, { 1.27f }, { -1.28f }, { 1.27f } },

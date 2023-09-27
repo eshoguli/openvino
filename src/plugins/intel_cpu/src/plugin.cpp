@@ -495,7 +495,7 @@ Engine::LoadExeNetworkImpl(const InferenceEngine::CNNNetwork &network, const std
     auto nGraphFunc = clonedNetwork.getFunction();
     Config::ModelType modelType = getModelType(nGraphFunc);
     ov::element::Type inferencePrecision = getInferencePrecision(config, engConfig, modelType);
-    const Config::SnippetsMode snippetsMode = getSnippetsMode(config, engConfig); 
+    const Config::SnippetsMode snippetsMode = getSnippetsMode(config, engConfig);
 
     DEBUG_LOG(PrintableModel(*nGraphFunc, "org_"));
 

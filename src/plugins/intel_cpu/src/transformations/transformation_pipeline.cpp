@@ -88,6 +88,8 @@
 #include "low_precision/convolution_backprop_data.hpp"
 #include "low_precision/group_convolution.hpp"
 #include "low_precision/multiply_to_group_convolution.hpp"
+#include "low_precision/multiply.hpp"
+#include "low_precision/multiply_partial.hpp"
 #include "low_precision/recurrent_cell.hpp"
 #include "low_precision/network_helper.hpp"
 #include "low_precision/rt_info/bias_attribute.hpp"
@@ -122,6 +124,9 @@
 #include "nodes/rnn.h"
 #include "dnnl.hpp"
 #include <cpu/x64/cpu_isa_traits.hpp>
+
+#include "ngraph/pass/visualize_tree.hpp"
+#include "ngraph/pass/serialize.hpp"
 
 namespace ov {
 namespace intel_cpu {
@@ -174,6 +179,9 @@ void Transformations::UpToLpt() {
             defaultPrecisions = ov::pass::low_precision::precision_set::int8_int16_int32_support;
         }
     }
+
+    ngraph::pass::Serialize("svg/cpu.original.xml", "svg/cpu.original.bin").run_on_model(model);
+    ngraph::pass::VisualizeTree("svg/cpu.original.svg").run_on_model(model);
 
     PreLpt(defaultPrecisions, isLegacyApi);
 
@@ -438,6 +446,9 @@ void Transformations::PreLpt(const std::vector<ov::element::Type>& defaultPrecis
 }
 
 void Transformations::Lpt(const bool hasINT16orINT32Levels, const std::vector<ov::element::Type>& defaultPrecisions) {
+    ngraph::pass::Serialize("svg/cpu.pre_lpt.xml", "svg/cpu.pre_lpt.bin").run_on_model(model);
+    ngraph::pass::VisualizeTree("svg/cpu.pre_lpt.svg").run_on_model(model);
+
     CPU_DEBUG_CAP_TRANSFORMATION_SCOPE(this, Lpt);
 
     using namespace ov::pass::low_precision;
@@ -503,10 +514,15 @@ void Transformations::Lpt(const bool hasINT16orINT32Levels, const std::vector<ov
     }
 
     ov::pass::Manager lptManager;
-    CPU_REGISTER_PASS_COMMON(lptManager, ov::pass::low_precision::LowPrecision,
+
+    auto lowPrecisionPass = CPU_REGISTER_PASS_COMMON(lptManager, ov::pass::low_precision::LowPrecision,
         supportedPrecisions,
         quantizationRestrictions,
         LayerTransformation::Params(updatePrecision, ov::element::f32, defaultPrecisions));
+
+    auto lowPrecision = std::dynamic_pointer_cast<ov::pass::low_precision::LowPrecision>(lowPrecisionPass);
+    lowPrecision->add_main<ov::pass::low_precision::MultiplyTransformation>();
+
     CPU_SET_CALLBACK_COMMON(lptManager,
         [](const_node_ptr& node) -> bool {
             if (const auto mulitply = std::dynamic_pointer_cast<const ov::opset1::Multiply>(node)) {
@@ -529,8 +545,12 @@ void Transformations::Lpt(const bool hasINT16orINT32Levels, const std::vector<ov
 
     CPU_DISABLE_PASS_ARM(lptManager, ov::pass::low_precision::RecurrentCellTransformation);
     CPU_DISABLE_PASS_COMMON(lptManager, ov::pass::low_precision::MultiplyToGroupConvolutionTransformation);
+    CPU_DISABLE_PASS_COMMON(lptManager, ov::pass::low_precision::MultiplyPartialTransformation);
 
     lptManager.run_passes(model);
+
+    ngraph::pass::Serialize("svg/cpu.lpt.xml", "svg/cpu.lpt.bin").run_on_model(model);
+    ngraph::pass::VisualizeTree("svg/cpu.lpt.svg").run_on_model(model);
 }
 
 void Transformations::PostLpt() {
