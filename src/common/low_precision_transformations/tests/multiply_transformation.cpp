@@ -20,8 +20,6 @@
 #include "simple_low_precision_transformer.hpp"
 #include "lpt_ngraph_functions/multiply_function.hpp"
 
-#include "ngraph/pass/serialize.hpp"
-
 namespace {
 using namespace testing;
 using namespace ov;
