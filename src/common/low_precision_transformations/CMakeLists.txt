@@ -53,6 +53,8 @@ target_include_directories(${TARGET_NAME} INTERFACE
 
 set_target_properties(${TARGET_NAME}_obj PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE ${ENABLE_LTO})
 
+openvino_developer_export_targets(COMPONENT core_legacy TARGETS ${TARGET_NAME})
+
 if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
