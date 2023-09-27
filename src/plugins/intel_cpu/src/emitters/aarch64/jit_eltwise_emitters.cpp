@@ -169,6 +169,15 @@ jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *ho
                                      const float power,
                                      const std::shared_ptr<ov::Node>& node)
                                      : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)), power(power) {
+    auto powerStaticNode = ov::as_type_ptr<ov::snippets::op::PowerStatic>(node);
+    if (powerStaticNode == nullptr) {
+        IE_THROW() << "Can't cast to snippets::op::PowerStatic";
+    }
+
+    // scale = 1.f;
+    // shift = 0.f;
+
+    prepare_table();
 }
 
 jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
@@ -176,13 +185,21 @@ jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *ho
                                      const float power,
                                      const Precision exec_prc)
                                      : jit_emitter(host, host_isa, exec_prc), power(power) {
+    prepare_table();
 }
 
 size_t jit_power_emitter::get_inputs_count() const { return 1; }
 
-size_t jit_power_emitter::get_aux_vecs_count() const { return 1; }
+size_t jit_power_emitter::get_aux_vecs_count() const { return 2; }
 
 size_t jit_power_emitter::get_aux_gprs_count() const { return 1; }
+
+void jit_power_emitter::register_table_entries() {
+    push_arg_entry_of("power", dnnl::impl::float2int(power), true);
+    // push_arg_entry_of("scale", float2int(scale), true);
+    // push_arg_entry_of("shift", float2int(shift), true);
+    // push_arg_entry_of("one",   float2int(1.f), true);
+}
 
 std::set<std::vector<element::Type>> jit_power_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
     return {{element::f32, element::f32}};
@@ -249,7 +266,11 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
 
         for (auto i = 0; i < 4; i++) {
             h->mov(s0, src.s[i]);
-            h->fmov(s1, power);
+
+            //const float power2 = 1.23;
+            //h->fmov(s1, power2);
+            h->ldr(s1, table_val("power"));
+
             h->blr(x8);
 
             Xbyak_aarch64::WReg w0(0);

@@ -38,7 +38,8 @@ public:
                 InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
                 const float alpha = 0.f,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec) :
-                Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc), alpha(alpha), in_out_type_(in_out_type) {
+                Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc),
+                alpha(alpha), in_out_type_(in_out_type), p_table(0), l_table (new Xbyak_aarch64::Label()) {
     }
 
     jit_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
@@ -47,7 +48,8 @@ public:
                 InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
                 const float alpha = 0.f,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec) :
-                Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc), alpha(alpha), in_out_type_(in_out_type) {
+                Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc),
+                alpha(alpha), in_out_type_(in_out_type), p_table(0), l_table (new Xbyak_aarch64::Label()) {
     }
 
     void emit_code(
@@ -55,6 +57,8 @@ public:
         const std::vector<size_t> &out_idxs,
         const std::vector<size_t> &pool_vec_idxs = {},
         const std::vector<size_t> &pool_gpr_idxs = {}) const override;
+
+    void emit_data() const override;
 
     virtual size_t get_inputs_count() const = 0;
     virtual size_t get_aux_vecs_count() const;
@@ -84,6 +88,26 @@ protected:
     virtual void prepare_table();
     virtual void register_table_entries() {}
 
+    void load_table_addr() const { h->adr(p_table, *l_table.get()); }
+
+    // we accept only 32bit hexadecimal table values to avoid any rounding
+    using table_entry_val_t = uint32_t;
+    using table_entry_offset_t = size_t; // offsets are in bytes wrt p_table
+    using table_entry_bcast_t = bool; // true => bcast value
+
+    struct table_entry_t {
+        table_entry_val_t val;
+        table_entry_bcast_t bcast;
+    };
+    struct mapped_table_entry_t {
+        table_entry_offset_t off;
+        table_entry_val_t val;
+        table_entry_bcast_t bcast;
+    };
+
+    mutable Xbyak_aarch64::XReg p_table;
+    mutable std::shared_ptr<Xbyak_aarch64::Label> l_table;
+
     virtual void emit_impl(const std::vector<size_t> &in_idxs, const std::vector<size_t> &out_idxs) const = 0;
 
     virtual void emitter_preamble(const std::vector<size_t>& in_idxs,
@@ -93,9 +117,49 @@ protected:
 
     virtual void emitter_postamble() const;
 
+    // XReg table_val(std::string key, size_t key_off_val_shift = 0) const {
+    //     auto off = table_off(key, key_off_val_shift);
+    //     return h->ptr[p_table + off];
+    // }
+
+    using table_t = std::multimap<std::string, table_entry_t>;
+    using mapped_table_t = std::multimap<std::string, mapped_table_entry_t>;
+
+    mapped_table_t entry_map_;
+
+    Xbyak_aarch64::AdrImm table_val(std::string key, size_t key_off_val_shift = 0) const {
+        //auto off = table_off(key, key_off_val_shift);
+        int32_t off = table_off(key, key_off_val_shift);
+        return Xbyak_aarch64::ptr(p_table, off);
+    }
+
+    void push_arg_entry_of(const std::string key, const table_entry_val_t val, const bool broadcast) {
+        mapped_table_entry_t te {0, val, broadcast};
+        entry_map_.insert(std::make_pair(key, te));
+    }
+
+    void push_entries_of(const table_t &t) {
+        for (auto it = t.begin(); it != t.end(); it++) {
+            auto key = (*it).first;
+            auto te = (*it).second; // copy values from table
+            push_arg_entry_of(key, te.val, te.bcast);
+        }
+    }
+
 private:
     mutable std::vector<size_t> preserved_vec_idxs;
     mutable std::vector<size_t> preserved_gpr_idxs;
+
+    size_t table_off(std::string& key, size_t key_off_val_shift = 0) const {
+        // assumption: all table entries sharing the same key also
+        // share their broadcast property
+        // TODO: enforce through data structure
+        const auto it = entry_map_.find(key); // search an entry for a key
+        assert(it != entry_map_.end());
+        const auto &te = (*it).second;
+        const auto scale = te.bcast ? get_vec_length() : sizeof(table_entry_val_t);
+        return te.off + key_off_val_shift * scale;
+    }
 };
 
 }   // namespace aarch64

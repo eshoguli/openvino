@@ -24,6 +24,22 @@ void jit_emitter::emit_code(const std::vector<size_t> &in_idxs,
     emitter_postamble();
 }
 
+void jit_emitter::emit_data() const {
+    h->align(64);
+    h->L(*l_table.get());
+
+    // Assumption: entries can be inserted with dd, so they should be 4 bytes.
+    assert(sizeof(table_entry_val_t) == 4);
+
+    // Run through the map and insert values stored there
+    for (auto it = entry_map_.begin(); it != entry_map_.end(); it++) {
+        const auto &te = (*it).second; // get map entry for a given key
+        const auto len = te.bcast ? get_vec_length() : sizeof(table_entry_val_t);
+        for (size_t d = 0; d < len; d += sizeof(table_entry_val_t))
+            h->dd(te.val);
+    }
+}
+
 std::set<std::vector<element::Type>> jit_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
     return {};
 }
@@ -45,6 +61,18 @@ size_t jit_emitter::get_aux_vecs_count() const {
 }
 
 void jit_emitter::prepare_table() {
+    register_table_entries();
+
+    // Now that we registered the entries, we set the offsets.  No
+    // entries should be registered after this point.  This allows to
+    // expect the same order when injecting the table entries in
+    // prepare_table.
+    size_t off = 0;
+    for (auto it = entry_map_.begin(); it != entry_map_.end(); it++) {
+        auto &te = (*it).second;
+        te.off = off;
+        off += te.bcast ? get_vec_length() : sizeof(table_entry_val_t);
+    }
 }
 
 void jit_emitter::emitter_preamble(const std::vector<size_t>& in_idxs,
@@ -65,6 +93,16 @@ void jit_emitter::emitter_preamble(const std::vector<size_t>& in_idxs,
 
     for (auto idx : pool_aux_gpr_idxs) {
         aux_gpr_idxs.push_back(static_cast<uint32_t>(idx));
+    }
+
+    if (!entry_map_.empty()) {
+        // last aux_gpr_idx is for p_table, we can use aux_gpr_idxs from idx 0 for other purpose
+        p_table = Xbyak_aarch64::XReg(aux_gpr_idxs[aux_gpr_idxs.size() - 1]);
+        aux_gpr_idxs.erase(aux_gpr_idxs.end() - 1);
+    }
+
+    if (!entry_map_.empty()) {
+        load_table_addr();
     }
 }
 

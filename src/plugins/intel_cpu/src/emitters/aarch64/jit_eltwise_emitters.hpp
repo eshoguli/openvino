@@ -79,6 +79,7 @@ private:
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 };
 
+// TODO: jit_power_emitter => jit_power_static_emitter
 class jit_power_emitter : public jit_emitter {
 public:
     jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
@@ -96,6 +97,8 @@ public:
     size_t get_aux_vecs_count() const override;
 
     size_t get_aux_gprs_count() const override;
+
+    void register_table_entries() override;
 
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ngraph::Node>& node = nullptr);
 
