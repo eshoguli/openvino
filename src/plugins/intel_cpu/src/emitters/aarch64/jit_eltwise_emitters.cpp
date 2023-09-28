@@ -214,7 +214,7 @@ void jit_power_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const 
 }
 
 namespace {
-extern "C" float my_function(float v1, float v2);
+extern "C" float pow_f32(float v1, float v2);
 float pow_f32(float v1, float v2) {
     return pow(v1, v2);
 }
@@ -258,8 +258,9 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
     } else {
         auto pow_f32_addr = reinterpret_cast<uintptr_t>(pow_f32);
 
-        Xbyak_aarch64::XReg x8(8);
-        h->mov(x8, pow_f32_addr);
+        // TODO: debug: hardcode
+        Xbyak_aarch64::XReg func_reg(15);
+        h->mov(func_reg, pow_f32_addr);
 
         Xbyak_aarch64::SReg s0(0);
         Xbyak_aarch64::SReg s1(1);
@@ -267,11 +268,70 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
         for (auto i = 0; i < 4; i++) {
             h->mov(s0, src.s[i]);
 
-            //const float power2 = 1.23;
+            // TODO: debug: only
+            //const float power2 = 1.f;
             //h->fmov(s1, power2);
             h->ldr(s1, table_val("power"));
 
-            h->blr(x8);
+            // X29: The register x29 represents the base pointer (also known as the frame pointer or FP)
+            // X30: In A64 systems, the return address is stored in register x30 (also known as LR)
+
+            h->stp(h->x29, h->x30, pre_ptr(h->sp, -16));
+            //h->sub(h->sp, h->sp, 16);
+            // h->stp(h->x0, h->x1, pre_ptr(h->sp, -16));
+            // //h->sub(h->sp, h->sp, 16);
+            // h->stp(h->x9, h->x10, pre_ptr(h->sp, -16));
+            // //h->sub(h->sp, h->sp, 16);
+
+            constexpr Xbyak_aarch64::Operand::Code save_gpr_regs[] = {
+                Xbyak_aarch64::Operand::X0, Xbyak_aarch64::Operand::X1,
+                Xbyak_aarch64::Operand::X2, Xbyak_aarch64::Operand::X3,
+                Xbyak_aarch64::Operand::X4, Xbyak_aarch64::Operand::X5,
+                Xbyak_aarch64::Operand::X6, Xbyak_aarch64::Operand::X7,
+                Xbyak_aarch64::Operand::X8, Xbyak_aarch64::Operand::X9,  // 9
+                Xbyak_aarch64::Operand::X10, Xbyak_aarch64::Operand::X11,
+                Xbyak_aarch64::Operand::X12, Xbyak_aarch64::Operand::X13,
+                Xbyak_aarch64::Operand::X14, Xbyak_aarch64::Operand::X15,
+                Xbyak_aarch64::Operand::X16, Xbyak_aarch64::Operand::X17,
+                Xbyak_aarch64::Operand::X18, Xbyak_aarch64::Operand::X19,
+                Xbyak_aarch64::Operand::X20, Xbyak_aarch64::Operand::X21,
+                Xbyak_aarch64::Operand::X22, Xbyak_aarch64::Operand::X23,
+                Xbyak_aarch64::Operand::X24, Xbyak_aarch64::Operand::X25,
+                Xbyak_aarch64::Operand::X26, Xbyak_aarch64::Operand::X27,
+                Xbyak_aarch64::Operand::X28, Xbyak_aarch64::Operand::X29, // 29
+            };
+
+
+            const size_t save_gpr_regs_size = sizeof(save_gpr_regs) / sizeof(save_gpr_regs[0]);
+            const int32_t xreg_len = 8;
+            //const size_t preserved_stack_size = xreg_len * (2 + save_gpr_regs_size);
+
+            //h->sub(h->sp, h->sp, static_cast<int64_t>(preserved_stack_size) - 16);
+            //h->mov(h->x9, h->sp);
+            for (size_t i = 0; i < save_gpr_regs_size; i += 2) {
+                h->stp(
+                    Xbyak_aarch64::XReg(save_gpr_regs[i]),
+                    Xbyak_aarch64::XReg(save_gpr_regs[i + 1]),
+                    pre_ptr(h->sp, -xreg_len * 2));
+            }
+
+            h->blr(func_reg);
+
+            // //h->add(h->sp, h->sp, 16);
+            // h->ldp(h->x9, h->x10, post_ptr(h->sp, 16));
+            // //h->add(h->sp, h->sp, 16);
+            // h->ldp(h->x0, h->x1, post_ptr(h->sp, 16));
+
+            //h->mov(h->x9, h->sp);
+            for (size_t i = 0; i < save_gpr_regs_size; i += 2) {
+                h->ldp(
+                    Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - (i + 1)]),
+                    Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - i]),
+                    post_ptr(h->sp, xreg_len * 2));
+            }
+
+            //h->add(h->sp, h->sp, 16);
+            h->ldp(h->x29, h->x30, post_ptr(h->sp, 16));
 
             Xbyak_aarch64::WReg w0(0);
             h->fmov(w0, s0);
