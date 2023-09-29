@@ -97,7 +97,9 @@ void jit_emitter::emitter_preamble(const std::vector<size_t>& in_idxs,
 
     if (!entry_map_.empty()) {
         // last aux_gpr_idx is for p_table, we can use aux_gpr_idxs from idx 0 for other purpose
-        p_table = Xbyak_aarch64::XReg(aux_gpr_idxs[aux_gpr_idxs.size() - 1]);
+        //p_table = Xbyak_aarch64::XReg(aux_gpr_idxs[aux_gpr_idxs.size() - 1]);
+        // TODO: debug: hardcode
+        p_table = Xbyak_aarch64::XReg(26);
         aux_gpr_idxs.erase(aux_gpr_idxs.end() - 1);
     }
 

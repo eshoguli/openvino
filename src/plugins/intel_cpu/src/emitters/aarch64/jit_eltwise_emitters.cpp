@@ -283,7 +283,7 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
             // h->stp(h->x9, h->x10, pre_ptr(h->sp, -16));
             // //h->sub(h->sp, h->sp, 16);
 
-            constexpr Xbyak_aarch64::Operand::Code save_gpr_regs[] = {
+            static constexpr Xbyak_aarch64::Operand::Code save_gpr_regs[] = {
                 Xbyak_aarch64::Operand::X0, Xbyak_aarch64::Operand::X1,
                 Xbyak_aarch64::Operand::X2, Xbyak_aarch64::Operand::X3,
                 Xbyak_aarch64::Operand::X4, Xbyak_aarch64::Operand::X5,
@@ -302,7 +302,7 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
             };
 
 
-            const size_t save_gpr_regs_size = sizeof(save_gpr_regs) / sizeof(save_gpr_regs[0]);
+            static constexpr size_t save_gpr_regs_size = sizeof(save_gpr_regs) / sizeof(save_gpr_regs[0]);
             const int32_t xreg_len = 8;
             //const size_t preserved_stack_size = xreg_len * (2 + save_gpr_regs_size);
 
