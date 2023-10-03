@@ -36,7 +36,9 @@ void jit_uni_eltwise_generic<isa>::generate() {
     preamble();
 
     const auto get_precision = []() {
+        // TODO: debug: not completed
         const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32;
+        //const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP16;
         return exec_prc;
     };
     const auto exec_prc = get_precision();
@@ -253,21 +255,35 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::uni_ldr(const TReg& data,
-                                           const XReg& ptr,
+                                           const XReg& ptr_reg,
                                            const Precision& src_prc,
                                            const Precision& dst_prc,
                                            const bool broadcast,
                                            const int32_t offset) {
     if (src_prc != dst_prc) {
-        IE_THROW(Unexpected) << "src_prc != dst_prc is not supported";
+        IE_THROW(Unexpected) << "src_prc (" << src_prc << ") != dst_prc (" << dst_prc << ") is not supported";
     }
 
     switch (dst_prc) {
+        case Precision::FP16: {
+            if (broadcast) {
+                // TODO: move custom uni_ld1rw
+                if (offset == 0) {
+                    ld1r(data.h, ptr(ptr_reg));
+                } else {
+                    add_imm(X_DEFAULT_ADDR, ptr_reg, offset, X_TMP_0);
+                    ld1r(data.h, ptr(X_DEFAULT_ADDR));
+                }
+            } else {
+                jit_generator::uni_ldr(data, ptr_reg, offset);
+            }
+            break;
+        }
         case Precision::FP32: {
             if (broadcast) {
-                jit_generator::uni_ld1rw(data.s, ptr, offset);
+                jit_generator::uni_ld1rw(data.s, ptr_reg, offset);
             } else {
-                jit_generator::uni_ldr(data, ptr, offset);
+                jit_generator::uni_ldr(data, ptr_reg, offset);
             }
             break;
         }
@@ -284,10 +300,11 @@ void jit_uni_eltwise_generic<isa>::uni_ldr(const SReg& data,
                                            const Precision& dst_prc,
                                            const int32_t offset) {
     if (src_prc != dst_prc) {
-        IE_THROW(Unexpected) << "src_prc != dst_prc is not supported";
+        IE_THROW(Unexpected) << "src_prc (" << src_prc << ") != dst_prc (" << dst_prc << ") is not supported";
     }
 
     switch (dst_prc) {
+        case Precision::FP16:
         case Precision::FP32: {
             ldr(data, Xbyak_aarch64::ptr(ptr, offset));
             break;
@@ -305,10 +322,11 @@ void jit_uni_eltwise_generic<isa>::uni_str(const XReg& ptr,
                                            const Precision& dst_prc,
                                            const int32_t offset) {
     if (src_prc != dst_prc) {
-        IE_THROW(Unexpected) << "src_prc != dst_prc is not supported";
+        IE_THROW(Unexpected) << "src_prc (" << src_prc << ") != dst_prc (" << dst_prc << ") is not supported";
     }
 
     switch (dst_prc) {
+        case Precision::FP16:
         case Precision::FP32: {
             str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, offset));
             break;
@@ -326,10 +344,11 @@ void jit_uni_eltwise_generic<isa>::uni_str(const XReg& ptr,
                                            const Precision& dst_prc,
                                            const int32_t offset) {
     if (src_prc != dst_prc) {
-        IE_THROW(Unexpected) << "uni_str: src_prc != dst_prc is not supported";
+        IE_THROW(Unexpected) << "src_prc (" << src_prc << ") != dst_prc (" << dst_prc << ") is not supported";
     }
 
     switch (dst_prc) {
+        case Precision::FP16:
         case Precision::FP32: {
             str(data, Xbyak_aarch64::ptr(ptr, offset));
             break;

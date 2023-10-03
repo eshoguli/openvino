@@ -124,7 +124,6 @@ private:
     // X14    | src ptr      | R14 | src ptr
     // X15    | src ptr      | R15 | temporary
     // X16    | src ptr
-    // X16    | src ptr
     // X17    | temporary
     // X18    | temporary
     // X19-30 | [not used]

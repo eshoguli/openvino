@@ -26,22 +26,32 @@ bool JitEltwiseExecutor::isSupported(
         return false;
     }
 
-    {
+    const auto check_precisions = [&node](const std::set<InferenceEngine::Precision>& precisions) {
         const auto& input_precisions = node->getOriginalInputPrecisions();
         if (std::any_of(input_precisions.begin(),
                         input_precisions.end(),
-                        [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
+                        [&input_precisions, &precisions](const InferenceEngine::Precision& precision) {
+                            return (input_precisions[0] != precision) || (precisions.find(precision) == precisions.end());
+                        })) {
             return false;
         }
-    }
 
-    {
         const auto& output_precisions = node->getOriginalOutputPrecisions();
         if (std::any_of(output_precisions.begin(),
                         output_precisions.end(),
-                        [](const InferenceEngine::Precision& precision) { return precision != InferenceEngine::Precision::FP32; })) {
+                        [&input_precisions, &precisions](const InferenceEngine::Precision& precision) {
+                            return (input_precisions[0] != precision) || (precisions.find(precision) == precisions.end());
+                        })) {
             return false;
         }
+
+        return true;
+    };
+
+    const std::set<InferenceEngine::Precision> supported_precisions =
+        std::set<InferenceEngine::Precision>{InferenceEngine::Precision::FP16, InferenceEngine::Precision::FP32};
+    if (!check_precisions(supported_precisions)) {
+        return false;
     }
 
     if ((algorithm == Algorithm::EltwiseRelu) && ((alpha != 0.f) || (beta != 0.f) || (gamma != 0.f))) {
