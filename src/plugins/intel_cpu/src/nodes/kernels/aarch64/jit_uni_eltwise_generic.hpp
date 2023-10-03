@@ -228,6 +228,16 @@ private:
     std::vector<std::shared_ptr<jit_emitter>> post_op_emitters;
 };
 
+class eltwise_precision_helper {
+public:
+    static InferenceEngine::Precision get_precision(const size_t inputs_number,
+                                                    const InferenceEngine::Precision (&src_prc)[MAX_ELTWISE_INPUTS],
+                                                    const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data);
+
+private:
+    static std::set<std::vector<element::Type>> get_supported_precisions(const Algorithm& algo);
+};
+
 }   // namespace aarch64
 }   // namespace intel_cpu
 }   // namespace ov
