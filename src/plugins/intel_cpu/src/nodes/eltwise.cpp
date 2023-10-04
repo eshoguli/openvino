@@ -1002,30 +1002,6 @@ const std::map<const ngraph::DiscreteTypeInfo, Eltwise::Initializer>& Eltwise::g
         }},
         {ngraph::op::v1::Power::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, Eltwise& node) {
             node.algorithm = Algorithm::EltwisePowerDynamic;
-
-// #if defined(OPENVINO_ARCH_ARM64)
-//             // TODO: debug: remove
-//             // EltwisePowerStatic is not supported for ARM64
-//             // as result we should handle scalar for EltwisePowerDynamic
-//             const auto get_scalar = [](const std::shared_ptr<ngraph::Node>& op) {
-//                 const auto value = op->get_input_node_shared_ptr(1);
-//                 const auto const_value = ov::as_type_ptr<opset1::Constant>(value);
-//                 if ((const_value == nullptr) || (ov::shape_size(const_value->output(0).get_shape()) != 1)) {
-//                     return std::pair<bool, float>(false, 0.f);
-//                 }
-
-//                 const auto& values = const_value->cast_vector<float>();
-//                 if (values.size() != 1) {
-//                     return std::pair<bool, float>(false, 0.f);
-//                 }
-
-//                 return std::pair<bool, float>(true, values[0]);
-//             };
-//             const auto result = get_scalar(op);
-//             if (result.first) {
-//                 node.alpha = result.second;
-//             }
-// #endif
         }},
         {PowerStaticNode::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, Eltwise& node) {
             auto powerStatic = getNgraphOpAs<PowerStaticNode>(op);
@@ -2045,7 +2021,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     const bool useJit = canUseOptimizedImpl &&
                         executors::aarch64::JitEltwiseExecutor::isSupported(this, getAlpha(), getBeta(), getGamma());
     if (useJit) {
-        outputPrecision = Precision::FP32;
+        //outputPrecision = Precision::FP32;
     } else {
         canUseOptimizedImpl = false;
     }
@@ -2495,7 +2471,6 @@ void Eltwise::execute(dnnl::stream strm) {
             }
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
-
         execPtr->exec(args_ptrs, dims_out);
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
