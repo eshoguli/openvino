@@ -213,15 +213,14 @@ std::set<std::vector<element::Type>> jit_multiply_emitter::get_supported_precisi
 jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                                      dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
                                      const float power,
+                                     const float scale,
+                                     const float shift,
                                      const std::shared_ptr<ov::Node>& node)
-                                     : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)), power(power) {
+                                     : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)), power(power), scale(scale), shift(shift) {
     auto powerStaticNode = ov::as_type_ptr<ov::snippets::op::PowerStatic>(node);
     if (powerStaticNode == nullptr) {
         IE_THROW() << "Can't cast to snippets::op::PowerStatic";
     }
-
-    // scale = 1.f;
-    // shift = 0.f;
 
     prepare_table();
 }
@@ -229,8 +228,10 @@ jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *ho
 jit_power_emitter::jit_power_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                                      dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
                                      const float power,
+                                     const float scale,
+                                     const float shift,
                                      const Precision exec_prc)
-                                     : jit_emitter(host, host_isa, exec_prc), power(power) {
+                                     : jit_emitter(host, host_isa, exec_prc), power(power), scale(scale), shift(shift) {
     prepare_table();
 }
 
@@ -242,8 +243,8 @@ size_t jit_power_emitter::get_aux_gprs_count() const { return 1; }
 
 void jit_power_emitter::register_table_entries() {
     push_arg_entry_of("power", dnnl::impl::float2int(power), true);
-    // push_arg_entry_of("scale", float2int(scale), true);
-    // push_arg_entry_of("shift", float2int(shift), true);
+    push_arg_entry_of("scale", dnnl::impl::float2int(scale), true);
+    push_arg_entry_of("shift", dnnl::impl::float2int(shift), true);
     // push_arg_entry_of("one",   float2int(1.f), true);
 }
 
@@ -278,9 +279,65 @@ void jit_power_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
     using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
     TReg src = TReg(in_vec_idxs[0]);
     TReg dst = TReg(out_vec_idxs[0]);
+    TReg aux = TReg(aux_vec_idxs[0]);
+
+
+    std::cout << "power=" << power << ", scale=" << scale << ", shift=" << shift << std::endl;
+
+    if (scale != 1.f) {
+        auto adr = table_val2("scale");
+        switch (exec_prc_) {
+            case Precision::FP16: {
+                h->ld1r(aux.h, adr);
+                //h->fmov(aux.h, -1.);
+                h->fmul(src.h, src.h, aux.h);
+                break;
+            }
+            case Precision::FP32: {
+                h->ld1r(aux.s, adr);
+                //h->fmov(aux.s, -1.);
+                h->fmul(src.s, src.s, aux.s);
+                break;
+            }
+            default: {
+                assert(!"unsupported precision");
+            }
+        }
+    }
+
+    if (shift != 0.f) {
+        auto adr = table_val2("shift");
+        switch (exec_prc_) {
+            case Precision::FP16: {
+                h->ld1r(aux.h, adr);
+                h->fadd(src.h, src.h, aux.h);
+                break;
+            }
+            case Precision::FP32: {
+                h->ld1r(aux.s, adr);
+                h->fadd(src.s, src.s, aux.s);
+                break;
+            }
+            default: {
+                assert(!"unsupported precision");
+            }
+        }
+    }
 
     if (power == 0.f) {
-        h->fmov(dst.s, 1.);
+        switch (exec_prc_) {
+            case Precision::FP16: {
+                h->fmov(dst.h, 1.);
+                break;
+            }
+            case Precision::FP32: {
+                h->fmov(dst.s, 1.);
+                break;
+            }
+            default: {
+                assert(!"unsupported precision");
+            }
+        }
         return;
     }
 

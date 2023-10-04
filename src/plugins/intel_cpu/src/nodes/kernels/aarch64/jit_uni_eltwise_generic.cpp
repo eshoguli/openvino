@@ -375,6 +375,8 @@ struct EltwiseEmitter<jit_power_emitter> {
         ctx.emitter = std::make_shared<jit_power_emitter>(ctx.host,
                                                           ctx.host_isa,
                                                           ctx.opData.alpha,
+                                                          ctx.opData.beta,
+                                                          ctx.opData.gamma,
                                                           ctx.exec_prc);
     }
 };

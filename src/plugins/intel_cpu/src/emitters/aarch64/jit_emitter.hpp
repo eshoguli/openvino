@@ -133,6 +133,14 @@ protected:
         return Xbyak_aarch64::ptr(p_table, off);
     }
 
+    Xbyak_aarch64::AdrNoOfs table_val2(std::string key, size_t key_off_val_shift = 0) const {
+        //auto off = table_off(key, key_off_val_shift);
+        int32_t off = table_off(key, key_off_val_shift);
+
+        h->add_imm(h->X_DEFAULT_ADDR, p_table, off, h->X_TMP_0);
+        return Xbyak_aarch64::ptr(h->X_DEFAULT_ADDR);
+    }
+
     void push_arg_entry_of(const std::string key, const table_entry_val_t val, const bool broadcast) {
         mapped_table_entry_t te {0, val, broadcast};
         entry_map_.insert(std::make_pair(key, te));

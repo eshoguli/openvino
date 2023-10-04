@@ -26,12 +26,13 @@ bool JitEltwiseExecutor::isSupported(
         return false;
     }
 
-    const auto check_precisions = [&node](const std::set<InferenceEngine::Precision>& precisions) {
+    const auto check_precisions = [&node](const std::set<InferenceEngine::Precision>& precisions, const bool& all_precisions_equal) {
         const auto& input_precisions = node->getOriginalInputPrecisions();
         if (std::any_of(input_precisions.begin(),
                         input_precisions.end(),
-                        [&input_precisions, &precisions](const InferenceEngine::Precision& precision) {
-                            return (input_precisions[0] != precision) || (precisions.find(precision) == precisions.end());
+                        [&precisions, &all_precisions_equal, &input_precisions](const InferenceEngine::Precision& precision) {
+                            return (all_precisions_equal && (input_precisions[0] != precision)) ||
+                                   (precisions.find(precision) == precisions.end());
                         })) {
             return false;
         }
@@ -39,8 +40,9 @@ bool JitEltwiseExecutor::isSupported(
         const auto& output_precisions = node->getOriginalOutputPrecisions();
         if (std::any_of(output_precisions.begin(),
                         output_precisions.end(),
-                        [&input_precisions, &precisions](const InferenceEngine::Precision& precision) {
-                            return (input_precisions[0] != precision) || (precisions.find(precision) == precisions.end());
+                        [&precisions, &all_precisions_equal, &input_precisions](const InferenceEngine::Precision& precision) {
+                            return (all_precisions_equal && (input_precisions[0] != precision)) ||
+                                   (precisions.find(precision) == precisions.end());
                         })) {
             return false;
         }
@@ -48,17 +50,14 @@ bool JitEltwiseExecutor::isSupported(
         return true;
     };
 
+    const bool all_precisions_equal = algorithm != Algorithm::EltwisePowerStatic;
     const std::set<InferenceEngine::Precision> supported_precisions =
         std::set<InferenceEngine::Precision>{InferenceEngine::Precision::FP16, InferenceEngine::Precision::FP32};
-    if (!check_precisions(supported_precisions)) {
+    if (!check_precisions(supported_precisions, all_precisions_equal)) {
         return false;
     }
 
     if ((algorithm == Algorithm::EltwiseRelu) && ((alpha != 0.f) || (beta != 0.f) || (gamma != 0.f))) {
-        return false;
-    }
-
-    if ((algorithm == Algorithm::EltwisePowerStatic) && ((beta != 1.f) || (gamma != 0.f))) {
         return false;
     }
 
