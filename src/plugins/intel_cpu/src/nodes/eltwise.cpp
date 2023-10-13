@@ -36,6 +36,7 @@
 
 #include "ngraph/ngraph.hpp"
 #include <ngraph/opsets/opset1.hpp>
+#include <openvino/opsets/opset13.hpp>
 #include "transformations/cpu_opset/common/op/power_static.hpp"
 #include "transformations/cpu_opset/common/op/leaky_relu.hpp"
 #include "transformations/cpu_opset/common/op/swish_cpu.hpp"
@@ -245,6 +246,10 @@ std::set<std::vector<element::Type>> eltwise_precision_helper::get_supported_pre
         OV_CASE(Algorithm::EltwiseIsInf, jit_is_inf_emitter),
         OV_CASE(Algorithm::EltwiseIsNaN, jit_is_nan_emitter),
         OV_CASE(Algorithm::EltwiseSelect, jit_select_emitter));
+        //OV_CASE(Algorithm::EltwiseBitwiseAnd, jit_bitwise_and_emitter),
+        //OV_CASE(Algorithm::EltwiseBitwiseOr, jit_bitwise_and_emitter),
+        //OV_CASE(Algorithm::EltwiseBitwiseNot, jit_bitwise_and_emitter),
+        //OV_CASE(Algorithm::EltwiseBitwiseXor, jit_bitwise_and_emitter));
 
     if (precisions.empty())
         IE_THROW() << "Unsupported operation type for Eltwise emitter";
@@ -619,6 +624,10 @@ private:
         OV_CASE(Algorithm::EltwiseIsInf, jit_is_inf_emitter),
         OV_CASE(Algorithm::EltwiseIsNaN, jit_is_nan_emitter),
         OV_CASE(Algorithm::EltwiseSelect, jit_select_emitter));
+        //OV_CASE(Algorithm::EltwiseBitwiseAnd, jit_bitwise_and_emitter),
+        //OV_CASE(Algorithm::EltwiseBitwiseOr, jit_bitwise_and_emitter),
+        //OV_CASE(Algorithm::EltwiseBitwiseNot, jit_bitwise_and_emitter),
+        //OV_CASE(Algorithm::EltwiseBitwiseXor, jit_bitwise_and_emitter));
 
         if (!ctx.emitter)
             IE_THROW() << "Unsupported operation type for Eltwise emitter";
@@ -717,7 +726,7 @@ private:
                     uni_vpmovzxbd(vmm_src, op);
                     break;
                 default:
-                    assert(!"unknown src_prc");
+                    IE_THROW() << "unknown src_prc: " << src_prc;
             }
 
             switch (dst_prc) {
@@ -730,7 +739,7 @@ private:
                         uni_vcvtps2dq(vmm_src, vmm_src);
                     break;
                 default:
-                    assert(!"unknown dst_prc");
+                    IE_THROW() << "unknown dst_prc: " << dst_prc;
             }
         }
     }
@@ -765,7 +774,7 @@ private:
                 uni_vmovq(xmm_src, reg_tmp_64);
                 break;
             default:
-                assert(!"unknown src_prc");
+                IE_THROW() << "unknown src_prc: " << src_prc;
         }
 
         switch (dst_prc) {
@@ -778,7 +787,7 @@ private:
                     uni_vcvtps2dq(xmm_src, xmm_src);
                 break;
             default:
-                assert(!"unknown dst_prc");
+                IE_THROW() << "unknown dst_prc: " << dst_prc;
         }
     }
 
@@ -796,7 +805,7 @@ private:
                     uni_vcvtdq2ps(vmm_dst, vmm_dst);
                 break;
             default:
-                assert(!"unknown src_prc");
+                IE_THROW() << "unknown src_prc: " << src_prc;
         }
 
         switch (dst_prc) {
@@ -868,7 +877,7 @@ private:
                 }
                 break;
             default:
-                assert(!"unknown dst_prc");
+                IE_THROW() << "unknown dst_prc: " << dst_prc;
         }
     }
 
@@ -883,7 +892,7 @@ private:
                     uni_vcvtdq2ps(xmm_dst, xmm_dst);
                 break;
             default:
-                assert(!"unknown src_prc");
+                IE_THROW() << "unknown src_prc: " << src_prc;
         }
 
         switch (dst_prc) {
@@ -923,7 +932,7 @@ private:
                 mov(op, reg_tmp_8);
                 break;
             default:
-                assert(!"unknown dst_prc");
+                IE_THROW() << "unknown dst_prc: " << dst_prc;
         }
     }
 };
@@ -1159,6 +1168,18 @@ const std::map<const ngraph::DiscreteTypeInfo, Eltwise::Initializer>& Eltwise::g
         }},
         {ngraph::op::v0::Log::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, Eltwise& node) {
             node.algorithm = Algorithm::EltwiseLog;
+        }},
+        {op::v13::BitwiseAnd::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, Eltwise& node) {
+        node.algorithm = Algorithm::EltwiseBitwiseAnd;
+        }},
+        {op::v13::BitwiseNot::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, Eltwise& node) {
+            node.algorithm = Algorithm::EltwiseBitwiseNot;
+        }},
+        {op::v13::BitwiseOr::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, Eltwise& node) {
+            node.algorithm = Algorithm::EltwiseBitwiseOr;
+        }},
+        {op::v13::BitwiseXor::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, Eltwise& node) {
+            node.algorithm = Algorithm::EltwiseBitwiseXor;
         }},
     };
     return initializers;
@@ -1735,6 +1756,10 @@ public:
                         break;
                     case Algorithm::EltwiseIsNaN:             *dst_ptr_f = std::isnan(src_f[0]); break;
                     case Algorithm::EltwiseSelect:            *dst_ptr_f = src_f[0] ? src_f[1] : src_f[2]; break;
+                    case Algorithm::EltwiseBitwiseAnd:        *dst_ptr_f = static_cast<uint64_t>(src_f[0]) & static_cast<uint64_t>(src_f[1]); break;
+                    //case Algorithm::EltwiseBitwiseNot:        *dst_ptr_f = ~src_f[0]; break;
+                    //case Algorithm::EltwiseBitwiseOr:         *dst_ptr_f = src_f[0] | src_f[1]; break;
+                    //case Algorithm::EltwiseBitwiseXor:        *dst_ptr_f = src_f[0] ^ src_f[1]; break;
                     default: IE_THROW() << "Unsupported operation type for Eltwise executor";
                 }
             }
@@ -1885,6 +1910,12 @@ size_t Eltwise::getOpInputsNum() const {
         case Algorithm::EltwiseMulAdd:
         case Algorithm::EltwiseSelect:
             return 3;
+        case Algorithm::EltwiseBitwiseAnd:
+        case Algorithm::EltwiseBitwiseOr:
+        case Algorithm::EltwiseBitwiseXor:
+            return 2;
+        case Algorithm::EltwiseBitwiseNot:
+            return 1;
         default: IE_THROW() << "Unsupported operation for Eltwise node with name `" << getName() << "`.";
     }
 }
@@ -1926,7 +1957,8 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     // if dim rank is greater than the maximum possible, we should use the reference execution
     bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
     // TODO: Add EltwiseLog algorithm support for JIT implementation
-    canUseOptimizedImpl &= !one_of(getAlgorithm(), Algorithm::EltwiseLog);
+    canUseOptimizedImpl &= !one_of(getAlgorithm(), Algorithm::EltwiseLog) && !one_of(getAlgorithm(), Algorithm::EltwiseBitwiseAnd);
+
     bool canUseOptimizedShapeAgnosticImpl = isDynamicNode() && canUseOptimizedImpl;
 
     if (!canUseOptimizedImpl && !fusedWith.empty()) {

@@ -2243,5 +2243,51 @@ void jit_select_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const 
         h->vblendmps(vmm_dst | k_mask, vmm_src1, vmm_src0);
     }
 }
+
+/// LOGICAL_AND ///
+jit_bitwise_and_emitter::jit_bitwise_and_emitter(x64::jit_generator *host, x64::cpu_isa_t host_isa, const std::shared_ptr<ov::Node>& node, Precision exec_prc)
+: jit_emitter(host, host_isa, exec_prc) {
+    prepare_table();
+}
+jit_bitwise_and_emitter::jit_bitwise_and_emitter(x64::jit_generator *host, x64::cpu_isa_t host_isa, Precision exec_prc)
+: jit_emitter(host, host_isa, exec_prc) {
+    prepare_table();
+}
+
+size_t jit_bitwise_and_emitter::get_inputs_num() const { return 2; }
+
+std::set<std::vector<element::Type>> jit_bitwise_and_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
+    return {
+        {element::i8, element::i8},
+        {element::i16, element::i16},
+        {element::i32, element::i32},
+        {element::u8, element::u8},
+        {element::u16, element::u16},
+        {element::u32, element::u32}
+    };
+}
+
+void jit_bitwise_and_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const {
+    if (host_isa_ == x64::sse41) {
+        emit_isa<x64::sse41>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == x64::avx2) {
+        emit_isa<x64::avx2>(in_vec_idxs, out_vec_idxs);
+    } else if (host_isa_ == x64::avx512_core) {
+        emit_isa<x64::avx512_core>(in_vec_idxs, out_vec_idxs);
+    } else {
+        assert(!"unsupported isa");
+    }
+}
+
+template <x64::cpu_isa_t isa>
+void jit_bitwise_and_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+}
+
+void jit_bitwise_and_emitter::register_table_entries() {
+}
+
+size_t jit_bitwise_and_emitter::aux_vecs_count() const {
+    return 3;
+}
 }   // namespace intel_cpu
 }   // namespace ov
