@@ -63,7 +63,14 @@ ov::Tensor EltwiseLayerCPUTest::generate_eltwise_input(const ov::element::Type& 
             break;
         }
     } else {
-        params = gen_params(INT32_MAX, INT32_MIN);
+        switch (type.size()) {
+            case 8:
+                params = gen_params(INT8_MAX, INT8_MIN);
+            case 16:
+                params = gen_params(INT16_MAX, INT16_MIN);
+            default:
+                params = gen_params(INT32_MAX, INT32_MIN);
+        }
     }
     return ov::test::utils::create_and_fill_tensor(type, shape, params.range, params.start_from, params.resolution);
 }

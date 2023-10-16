@@ -1568,6 +1568,9 @@ public:
 template<typename T,
          typename std::enable_if<
              std::is_same<T, float>::value ||
+             std::is_same<T, int8_t>::value ||
+             std::is_same<T, int16_t>::value ||
+             std::is_same<T, int32_t>::value ||
              std::is_same<T, dnnl::impl::float16_t>::value>
          ::type* = nullptr>
 class EltwiseRefExecutor : public Eltwise::IEltwiseExecutor {
@@ -1754,12 +1757,62 @@ public:
                         *dst_ptr_f = (_opData.alpha && (src_f[0] == -std::numeric_limits<T>::infinity())) ||
                                      (_opData.beta  && (src_f[0] == std::numeric_limits<T>::infinity()));
                         break;
-                    case Algorithm::EltwiseIsNaN:             *dst_ptr_f = std::isnan(src_f[0]); break;
+                    case Algorithm::EltwiseIsNaN: {
+                        if ((typeid(src_f[0]) != typeid(float)) && (typeid(src_f[0]) != typeid(dnnl::impl::float16_t))) {
+                            IE_THROW() << "Unsupported operation type for Eltwise executor";
+                        }
+                        *dst_ptr_f = std::isnan(sizeof(src_f[0]) == 4 ? static_cast<float>(src_f[0]) : static_cast<dnnl::impl::float16_t>(src_f[0]));
+                        break;
+                    }
                     case Algorithm::EltwiseSelect:            *dst_ptr_f = src_f[0] ? src_f[1] : src_f[2]; break;
-                    case Algorithm::EltwiseBitwiseAnd:        *dst_ptr_f = static_cast<uint64_t>(src_f[0]) & static_cast<uint64_t>(src_f[1]); break;
-                    //case Algorithm::EltwiseBitwiseNot:        *dst_ptr_f = ~src_f[0]; break;
-                    //case Algorithm::EltwiseBitwiseOr:         *dst_ptr_f = src_f[0] | src_f[1]; break;
-                    //case Algorithm::EltwiseBitwiseXor:        *dst_ptr_f = src_f[0] ^ src_f[1]; break;
+                    case Algorithm::EltwiseBitwiseAnd: {
+                        if (typeid(src_f[0]) == typeid(int8_t)) {
+                            *dst_ptr_f = static_cast<int8_t>(src_f[0]) & static_cast<int8_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int16_t)) {
+                            *dst_ptr_f = static_cast<int16_t>(src_f[0]) & static_cast<int16_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int32_t)) {
+                            *dst_ptr_f = static_cast<int32_t>(src_f[0]) & static_cast<int32_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int64_t)) {
+                            *dst_ptr_f = static_cast<int64_t>(src_f[0]) & static_cast<int64_t>(src_f[1]);
+                        }
+                        break;
+                    }
+                    case Algorithm::EltwiseBitwiseNot: {
+                        if (typeid(src_f[0]) == typeid(int8_t)) {
+                            *dst_ptr_f = ~static_cast<int8_t>(src_f[0]);
+                        } else if (typeid(src_f[0]) == typeid(int16_t)) {
+                            *dst_ptr_f = ~static_cast<int16_t>(src_f[0]);
+                        } else if (typeid(src_f[0]) == typeid(int32_t)) {
+                            *dst_ptr_f = ~static_cast<int32_t>(src_f[0]);
+                        } else if (typeid(src_f[0]) == typeid(int64_t)) {
+                            *dst_ptr_f = ~static_cast<int64_t>(src_f[0]);
+                        }
+                        break;
+                    }
+                    case Algorithm::EltwiseBitwiseOr: {
+                        if (typeid(src_f[0]) == typeid(int8_t)) {
+                            *dst_ptr_f = static_cast<int8_t>(src_f[0]) | static_cast<int8_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int16_t)) {
+                            *dst_ptr_f = static_cast<int16_t>(src_f[0]) | static_cast<int16_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int32_t)) {
+                            *dst_ptr_f = static_cast<int32_t>(src_f[0]) | static_cast<int32_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int64_t)) {
+                            *dst_ptr_f = static_cast<int64_t>(src_f[0]) | static_cast<int64_t>(src_f[1]);
+                        }
+                        break;
+                    }
+                    case Algorithm::EltwiseBitwiseXor: {
+                        if (typeid(src_f[0]) == typeid(int8_t)) {
+                            *dst_ptr_f = static_cast<int8_t>(src_f[0]) ^ static_cast<int8_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int16_t)) {
+                            *dst_ptr_f = static_cast<int16_t>(src_f[0]) ^ static_cast<int16_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int32_t)) {
+                            *dst_ptr_f = static_cast<int32_t>(src_f[0]) ^ static_cast<int32_t>(src_f[1]);
+                        } else if (typeid(src_f[0]) == typeid(int64_t)) {
+                            *dst_ptr_f = static_cast<int64_t>(src_f[0]) ^ static_cast<int64_t>(src_f[1]);
+                        }
+                        break;
+                    }
                     default: IE_THROW() << "Unsupported operation type for Eltwise executor";
                 }
             }
@@ -1796,15 +1849,36 @@ bool Eltwise::EltwiseData::operator==(const EltwiseData &rhs) const noexcept {
 }
 
 static Eltwise::executorPtr buildRefExecutor(const EltwiseKey& key) {
-    if (key.outPrc == Precision::FP16) {
-        return std::make_shared<EltwiseRefExecutor<dnnl::impl::float16_t>>(key.eltwise_data.front(),
-                                                                           key.outBlkDims,
-                                                                           key.inpDims);
+    switch(key.outPrc) {
+        case Precision::FP16:
+            return std::make_shared<EltwiseRefExecutor<dnnl::impl::float16_t>>(key.eltwise_data.front(),
+                                                                               key.outBlkDims,
+                                                                               key.inpDims);
+
+        case Precision::I8:
+            return std::make_shared<EltwiseRefExecutor<PrecisionTrait<Precision::I8>::value_type>>(
+                key.eltwise_data.front(),
+                key.outBlkDims,
+                key.inpDims);
+
+        case Precision::I16:
+            return std::make_shared<EltwiseRefExecutor<PrecisionTrait<Precision::I16>::value_type>>(
+                key.eltwise_data.front(),
+                key.outBlkDims,
+                key.inpDims);
+#
+        case Precision::I32:
+            return std::make_shared<EltwiseRefExecutor<PrecisionTrait<Precision::I32>::value_type>>(
+                key.eltwise_data.front(),
+                key.outBlkDims,
+                key.inpDims);
+
+        default:
+            // use float reference executor for any other precision for now
+            return std::make_shared<EltwiseRefExecutor<float>>(key.eltwise_data.front(),
+                                                               key.outBlkDims,
+                                                               key.inpDims);
     }
-    // use float reference executor for any other precision for now
-    return std::make_shared<EltwiseRefExecutor<float>>(key.eltwise_data.front(),
-                                                       key.outBlkDims,
-                                                       key.inpDims);
 }
 
 static Eltwise::executorPtr buildExecutor(const EltwiseKey& key) {
@@ -1957,7 +2031,11 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     // if dim rank is greater than the maximum possible, we should use the reference execution
     bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
     // TODO: Add EltwiseLog algorithm support for JIT implementation
-    canUseOptimizedImpl &= !one_of(getAlgorithm(), Algorithm::EltwiseLog) && !one_of(getAlgorithm(), Algorithm::EltwiseBitwiseAnd);
+    canUseOptimizedImpl &= !(one_of(getAlgorithm(), Algorithm::EltwiseLog) ||
+                             one_of(getAlgorithm(), Algorithm::EltwiseBitwiseAnd) ||
+                             one_of(getAlgorithm(), Algorithm::EltwiseBitwiseNot) ||
+                             one_of(getAlgorithm(), Algorithm::EltwiseBitwiseOr) ||
+                             one_of(getAlgorithm(), Algorithm::EltwiseBitwiseXor));
 
     bool canUseOptimizedShapeAgnosticImpl = isDynamicNode() && canUseOptimizedImpl;
 
@@ -2041,6 +2119,13 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
 #else
     auto filterPrecision = [&](Precision& prc) {
         if (implType == EltwiseImplType::reference) {
+            if (((algorithm == Algorithm::EltwiseBitwiseAnd) ||
+                (algorithm == Algorithm::EltwiseBitwiseNot) ||
+                (algorithm == Algorithm::EltwiseBitwiseOr) ||
+                (algorithm == Algorithm::EltwiseBitwiseXor)) &&
+                (std::find(supportedPrecisions.begin(), supportedPrecisions.end(), prc) != supportedPrecisions.end())) {
+                return prc;
+            }
             return Precision(Precision::FP32);
         } else if (std::find(supportedPrecisions.begin(), supportedPrecisions.end(), prc) == supportedPrecisions.end()) {
             if (prc == Precision::U32 || prc == Precision::I64 || prc == Precision::U64) {

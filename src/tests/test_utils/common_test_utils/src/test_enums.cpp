@@ -110,6 +110,9 @@ std::ostream& operator<<(std::ostream& os, ov::test::utils::InputLayerType type)
     case ov::test::utils::InputLayerType::PARAMETER:
         os << "PARAMETER";
         break;
+    case ov::test::utils::InputLayerType::NONE:
+        os << "NONE";
+        break;
     default:
         throw std::runtime_error("NOT_SUPPORTED_INPUT_LAYER_TYPE");
     }

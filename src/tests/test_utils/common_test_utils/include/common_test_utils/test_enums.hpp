@@ -71,6 +71,7 @@ enum SqueezeOpType {
 enum class InputLayerType {
     CONSTANT,
     PARAMETER,
+    NONE,
 };
 
 enum LogicalTypes {
