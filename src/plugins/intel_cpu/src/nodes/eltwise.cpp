@@ -139,6 +139,14 @@ static void set_intersection(const std::set<std::vector<element::Type>>& precisi
 InferenceEngine::Precision eltwise_precision_helper::get_precision(const size_t inputs_number,
                                                                    const InferenceEngine::Precision(&src_prc)[MAX_ELTWISE_INPUTS],
                                                                    const std::vector<Eltwise::EltwiseData>& eltwise_data) {
+    if (one_of(eltwise_data[0].algo,
+               Algorithm::EltwiseBitwiseAnd,
+               Algorithm::EltwiseBitwiseNot,
+               Algorithm::EltwiseBitwiseOr,
+               Algorithm::EltwiseBitwiseXor)) {
+        return InferenceEngine::Precision::I32;
+    }
+
     Precision exec_prc = Precision::UNSPECIFIED;
 
     std::set<std::vector<element::Type>> supported_precision_intersection = get_supported_precisions(eltwise_data.front().algo);
@@ -249,7 +257,11 @@ std::set<std::vector<element::Type>> eltwise_precision_helper::get_supported_pre
         OV_CASE(Algorithm::EltwiseIsFinite, jit_is_finite_emitter),
         OV_CASE(Algorithm::EltwiseIsInf, jit_is_inf_emitter),
         OV_CASE(Algorithm::EltwiseIsNaN, jit_is_nan_emitter),
-        OV_CASE(Algorithm::EltwiseSelect, jit_select_emitter));
+        OV_CASE(Algorithm::EltwiseSelect, jit_select_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseAnd, jit_bitwise_and_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseNot, jit_bitwise_not_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseOr, jit_bitwise_or_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseXor, jit_bitwise_xor_emitter));
 
     if (precisions.empty())
         IE_THROW() << "Unsupported operation type for Eltwise emitter";
@@ -623,7 +635,11 @@ private:
         OV_CASE(Algorithm::EltwiseIsFinite, jit_is_finite_emitter),
         OV_CASE(Algorithm::EltwiseIsInf, jit_is_inf_emitter),
         OV_CASE(Algorithm::EltwiseIsNaN, jit_is_nan_emitter),
-        OV_CASE(Algorithm::EltwiseSelect, jit_select_emitter));
+        OV_CASE(Algorithm::EltwiseSelect, jit_select_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseAnd, jit_bitwise_and_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseNot, jit_bitwise_not_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseOr, jit_bitwise_or_emitter),
+        OV_CASE(Algorithm::EltwiseBitwiseXor, jit_bitwise_xor_emitter));
 
         if (!ctx.emitter)
             IE_THROW() << "Unsupported operation type for Eltwise emitter";
@@ -1792,7 +1808,7 @@ public:
                         break;
                     case Algorithm::EltwiseIsNaN:             *dst_ptr_f = std::isnan(src_f[0]); break;
                     case Algorithm::EltwiseSelect:            *dst_ptr_f = src_f[0] ? src_f[1] : src_f[2]; break;
-                    default: IE_THROW() << "Unsupported operation type for Eltwise executor";
+                    default: OPENVINO_THROW("Unsupported operation type for Eltwise executor");
                 }
             }
         });
@@ -1849,7 +1865,7 @@ public:
                         *dst_ptr_f = src_f[0] ^ src_f[1];
                         break;
                     }
-                    default: IE_THROW() << "Unsupported operation type for Eltwise executor";
+                    default: OPENVINO_THROW("Unsupported operation type for Eltwise executor");
                 }
             }
         });
@@ -2076,7 +2092,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
     // if dim rank is greater than the maximum possible, we should use the reference execution
     bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
     // TODO: Add EltwiseLog algorithm support for JIT implementation
-    canUseOptimizedImpl &= !(one_of(getAlgorithm(), Algorithm::EltwiseLog) || isBitwise(getAlgorithm()));
+    canUseOptimizedImpl &= !one_of(getAlgorithm(), Algorithm::EltwiseLog);
 
     bool canUseOptimizedShapeAgnosticImpl = isDynamicNode() && canUseOptimizedImpl;
 
@@ -2845,19 +2861,8 @@ bool Eltwise::canFuse(const NodePtr& node) const {
     if (!mayiuse(x64::sse41) || getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK)
         return false;
 
-    // TODO: supported only via reference executor
-    if (one_of(getAlgorithm(),
-               Algorithm::EltwiseLog,
-               Algorithm::EltwiseBitwiseAnd,
-               Algorithm::EltwiseBitwiseNot,
-               Algorithm::EltwiseBitwiseOr,
-               Algorithm::EltwiseBitwiseXor) ||
-        one_of(node->getAlgorithm(),
-               Algorithm::EltwiseLog,
-               Algorithm::EltwiseBitwiseAnd,
-               Algorithm::EltwiseBitwiseNot,
-               Algorithm::EltwiseBitwiseOr,
-               Algorithm::EltwiseBitwiseXor))
+    // TODO: EltwiseLog is supported only via reference executor
+    if (getAlgorithm() == Algorithm::EltwiseLog || node->getAlgorithm() == Algorithm::EltwiseLog)
         return false;
 
     bool isIntegerNode = isIntegerComputeSupported(this);
