@@ -64,6 +64,9 @@ ov::Tensor EltwiseLayerCPUTest::generate_eltwise_input(const ov::element::Type& 
         }
     } else {
         switch (type) {
+            case ov::element::boolean:
+                params = gen_params(1, 0);
+                break;
             case ov::element::i8:
                 params = gen_params(INT8_MAX, INT8_MIN);
                 break;

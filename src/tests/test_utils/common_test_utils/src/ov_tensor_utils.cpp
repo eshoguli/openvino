@@ -303,6 +303,14 @@ void compare(const ov::Tensor& expected,
     abs_error.mean /= shape_size_cnt;
     rel_error.mean /= shape_size_cnt;
 
+    // TODO: debug
+    std::cout << "\nexpected values:\n";
+    for (size_t i = 0; i < shape_size_cnt; ++i) {
+        int v = static_cast<int8_t>(expected_data[i]);
+        std::cout << v << ", ";
+    }
+    std::cout << "\n";
+
     if (!(less_or_equal(abs_error.max, abs_threshold) && less_or_equal(rel_error.max, rel_threshold))) {
         std::ostringstream out_stream;
         out_stream << "abs_max < abs_threshold && rel_max < rel_threshold"

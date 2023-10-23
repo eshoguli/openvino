@@ -189,9 +189,16 @@ void inline fill_data_random(T* pointer,
     if (start_from < 0 && !std::numeric_limits<T>::is_signed) {
         start_from = 0;
     }
+
+    std::cout << std::endl << "input:" << std::endl;
     for (std::size_t i = 0; i < size; i++) {
-        pointer[i] = static_cast<T>(start_from + static_cast<T>(random.Generate(k_range)) / k);
+        //pointer[i] = static_cast<T>(start_from + static_cast<T>(random.Generate(k_range)) / k);
+        // TODO: debug
+        auto v = random.Generate(10) > 5 ? true : false;
+        pointer[i] = v;
+        std::cout << static_cast<int>(v) << ", ";
     }
+    std::cout << std::endl << std::endl;
 }
 
 /** @brief Fill a memory area with a sorted sequence of unique elements randomly generated.

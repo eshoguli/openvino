@@ -252,6 +252,27 @@ const auto params_4D_bitwise = ::testing::Combine(
 
 INSTANTIATE_TEST_SUITE_P(smoke_CompareWithRefs_4D_Bitwise, EltwiseLayerCPUTest, params_4D_bitwise, EltwiseLayerCPUTest::getTestCaseName);
 
+const auto params_4D_bitwise_boolean = ::testing::Combine(
+    ::testing::Combine(
+        ::testing::Values(bitwise_in_shapes_4D),
+        ::testing::ValuesIn({
+            ngraph::helpers::EltwiseTypes::BITWISE_AND,
+            ngraph::helpers::EltwiseTypes::BITWISE_OR,
+            ngraph::helpers::EltwiseTypes::BITWISE_XOR
+            }),
+        ::testing::ValuesIn(secondaryInputTypes()),
+        ::testing::ValuesIn({ ov::test::utils::OpType::VECTOR }),
+        ::testing::ValuesIn({ ov::element::Type_t::boolean }),
+        ::testing::Values(ov::element::Type_t::undefined),
+        ::testing::Values(ov::element::Type_t::undefined),
+        ::testing::Values(ov::test::utils::DEVICE_CPU),
+        ::testing::Values(ov::AnyMap())),
+    ::testing::Values(CPUSpecificParams({ nhwc, nhwc }, { nhwc }, {}, "ref_I8$/")),
+    ::testing::Values(emptyFusingSpec),
+    ::testing::Values(false));
+
+INSTANTIATE_TEST_SUITE_P(smoke_CompareWithRefs_4D_Bitwise_boolean, EltwiseLayerCPUTest, params_4D_bitwise_boolean, EltwiseLayerCPUTest::getTestCaseName);
+
 const auto params_4D_bitwise_i16 = ::testing::Combine(
     ::testing::Combine(
         ::testing::Values(bitwise_in_shapes_4D),
