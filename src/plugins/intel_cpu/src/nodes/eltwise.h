@@ -207,14 +207,13 @@ private:
 
 class eltwise_precision_helper {
 public:
-    static InferenceEngine::Precision get_precision(const size_t inputs_number,
-                                                    const ov::element::Type (&src_prc)[MAX_ELTWISE_INPUTS],
-                                                    #if defined(OPENVINO_ARCH_X86_64)
-                                                    const std::vector<EltwiseData>& eltwise_data);
-                                                    #endif
-                                                    #if defined(OPENVINO_ARCH_ARM64)
-                                                    const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data);
-                                                    #endif
+    static ov::element::Type get_precision(const size_t inputs_number,
+                                           const ov::element::Type (&src_prc)[MAX_ELTWISE_INPUTS],
+                                           #if defined(OPENVINO_ARCH_ARM64)
+                                           const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data);
+                                           #else
+                                           const std::vector<EltwiseData>& eltwise_data);
+                                           #endif
 
 private:
     static std::set<std::vector<element::Type>> get_supported_precisions(const Algorithm& algo);

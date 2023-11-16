@@ -30,8 +30,8 @@ struct jit_eltwise_params {
     size_t inputs_number;
     size_t input_size;
 
-    InferenceEngine::Precision src_prc[MAX_ELTWISE_INPUTS];
-    InferenceEngine::Precision dst_prc;
+    ov::element::Type src_prc[MAX_ELTWISE_INPUTS];
+    ov::element::Type dst_prc;
 
     VectorDims dims;
     VectorDims src_offsets[MAX_ELTWISE_INPUTS];
@@ -192,30 +192,30 @@ private:
 
     void load_vector(const TReg& data,
                      const XReg& ptr,
-                     const Precision& src_prc,
-                     const Precision& dst_prc,
+                     const ov::element::Type& src_prc,
+                     const ov::element::Type& dst_prc,
                      const bool broadcast,
                      const int32_t offset = 0);
 
     void load_scalar(const SReg& data,
                      const XReg& ptr,
-                     const Precision& src_prc,
-                     const Precision& dst_prc,
+                     const ov::element::Type& src_prc,
+                     const ov::element::Type& dst_prc,
                      const int32_t offset = 0);
 
     void store_vector(const XReg& ptr,
                  const TReg& data,
-                 const Precision& src_prc,
-                 const Precision& dst_prc,
+                 const ov::element::Type& src_prc,
+                 const ov::element::Type& dst_prc,
                  const int32_t offset = 0);
 
     void store_scalar(const XReg& ptr,
                       const SReg& data,
-                      const Precision& src_prc,
-                      const Precision& dst_prc,
+                      const ov::element::Type& src_prc,
+                      const ov::element::Type& dst_prc,
                       const int32_t offset = 0);
 
-    std::shared_ptr<jit_emitter> create_eltwise_emitter(const EltwiseData& data, const Precision& exec_prec);
+    std::shared_ptr<jit_emitter> create_eltwise_emitter(const EltwiseData& data, const ov::element::Type& exec_prec);
 
     void compute_eltwise_op();
     void apply_post_ops();
@@ -230,9 +230,9 @@ private:
 
 class eltwise_precision_helper {
 public:
-    static InferenceEngine::Precision get_precision(const size_t inputs_number,
-                                                    const InferenceEngine::Precision (&src_prc)[MAX_ELTWISE_INPUTS],
-                                                    const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data);
+    static ov::element::Type get_precision(const size_t inputs_number,
+                                           const ov::element::Type (&src_prc)[MAX_ELTWISE_INPUTS],
+                                           const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data);
 
 private:
     static std::set<std::vector<element::Type>> get_supported_precisions(const Algorithm& algo);

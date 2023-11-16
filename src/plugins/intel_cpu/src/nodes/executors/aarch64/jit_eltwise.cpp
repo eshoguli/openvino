@@ -26,11 +26,11 @@ bool JitEltwiseExecutor::isSupported(
         return false;
     }
 
-    const auto check_precisions = [&node](const std::set<InferenceEngine::Precision>& precisions) {
+    const auto check_precisions = [&node](const std::set<ov::element::Type>& precisions) {
         const auto& input_precisions = node->getOriginalInputPrecisions();
         if (std::any_of(input_precisions.begin(),
                         input_precisions.end(),
-                        [&precisions](const InferenceEngine::Precision& precision) {
+                        [&precisions](const ov::element::Type& precision) {
                             return precisions.find(precision) == precisions.end();
                         })) {
             return false;
@@ -39,7 +39,7 @@ bool JitEltwiseExecutor::isSupported(
         const auto& output_precisions = node->getOriginalOutputPrecisions();
         if (std::any_of(output_precisions.begin(),
                         output_precisions.end(),
-                        [&precisions](const InferenceEngine::Precision& precision) {
+                        [&precisions](const ov::element::Type& precision) {
                             return precisions.find(precision) == precisions.end();
                         })) {
             return false;
@@ -48,9 +48,9 @@ bool JitEltwiseExecutor::isSupported(
         return true;
     };
 
-    const std::set<InferenceEngine::Precision> supported_precisions = std::set<InferenceEngine::Precision> {
-        InferenceEngine::Precision::FP16,
-        InferenceEngine::Precision::FP32
+    const std::set<ov::element::Type> supported_precisions = {
+        ov::element::f16,
+        ov::element::f32
     };
     if (!check_precisions(supported_precisions)) {
         return false;

@@ -35,7 +35,7 @@ class jit_emitter : public ov::snippets::Emitter {
 public:
     jit_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
+                ov::element::Type exec_prc = ov::element::f32,
                 const float alpha = 0.f,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec) :
                 Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc),
@@ -45,7 +45,7 @@ public:
     jit_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
                 const std::shared_ptr<ngraph::Node>& n,
-                InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
+                ov::element::Type exec_prc = ov::element::f32,
                 const float alpha = 0.f,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec) :
                 Emitter(), h(host), host_isa_(host_isa), exec_prc_(exec_prc),
@@ -80,7 +80,7 @@ protected:
 
     dnnl::impl::cpu::aarch64::jit_generator* h;
     dnnl::impl::cpu::aarch64::cpu_isa_t host_isa_;
-    InferenceEngine::Precision exec_prc_;
+    ov::element::Type exec_prc_;
     const float alpha;
 
     emitter_in_out_map in_out_type_;

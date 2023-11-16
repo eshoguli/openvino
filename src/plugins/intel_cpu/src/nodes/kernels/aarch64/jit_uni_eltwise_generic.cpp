@@ -250,12 +250,12 @@ void jit_uni_eltwise_generic<isa>::generate() {
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::load_vector(const TReg& data,
                                                const XReg& ptr_reg,
-                                               const Precision& src_prc,
-                                               const Precision& dst_prc,
+                                               const ov::element::Type& src_prc,
+                                               const ov::element::Type& dst_prc,
                                                const bool broadcast,
                                                const int32_t offset) {
     switch (src_prc) {
-        case Precision::FP16: {
+        case ov::element::f16: {
             if (broadcast) {
                 if (offset == 0) {
                     ld1r(data.h, ptr(ptr_reg));
@@ -268,7 +268,7 @@ void jit_uni_eltwise_generic<isa>::load_vector(const TReg& data,
             }
             break;
         }
-        case Precision::FP32: {
+        case ov::element::f32: {
             if (broadcast) {
                 jit_generator::uni_ld1rw(data.s, ptr_reg, offset);
             } else {
@@ -283,9 +283,9 @@ void jit_uni_eltwise_generic<isa>::load_vector(const TReg& data,
 
     if (dst_prc != src_prc) {
         switch (dst_prc) {
-            case Precision::FP32:
+            case ov::element::f32:
                 switch (src_prc) {
-                    case Precision::FP16: {
+                    case ov::element::f16: {
                         fcvtl(data.s4, data.h4);
                         break;
                     }
@@ -302,15 +302,15 @@ void jit_uni_eltwise_generic<isa>::load_vector(const TReg& data,
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::load_scalar(const SReg& data,
                                                const XReg& ptr,
-                                               const Precision& src_prc,
-                                               const Precision& dst_prc,
+                                               const ov::element::Type& src_prc,
+                                               const ov::element::Type& dst_prc,
                                                const int32_t offset) {
     switch (src_prc) {
-        case Precision::FP16: {
+        case ov::element::f16: {
             ldr(Xbyak_aarch64::HReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
-        case Precision::FP32: {
+        case ov::element::f32: {
             ldr(data, Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
@@ -321,9 +321,9 @@ void jit_uni_eltwise_generic<isa>::load_scalar(const SReg& data,
 
     if (dst_prc != src_prc) {
         switch (dst_prc) {
-            case Precision::FP32:
+            case ov::element::f32:
                 switch (src_prc) {
-                    case Precision::FP16: {
+                    case ov::element::f16: {
                         fcvt(Xbyak_aarch64::SReg(data.getIdx()), Xbyak_aarch64::HReg(data.getIdx()));
                         break;
                     }
@@ -340,14 +340,14 @@ void jit_uni_eltwise_generic<isa>::load_scalar(const SReg& data,
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::store_vector(const XReg& ptr,
                                                 const TReg& data,
-                                                const Precision& src_prc,
-                                                const Precision& dst_prc,
+                                                const ov::element::Type& src_prc,
+                                                const ov::element::Type& dst_prc,
                                                 const int32_t offset) {
     if (src_prc != dst_prc) {
         switch (src_prc) {
-            case Precision::FP32: {
+            case ov::element::f32: {
                 switch (dst_prc) {
-                    case Precision::FP16: {
+                    case ov::element::f16: {
                         fcvtn(data.h4, data.s4);
                         break;
                     }
@@ -364,11 +364,11 @@ void jit_uni_eltwise_generic<isa>::store_vector(const XReg& ptr,
     }
 
     switch (dst_prc) {
-        case Precision::FP16: {
+        case ov::element::f16: {
             str(Xbyak_aarch64::DReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
-        case Precision::FP32: {
+        case ov::element::f32: {
             str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
@@ -381,14 +381,14 @@ void jit_uni_eltwise_generic<isa>::store_vector(const XReg& ptr,
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::store_scalar(const XReg& ptr,
                                                 const SReg& data,
-                                                const Precision& src_prc,
-                                                const Precision& dst_prc,
+                                                const ov::element::Type& src_prc,
+                                                const ov::element::Type& dst_prc,
                                                 const int32_t offset) {
     if (src_prc != dst_prc) {
         switch (src_prc) {
-            case Precision::FP32: {
+            case ov::element::f32: {
                 switch (dst_prc) {
-                    case Precision::FP16: {
+                    case ov::element::f16: {
                         fcvt(Xbyak_aarch64::HReg(data.getIdx()), data);
                         break;
                     }
@@ -405,11 +405,11 @@ void jit_uni_eltwise_generic<isa>::store_scalar(const XReg& ptr,
     }
 
     switch (dst_prc) {
-        case Precision::FP16: {
+        case ov::element::f16: {
             str(Xbyak_aarch64::HReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
-        case Precision::FP32: {
+        case ov::element::f32: {
             str(data, Xbyak_aarch64::ptr(ptr, offset));
             break;
         }
@@ -424,7 +424,7 @@ struct EltwiseEmitterContext {
     dnnl::impl::cpu::aarch64::jit_generator *host;
     dnnl::impl::cpu::aarch64::cpu_isa_t host_isa;
     const EltwiseData& opData;
-    InferenceEngine::Precision exec_prc;
+    ov::element::Type exec_prc;
 };
 
 template<typename T>
@@ -447,7 +447,7 @@ struct EltwiseEmitter<jit_power_static_emitter> {
 };
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitter(const EltwiseData& data, const Precision& exec_prec) {
+std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitter(const EltwiseData& data, const ov::element::Type& exec_prec) {
     EltwiseEmitterContext ctx = {
         nullptr,
         this,
@@ -556,11 +556,10 @@ static void set_intersection(const std::set<std::vector<element::Type>>& precisi
 }
 } // namespace
 
-InferenceEngine::Precision eltwise_precision_helper::get_precision(
-        const size_t inputs_number,
-        const InferenceEngine::Precision (&src_prc)[MAX_ELTWISE_INPUTS],
-        const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data) {
-    Precision exec_prc = Precision::UNSPECIFIED;
+ov::element::Type eltwise_precision_helper::get_precision(const size_t inputs_number,
+                                                          const ov::element::Type (&src_prc)[MAX_ELTWISE_INPUTS],
+                                                          const std::vector<ov::intel_cpu::aarch64::EltwiseData>& eltwise_data) {
+    ov::element::Type exec_prc = ov::element::undefined;
 
     const auto algorithm = eltwise_data.front().algo;
     std::set<std::vector<element::Type>> supported_precision_intersection = get_supported_precisions(algorithm);
@@ -584,19 +583,19 @@ InferenceEngine::Precision eltwise_precision_helper::get_precision(
             supported_precision_intersection.begin(),
             supported_precision_intersection.end(),
             [&prc](const std::vector<element::Type>& precisions) { return std::find(precisions.begin(), precisions.end(), prc) != precisions.end(); })) {
-            exec_prc = InferenceEngine::details::convertPrecision(prc);
+            exec_prc = prc;
             break;
         }
     }
 
     for (size_t i = 0; i < inputs_number; i++) {
         if (src_prc[i] != exec_prc) {
-            exec_prc = Precision::FP32;
+            exec_prc = ov::element::f32;
             break;
         }
     }
 
-    if (exec_prc == Precision::UNSPECIFIED) {
+    if (exec_prc == ov::element::undefined) {
         IE_THROW() << "Eltwise jitter failed to specify execution precision for Eltwise node";
     }
 

@@ -14,7 +14,7 @@ class jit_add_emitter : public jit_emitter {
 public:
     jit_add_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                     dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                    const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
+                    const ov::element::Type exec_prc = ov::element::f32,
                     const float alpha = 0.f);
 
     jit_add_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
@@ -38,7 +38,7 @@ class jit_mul_add_emitter : public jit_emitter {
 public:
     jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                         dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                        InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
+                        ov::element::Type exec_prc = ov::element::f32,
                         const float alpha = 0.f);
 
     jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
@@ -61,7 +61,7 @@ class jit_multiply_emitter : public jit_emitter {
 public:
     jit_multiply_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                          dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                         InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
+                         ov::element::Type exec_prc = ov::element::f32,
                          const float alpha = 0.f);
 
     jit_multiply_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
@@ -87,7 +87,7 @@ public:
                       const float power,
                       const float scale,
                       const float shift,
-                      const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32);
+                      const ov::element::Type exec_prc = ov::element::f32);
 
     jit_power_static_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                       dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
@@ -120,7 +120,7 @@ class jit_relu_emitter : public jit_emitter {
 public:
     jit_relu_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                      dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                     const InferenceEngine::Precision exec_prc = InferenceEngine::Precision::FP32,
+                     const ov::element::Type exec_prc = ov::element::f32,
                      const float alpha = 0.f);
 
     jit_relu_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,

@@ -18,17 +18,17 @@ using namespace dnnl::impl::cpu;
 using namespace Xbyak_aarch64;
 
 namespace {
-InferenceEngine::Precision get_arithmetic_binary_exec_precision(const std::shared_ptr<ov::Node>& n) {
-    std::vector<InferenceEngine::Precision> input_precisions;
+ov::element::Type get_arithmetic_binary_exec_precision(const std::shared_ptr<ov::Node>& n) {
+    std::vector<ov::element::Type> input_precisions;
     for (const auto& input : n->inputs()) {
         input_precisions.push_back(
-            InferenceEngine::details::convertPrecision(input.get_source_output().get_element_type()));
+            input.get_source_output().get_element_type());
     }
 
     assert(std::all_of(
         input_precisions.begin(),
         input_precisions.end(),
-        [&input_precisions](const InferenceEngine::Precision& precision) {return precision == input_precisions[0]; }));
+        [&input_precisions](const ov::element::Type& precision) {return precision == input_precisions[0]; }));
 
     return input_precisions[0];
 }
@@ -44,7 +44,7 @@ jit_add_emitter::jit_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
 
 jit_add_emitter::jit_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                                  dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                 const Precision exec_prc,
+                                 const ov::element::Type exec_prc,
                                  const float alpha) : jit_emitter(host, host_isa, exec_prc, alpha) {
 }
 
@@ -60,7 +60,7 @@ void jit_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const st
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if ((exec_prc_ != Precision::FP16) && (exec_prc_ != Precision::FP32)) {
+    if (exec_prc_ != ov::element::f32) {
         IE_THROW() << "unsupported precision: " << exec_prc_;
     }
 
@@ -69,19 +69,7 @@ void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     TReg src1 = TReg(in_vec_idxs[1]);
     TReg dst = TReg(out_vec_idxs[0]);
 
-    switch (exec_prc_) {
-        case Precision::FP16: {
-            h->uni_fadd(dst.h, src0.h, src1.h);
-            break;
-        }
-        case Precision::FP32: {
-            h->uni_fadd(dst.s, src0.s, src1.s);
-            break;
-        }
-        default: {
-            assert(!"unsupported precision");
-        }
-    }
+    h->uni_fadd(dst.s, src0.s, src1.s);
 }
 
 std::set<std::vector<element::Type>> jit_add_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
@@ -98,7 +86,7 @@ jit_mul_add_emitter::jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator
 
 jit_mul_add_emitter::jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                                          dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                         const Precision exec_prc,
+                                         const ov::element::Type exec_prc,
                                          const float alpha)
                                          : jit_emitter(host, host_isa, exec_prc, alpha) {
 }
@@ -115,7 +103,7 @@ void jit_mul_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, cons
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_mul_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if ((exec_prc_ != Precision::FP16) && (exec_prc_ != Precision::FP32)) {
+    if (exec_prc_ != ov::element::f32) {
         IE_THROW() << "unsupported precision: " << exec_prc_;
     }
 
@@ -125,22 +113,8 @@ void jit_mul_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
     TReg src2 = TReg(in_vec_idxs[2]);
     TReg dst = TReg(out_vec_idxs[0]);
 
-    // uni_fmad implementation
-    switch (exec_prc_) {
-        case Precision::FP16: {
-            h->fmul(dst.h, src0.h, src1.h);
-            h->fadd(dst.h, dst.h, src2.h);
-            break;
-        }
-        case Precision::FP32: {
-            h->fmul(dst.s, src0.s, src1.s);
-            h->fadd(dst.s, dst.s, src2.s);
-            break;
-        }
-        default: {
-            assert(!"unsupported precision");
-        }
-    }
+    h->fmul(dst.s, src0.s, src1.s);
+    h->fadd(dst.s, dst.s, src2.s);
 }
 
 std::set<std::vector<element::Type>> jit_mul_add_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
@@ -156,7 +130,7 @@ jit_multiply_emitter::jit_multiply_emitter(dnnl::impl::cpu::aarch64::jit_generat
 
 jit_multiply_emitter::jit_multiply_emitter(dnnl::impl::cpu::aarch64::jit_generator *host,
                                            dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                           const Precision exec_prc,
+                                           const ov::element::Type exec_prc,
                                            const float alpha)
                                            : jit_emitter(host, host_isa, exec_prc, alpha) {}
 
@@ -172,7 +146,7 @@ void jit_multiply_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, con
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if ((exec_prc_ != Precision::FP16) && (exec_prc_ != Precision::FP32)) {
+    if (exec_prc_ != ov::element::f32) {
         IE_THROW() << "unsupported precision: " << exec_prc_;
     }
 
@@ -181,19 +155,7 @@ void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, cons
     TReg src1 = TReg(in_vec_idxs[1]);
     TReg dst = TReg(out_vec_idxs[0]);
 
-    switch (exec_prc_) {
-        case Precision::FP16: {
-            h->uni_fmul(dst.h, src0.h, src1.h);
-            break;
-        }
-        case Precision::FP32: {
-            h->uni_fmul(dst.s, src0.s, src1.s);
-            break;
-        }
-        default: {
-            assert(!"unsupported precision");
-        }
-    }
+    h->uni_fmul(dst.s, src0.s, src1.s);
 }
 
 std::set<std::vector<element::Type>> jit_multiply_emitter::get_supported_precisions(const std::shared_ptr<ngraph::Node>& node) {
@@ -224,7 +186,7 @@ jit_power_static_emitter::jit_power_static_emitter(dnnl::impl::cpu::aarch64::jit
                                                    const float power,
                                                    const float scale,
                                                    const float shift,
-                                                   const Precision exec_prc)
+                                                   const ov::element::Type exec_prc)
                                                    : jit_emitter(host, host_isa, exec_prc),
                                                      power(power),
                                                      scale(scale),
@@ -265,7 +227,7 @@ float pow_f32(float v1, float v2) {
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if ((exec_prc_ != Precision::FP16) && (exec_prc_ != Precision::FP32)) {
+    if (exec_prc_ != ov::element::f32) {
         IE_THROW() << "unsupported precision: " << exec_prc_;
     }
 
@@ -378,7 +340,7 @@ jit_relu_emitter::jit_relu_emitter(dnnl::impl::cpu::aarch64::jit_generator* host
 
 jit_relu_emitter::jit_relu_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                                    dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                   const Precision exec_prc,
+                                   const ov::element::Type exec_prc,
                                    const float alpha)
                                    : jit_emitter(host, host_isa, exec_prc, alpha) {
 }
@@ -401,7 +363,7 @@ void jit_relu_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const s
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if ((exec_prc_ != Precision::FP16) && (exec_prc_ != Precision::FP32)) {
+    if (exec_prc_ != ov::element::f32) {
         IE_THROW() << "unsupported precision: " << exec_prc_;
     }
 
