@@ -21,7 +21,7 @@ namespace ov {
 namespace intel_cpu {
 namespace node {
 
-#if defined(OPENVINO_ARCH_X86_64)
+#ifndef OPENVINO_ARCH_ARM64
 
 struct jit_eltwise_params {
     size_t inputs_number;
@@ -73,7 +73,7 @@ enum class EltwiseImplType {
     optimizedShapeAgnostic = 2
 };
 
-#if defined (OPENVINO_ARCH_X86_64)
+#ifndef OPENVINO_ARCH_ARM64
 struct EltwiseData {
     Algorithm algo;
     dnnl::algorithm onednnAlgorithm;

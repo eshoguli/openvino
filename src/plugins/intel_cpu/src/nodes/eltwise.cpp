@@ -25,7 +25,7 @@
 #include "input.h"
 #include "common/cpu_convert.h"
 
-#if defined(OPENVINO_ARCH_X86_64)
+#ifndef OPENVINO_ARCH_ARM64
 #include <cpu/x64/injectors/jit_uni_quantization_injector.hpp>
 #include "emitters/x64/jit_emitter.hpp"
 #include "emitters/x64/jit_eltwise_emitters.hpp"
@@ -67,7 +67,7 @@ using namespace InferenceEngine;
 using namespace dnnl::impl::utils;
 using namespace dnnl::impl::cpu;
 
-#if defined(OPENVINO_ARCH_X86_64)
+#ifndef OPENVINO_ARCH_ARM64
 using namespace dnnl::impl::cpu::x64;
 using namespace Xbyak;
 #endif
@@ -2095,15 +2095,10 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         return;
 
     // if dim rank is greater than the maximum possible, we should use the reference execution
-#ifdef OPENVINO_ARCH_X86_64
-    bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
-#endif
-
-#ifdef OPENVINO_ARCH_ARM64
+#if defined (OPENVINO_ARCH_ARM64)
     bool canUseOptimizedImpl = mayiuse(dnnl::impl::cpu::aarch64::asimd) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
-#endif
-
-#ifdef OPENVINO_ARCH_X86_64
+#else
+    bool canUseOptimizedImpl = mayiuse(x64::sse41) && getInputShapeAtPort(0).getRank() <= MAX_ELTWISE_DIM_RANK;
     // TODO: Add EltwiseLog algorithm support for JIT implementation
     canUseOptimizedImpl &= !(one_of(getAlgorithm(), Algorithm::EltwiseLog) || isBitwise(getAlgorithm()));
 
@@ -2153,7 +2148,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
                     inputPrecisions.push_back(fusedNode->getOriginalInputPrecisionAtPort(i));
             }
         }
-#ifdef OPENVINO_ARCH_X86_64
+#ifndef OPENVINO_ARCH_ARM64
         if (fusedNode->getType() == Type::FakeQuantize) {
             canUseOptimizedShapeAgnosticImpl = false;
         }
@@ -2168,7 +2163,7 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         outputPrecision = fusedWith[fusedWith.size() - 1]->getOriginalOutputPrecisionAtPort(0);
     }
 
-#if defined(OPENVINO_ARCH_X86_64)
+#ifndef OPENVINO_ARCH_ARM64
     implType = canUseOptimizedShapeAgnosticImpl ? EltwiseImplType::optimizedShapeAgnostic :
             canUseOptimizedImpl ? EltwiseImplType::optimized : EltwiseImplType::reference;
 
@@ -2296,12 +2291,10 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
             // bad accuracy for shape {1, 1, 4, 11}, {2, 5, 1, 1}
             // same for disabled collapse dims
             } else if (lt == Blocked && shape.getRank() != 1 && (shape.getMinDims()[1] != Shape::UNDEFINED_DIM && shape.getMinDims()[1] > 1)) {
-                #ifdef OPENVINO_ARCH_X86_64
-                size_t blockSize = mayiuse(x64::avx512_core) ? 16 : 8;
-                #endif
-
-                #ifdef OPENVINO_ARCH_ARM64
+                #if defined (OPENVINO_ARCH_ARM64)
                 size_t blockSize = cpu_isa_traits<dnnl::impl::cpu::aarch64::asimd>::vlen / 4;
+                #else
+                size_t blockSize = mayiuse(x64::avx512_core) ? 16 : 8;
                 #endif
 
                 VectorDims blocks = dims;
@@ -2375,21 +2368,19 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
         } else {
             impl_desc_type impl_type = impl_desc_type::ref;
             if (canUseOptimizedImpl) {
-                #ifdef OPENVINO_ARCH_X86_64
+                #if defined (OPENVINO_ARCH_ARM64)
+                if (mayiuse(dnnl::impl::cpu::aarch64::asimd)) {
+                    impl_type = impl_desc_type::jit_asimd;
+                } else {
+                    IE_THROW() << "not supported architecture";
+                }
+                #else
                 if (mayiuse(x64::avx512_core)) {
                     impl_type = impl_desc_type::jit_avx512;
                 } else if (mayiuse(x64::avx2)) {
                     impl_type = impl_desc_type::jit_avx2;
                 } else if (mayiuse(x64::sse41)) {
                     impl_type = impl_desc_type::jit_sse42;
-                }
-                #endif
-
-                #ifdef OPENVINO_ARCH_ARM64
-                if (mayiuse(dnnl::impl::cpu::aarch64::asimd)) {
-                    impl_type = impl_desc_type::jit_asimd;
-                } else {
-                    IE_THROW() << "not supported architecture";
                 }
                 #endif
             }
@@ -2927,12 +2918,7 @@ bool Eltwise::canFuse(const NodePtr& node) const {
         return true;
     };
 
-#ifdef OPENVINO_ARCH_X86_64
-    if (!mayiuse(x64::sse41) || getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK)
-        return false;
-#endif
-
-#ifdef OPENVINO_ARCH_ARM64
+#if defined (OPENVINO_ARCH_ARM64)
     if (!mayiuse(dnnl::impl::cpu::aarch64::asimd) || (getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK))
         return false;
 
@@ -2946,6 +2932,9 @@ bool Eltwise::canFuse(const NodePtr& node) const {
                                                                                       eltwise->getGamma()))) {
         return false;
     }
+#else
+    if (!mayiuse(x64::sse41) || getInputShapeAtPort(0).getRank() > MAX_ELTWISE_DIM_RANK)
+        return false;
 #endif
 
     // TODO: supported only via reference executor
