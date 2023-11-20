@@ -117,6 +117,10 @@ protected:
 
     virtual void emitter_postamble() const;
 
+    void store_context() const;
+
+    void restore_context() const;
+
     using table_t = std::multimap<std::string, table_entry_t>;
     using mapped_table_t = std::multimap<std::string, mapped_table_entry_t>;
 
@@ -148,6 +152,12 @@ protected:
 
 private:
     mutable std::vector<size_t> preserved_gpr_idxs;
+
+    // General-purpose Registers
+    static const std::vector<uint32_t> save_gpr_regs;
+
+    // SIMD and Floating-Point registers
+    static const std::vector<uint32_t> save_v_regs;
 
     size_t table_off(std::string& key, size_t key_off_val_shift = 0) const {
         // assumption: all table entries sharing the same key also

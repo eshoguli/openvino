@@ -13,6 +13,18 @@ namespace ov {
 namespace intel_cpu {
 namespace aarch64 {
 
+const std::vector<uint32_t> jit_emitter::save_gpr_regs = {
+    0, 1, 2, 3, 4, 5, 6, 7,
+    8, 9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 31
+};
+
+const std::vector<uint32_t> jit_emitter::save_v_regs = {
+    0, 1, 2, 3, 4, 5, 6, 7,
+    16, 17, 18, 19, 20, 21, 22, 23,
+    24, 25, 26, 27, 28, 29, 30, 31
+};
+
 void jit_emitter::emit_code(const std::vector<size_t> &in_idxs,
                             const std::vector<size_t> &out_idxs,
                             const std::vector<size_t> &pool_vec_idxs,
@@ -119,6 +131,52 @@ void jit_emitter::emitter_postamble() const {
 
     aux_vec_idxs.clear();
     aux_gpr_idxs.clear();
+}
+
+void jit_emitter::store_context() const {
+    // X29: The register x29 represents the base pointer (also known as the frame pointer or FP)
+    // X30: In A64 systems, the return address is stored in register x30 (also known as LR)
+    h->stp(h->x29, h->x30, pre_ptr(h->sp, -16));
+
+    // General-purpose Registers
+    const auto save_gpr_regs_size = save_gpr_regs.size();
+    const int32_t xreg_len = 8;
+    for (size_t i = 0; i < save_gpr_regs_size; i += 2) {
+        h->stp(Xbyak_aarch64::XReg(save_gpr_regs[i]),
+            Xbyak_aarch64::XReg(save_gpr_regs[i + 1]),
+            pre_ptr(h->sp, -xreg_len * 2));
+    }
+
+    // SIMD and Floating-Point registers
+    const auto save_v_regs_size = save_v_regs.size();
+    const int32_t qreg_len = 16;
+    for (size_t i = 0; i < save_v_regs_size; i += 2) {
+        h->stp(Xbyak_aarch64::QReg(save_v_regs[i]),
+                Xbyak_aarch64::QReg(save_v_regs[i + 1]),
+                pre_ptr(h->sp, -qreg_len * 2));
+    }
+}
+
+void jit_emitter::restore_context() const {
+    // SIMD and Floating-Point registers
+    const auto save_v_regs_size = save_v_regs.size();
+    const int32_t qreg_len = 16;
+    for (size_t i = 0; i < save_v_regs_size; i += 2) {
+        h->ldp(Xbyak_aarch64::QReg(save_v_regs[save_v_regs_size - 1 - (i + 1)]),
+                Xbyak_aarch64::QReg(save_v_regs[save_v_regs_size - 1 - i]),
+                post_ptr(h->sp, qreg_len * 2));
+    }
+
+    // General-purpose Registers
+    const auto save_gpr_regs_size = save_gpr_regs.size();
+    const int32_t xreg_len = 8;
+    for (size_t i = 0; i < save_gpr_regs_size; i += 2) {
+        h->ldp(Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - (i + 1)]),
+                Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - i]),
+                post_ptr(h->sp, xreg_len * 2));
+    }
+
+    h->ldp(h->x29, h->x30, post_ptr(h->sp, 16));
 }
 
 }   // namespace aarch64
