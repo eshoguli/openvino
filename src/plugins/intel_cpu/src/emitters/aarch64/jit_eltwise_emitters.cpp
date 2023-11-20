@@ -297,6 +297,7 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
             // X30: In A64 systems, the return address is stored in register x30 (also known as LR)
             h->stp(h->x29, h->x30, pre_ptr(h->sp, -16));
 
+            // General-purpose Registers
             const auto save_gpr_regs_size = 30;
             static std::vector<uint32_t> save_gpr_regs(save_gpr_regs_size);
             for (auto i = 0; i < save_gpr_regs_size; i += 2) {
@@ -306,26 +307,66 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
 
             const int32_t xreg_len = 8;
             for (size_t i = 0; i < save_gpr_regs_size; i += 2) {
-                h->stp(
-                    Xbyak_aarch64::XReg(save_gpr_regs[i]),
+                h->stp(Xbyak_aarch64::XReg(save_gpr_regs[i]),
                     Xbyak_aarch64::XReg(save_gpr_regs[i + 1]),
                     pre_ptr(h->sp, -xreg_len * 2));
             }
 
-            h->blr(func_reg);
+            // SIMD and Floating-Point registers
+            // static std::vector<uint32_t> save_v_regs;
+            // for (auto i = 0; i <= 30; i += 2) {
+            //     if (i == 8) {
+            //         continue;
+            //     }
+            //     save_v_regs.push_back(i);
+            //     save_v_regs.push_back(i + 1);
+            // }
+            static std::vector<uint32_t> save_v_regs = {
+                0, 1, 2, 3, 4, 5, 6, 7,
+                // 10, 11, 12, 13, 14, 15,
+                // 16, 17, 18, 19, 20, 21, 22, 23,
+                // 24, 25, 26, 27, 28, 29, 30, 31
+            };
+            const auto save_v_regs_size = save_v_regs.size();
 
-            for (size_t i = 0; i < save_gpr_regs_size; i += 2) {
-                h->ldp(
-                    Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - (i + 1)]),
-                    Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - i]),
-                    post_ptr(h->sp, xreg_len * 2));
+            const int32_t qreg_len = 16;
+            for (size_t i = 0; i < save_v_regs_size; i += 2) {
+                //std::cout << "Qi=" << save_v_regs[i] << ", Qi+1=" << save_v_regs[i + 1] << std::endl;
+                h->stp(Xbyak_aarch64::QReg(save_v_regs[i]),
+                       Xbyak_aarch64::QReg(save_v_regs[i + 1]),
+                       pre_ptr(h->sp, -qreg_len * 2));
             }
 
-            h->ldp(h->x29, h->x30, post_ptr(h->sp, 16));
+            // h->stp(Xbyak_aarch64::QReg(16),
+            //     Xbyak_aarch64::QReg(17),
+            //     pre_ptr(h->sp, -qreg_len * 2));
+
+            h->blr(func_reg);
 
             Xbyak_aarch64::WReg w0(0);
             h->fmov(w0, s0);
             h->mov(dst.s[i], w0);
+
+            // h->ldp(Xbyak_aarch64::QReg(16),
+            //        Xbyak_aarch64::QReg(17),
+            //        post_ptr(h->sp, qreg_len * 2));
+
+            for (size_t i = 0; i < save_v_regs_size; i += 2) {
+                //std::cout << "Qi=" << save_v_regs[save_v_regs_size - 1 - (i + 1)] << ", Qi+1=" << save_v_regs[save_v_regs_size - 1 - i] << std::endl;
+                h->ldp(Xbyak_aarch64::QReg(save_v_regs[save_v_regs_size - 1 - (i + 1)]),
+                       Xbyak_aarch64::QReg(save_v_regs[save_v_regs_size - 1 - i]),
+                       post_ptr(h->sp, qreg_len * 2));
+            }
+
+            for (size_t i = 0; i < save_gpr_regs_size; i += 2) {
+                h->ldp(Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - (i + 1)]),
+                       Xbyak_aarch64::XReg(save_gpr_regs[save_gpr_regs_size - 1 - i]),
+                       post_ptr(h->sp, xreg_len * 2));
+            }
+
+            h->ldp(h->x29, h->x30, post_ptr(h->sp, 16));
+
+            //std::cout << std::endl;
         }
     }
 }
