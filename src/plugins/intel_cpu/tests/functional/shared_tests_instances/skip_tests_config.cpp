@@ -210,7 +210,7 @@ std::vector<std::string> disabledTestPatterns() {
         // Issue: 129931
         R"(smoke_FQLayerDQBias_4D_dynamic/FQLayerDQBias.*)",
         R"(smoke_FQLayerDQBias_4D_static/FQLayerDQBias.*)",
-        R"(smoke_LPT/ConvolutionTransformation.*)",
+        //R"(smoke_LPT/ConvolutionTransformation.*)",
         R"(smoke_LPT/ConvolutionWIthIncorrectWeightsTransformation.*)",
         R"(smoke_LPT/EliminateFakeQuantizeTransformation.*)",
         R"(smoke_LPT/FakeQuantizeAndTwoOutputBranchesWithConvolutionTransformation.*)",

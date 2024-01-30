@@ -228,10 +228,16 @@ void Transformations::UpToLpt() {
         }
     }
 
+    ov::pass::VisualizeTree("svg/cpu.original.svg").run_on_model(model);
+
     PreLpt(defaultPrecisions, isLegacyApi);
+
+    ov::pass::VisualizeTree("svg/cpu.pre_lpt.svg").run_on_model(model);
 
     if (useLpt)
         Lpt(hasINT16orINT32Levels, defaultPrecisions);
+
+    ov::pass::VisualizeTree("svg/cpu.post_lpt.svg").run_on_model(model);
 }
 
 void Transformations::CpuSpecificOpSet(void) {
@@ -835,6 +841,7 @@ void Transformations::PostSnippets(void) {
 }
 
 void Transformations::Snippets(void) {
+    return;
     const bool useSnippets = snippetsMode != Config::SnippetsMode::Disable &&
         CPU_DEBUG_CAP_IS_TRANSFORMATION_ENABLED(config.debugCaps, Snippets);
     if (!useSnippets)

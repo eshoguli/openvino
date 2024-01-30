@@ -214,6 +214,11 @@ std::shared_ptr<ov::Model> FakeQuantizeAndConvolutionFunction::get(
         OPENVINO_THROW("Unknown operation type ", operation);
     }
 
+    lastOperation = std::make_shared<ov::opset1::Reshape>(
+        lastOperation,
+        std::make_shared<opset1::Constant>(element::i64, Shape{ 2 }, std::vector<int32_t>{0, -1}),
+        true);
+
     if (!dequantizationAfter.empty()) {
         lastOperation->set_friendly_name("output_original");
         lastOperation = makeDequantization(lastOperation, dequantizationAfter);

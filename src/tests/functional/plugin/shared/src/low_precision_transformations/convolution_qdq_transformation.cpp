@@ -62,6 +62,20 @@ void ConvolutionQDqTransformation::SetUp() {
 void ConvolutionQDqTransformation::run() {
     LayerTransformation::run();
 
+    const std::string operationType = "Multiply";
+    size_t count = 0;
+
+    const std::shared_ptr<const ov::Model>& execFunction = compiledModel.get_runtime_model();
+    for (const auto& op : execFunction->get_ordered_ops()) {
+        const auto& rtInfo = op->get_rt_info();
+        const auto& typeIt = rtInfo.find("layerType");
+
+        const auto actualOperationType = typeIt->second.as<std::string>();
+        if (actualOperationType == operationType) {
+            count++;
+        }
+    }
+
     const auto params = std::get<4>(GetParam());
     const auto actualType = get_runtime_precision_by_type(params.layerName);
     EXPECT_EQ(actualType, params.expectedKernelType);
