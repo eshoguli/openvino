@@ -124,7 +124,9 @@ bool jitIsSupported(const Node* node,
         ov::element::f16,
         ov::element::f32,
         ov::element::i32,
-        ov::element::u32
+        ov::element::u32,
+        ov::element::i8,
+        ov::element::u8
     };
 
     if (!check_precisions(input_precisions, supported_precisions)) {
@@ -2789,6 +2791,18 @@ void Eltwise::execute(dnnl::stream strm) {
             }
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
+
+        // TODO: debug
+        if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
+            std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        } else if (
+            (std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
+            (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
+            std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        } else {
+            std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
+        }
+
         execPtr->exec(args_ptrs, dims_out);
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
@@ -2797,6 +2811,9 @@ void Eltwise::execute(dnnl::stream strm) {
         }
         std::vector<MemoryPtr> dstMemory;
         dstMemory.push_back(getDstMemoryAtPort(0));
+
+        // TODO: debug
+        std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << std::endl;
 
         aclExecPtr->exec(srcMemory, dstMemory, fqDataPtrs.data());
     } else {
