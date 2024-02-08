@@ -454,6 +454,12 @@ void compare(const ov::Tensor& expected,
             expected_value && actual_value && !std::isinf(expected_value) ? (abs / std::fabs(expected_value)) : 0;
         abs_error.update(abs, i);
         rel_error.update(rel, i);
+
+        // TODO: debug only
+//        std::cout << std::fixed << std::setw(11) << i <<
+//            "\texpected: " << expected_value <<
+//            "\tactual: " << actual_value <<
+//            "\tdiff: " << ((actual_value != 0) ? std::to_string(std::fabs(expected_value - actual_value) / actual_value) : "n/a") << std::endl;
     }
     abs_error.mean /= shape_size_cnt;
     rel_error.mean /= shape_size_cnt;

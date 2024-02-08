@@ -309,7 +309,15 @@ void jit_uni_eltwise_generic<isa>::load_vector(const TReg& data,
                                                const int32_t ptr_offset) {
     switch (src_prc) {
         case ov::element::f16: {
-            utils::load_vector(data.h, data.h4, ptr_reg, ptr_offset, broadcast, this);
+            mov(XReg(0), XReg(0));
+            mov(XReg(0), XReg(0));
+            mov(XReg(0), XReg(0));
+
+            utils::load_vector(data.h, data.h8, ptr_reg, ptr_offset, broadcast, this);
+
+            mov(XReg(0), XReg(0));
+            mov(XReg(0), XReg(0));
+            mov(XReg(0), XReg(0));
             break;
         }
         case ov::element::f32:
@@ -444,6 +452,11 @@ void jit_uni_eltwise_generic<isa>::store_vector(const XReg& ptr,
                                                 const ov::element::Type& src_prc,
                                                 const ov::element::Type& dst_prc,
                                                 const int32_t ptr_offset) {
+    if (src_prc == dst_prc) {
+        str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+        return;
+    }
+
     if (src_prc != dst_prc) {
         switch (src_prc) {
             case ov::element::f32: {

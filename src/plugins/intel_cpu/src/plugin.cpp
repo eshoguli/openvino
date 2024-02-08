@@ -168,7 +168,7 @@ Engine::Engine() :
         dnnl::impl::cpu::x64::cpu();
     });
 #if defined(OV_CPU_WITH_ACL)
-    scheduler_guard = SchedulerGuard::instance();
+    //scheduler_guard = SchedulerGuard::instance();
 #endif
     auto& ov_version = ov::get_openvino_version();
     m_compiled_model_runtime_properties["OV_VERSION"] = std::string(ov_version.buildNumber);
@@ -275,6 +275,10 @@ static Config::SnippetsMode getSnippetsMode(const ov::AnyMap& modelConfig, const
 
 std::shared_ptr<ov::ICompiledModel>
 Engine::compile_model(const std::shared_ptr<const ov::Model>& model, const ov::AnyMap& orig_config) const{
+    auto model_ptr = const_cast<Model*>(model.get());
+    auto model2 = model_ptr->shared_from_this();
+    ov::pass::Serialize("cpu.convert.1.xml", "cpu.convert.1.bin").run_on_model(model2);
+
     OV_ITT_SCOPED_TASK(itt::domains::intel_cpu, "Engine::compile_model");
     CREATE_DEBUG_TIMER(debugLoadTimer);
 
@@ -318,6 +322,8 @@ Engine::compile_model(const std::shared_ptr<const ov::Model>& model, const ov::A
     Transformations transformations(cloned_model, enableLPT, inferencePrecision, is_legacy_api(), snippetsMode, conf);
 
     transformations.UpToLpt();
+
+    ov::pass::Serialize("cpu.convert.2.xml", "cpu.convert.2.bin").run_on_model(model2);
 
     conf.readProperties(config, modelType);
     calculate_streams(conf, cloned_model);

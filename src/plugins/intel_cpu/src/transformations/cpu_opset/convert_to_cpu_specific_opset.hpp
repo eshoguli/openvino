@@ -30,6 +30,8 @@ namespace intel_cpu {
 inline void ConvertToCPUSpecificOpset(std::shared_ptr<ov::Model> &nGraphFunc) {
     RUN_ON_FUNCTION_SCOPE(ConvertToCPUSpecificOpset);
 
+    ov::pass::Serialize("cpu.convert.3.xml", "cpu.convert.3.bin").run_on_model(nGraphFunc);
+
     ov::pass::Manager manager;
     manager.set_per_pass_validation(false);
     CPU_REGISTER_PASS_COMMON(manager, ConvertMatMulToFC);
@@ -55,6 +57,8 @@ inline void ConvertToCPUSpecificOpset(std::shared_ptr<ov::Model> &nGraphFunc) {
     CPU_REGISTER_PASS_COMMON(manager, ov::pass::Validate);
 
     manager.run_passes(nGraphFunc);
+
+    ov::pass::Serialize("cpu.convert.4.xml", "cpu.convert.4.bin").run_on_model(nGraphFunc);
 }
 
 }   // namespace intel_cpu
