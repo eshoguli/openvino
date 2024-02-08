@@ -57,7 +57,7 @@ void jit_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const st
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (exec_prc_ != ov::element::f32) {
+    if ((exec_prc_ != ov::element::f16) && (exec_prc_ != ov::element::f32)) {
         OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
     }
 
@@ -66,11 +66,23 @@ void jit_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     TReg src1 = TReg(in_vec_idxs[1]);
     TReg dst = TReg(out_vec_idxs[0]);
 
-    h->uni_fadd(dst.s, src0.s, src1.s);
+    switch (exec_prc_) {
+        case element::f16: {
+            h->uni_fadd(dst.h, src0.h, src1.h);
+            break;
+        }
+        case element::f32: {
+            h->uni_fadd(dst.s, src0.s, src1.s);
+            break;
+        }
+        default: {
+            OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+        }
+    }
 }
 
 std::set<std::vector<element::Type>> jit_add_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32, element::f32}};
+    return {{element::f16, element::f16}, {element::f32, element::f32}};
 }
 
 /// CLAMP ///
@@ -298,7 +310,7 @@ void jit_mul_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, cons
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_mul_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (exec_prc_ != ov::element::f32) {
+    if ((exec_prc_ != element::f16) && (exec_prc_ != element::f32)) {
         OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
     }
 
@@ -326,11 +338,23 @@ void jit_mul_add_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
         h->mov(dst.b16, src2.b16);
     }
 
-    h->fmla(dst.s, mul0.s, mul1.s);
+    switch (exec_prc_) {
+        case element::f16: {
+            h->fmla(dst.h, mul0.h, mul1.h);
+            break;
+        }
+        case element::f32: {
+            h->fmla(dst.s, mul0.s, mul1.s);
+            break;
+        }
+        default: {
+            OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+        }
+    }
 }
 
 std::set<std::vector<element::Type>> jit_mul_add_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32, element::f32, element::f32}};
+    return {{element::f16, element::f16, element::f16}, {element::f32, element::f32, element::f32}};
 }
 
 /// MULTIPLY ///
@@ -356,7 +380,7 @@ void jit_multiply_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, con
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (exec_prc_ != ov::element::f32) {
+    if ((exec_prc_ != ov::element::f16) && (exec_prc_ != ov::element::f32)) {
         OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
     }
 
@@ -365,11 +389,23 @@ void jit_multiply_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, cons
     TReg src1 = TReg(in_vec_idxs[1]);
     TReg dst = TReg(out_vec_idxs[0]);
 
-    h->uni_fmul(dst.s, src0.s, src1.s);
+    switch (exec_prc_) {
+        case ov::element::f16: {
+            h->uni_fmul(dst.h, src0.h, src1.h);
+            break;
+        }
+        case ov::element::f32: {
+            h->uni_fmul(dst.s, src0.s, src1.s);
+            break;
+        }
+        default: {
+            OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+        }
+    }
 }
 
 std::set<std::vector<element::Type>> jit_multiply_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32, element::f32}};
+    return {{element::f16, element::f16}, {element::f32, element::f32}};
 }
 
 /// TANH ///
@@ -486,13 +522,27 @@ size_t jit_power_static_emitter::get_aux_vecs_count() const { return 1; }
 size_t jit_power_static_emitter::get_aux_gprs_count() const { return 2; }
 
 void jit_power_static_emitter::register_table_entries() {
-    push_arg_entry_of("power", dnnl::impl::float2int(power), true);
-    push_arg_entry_of("scale", dnnl::impl::float2int(scale), true);
-    push_arg_entry_of("shift", dnnl::impl::float2int(shift), true);
+    switch (exec_prc_) {
+        case ov::element::f16: {
+            push_arg_entry_of("power", dnnl::impl::utils::bit_cast<int16_t>(static_cast<float16>(power)), true);
+            push_arg_entry_of("scale", dnnl::impl::utils::bit_cast<int16_t>(static_cast<float16>(scale)), true);
+            push_arg_entry_of("shift", dnnl::impl::utils::bit_cast<int16_t>(static_cast<float16>(shift)), true);
+            break;
+        }
+        case ov::element::f32: {
+            push_arg_entry_of("power", dnnl::impl::float2int(power), true);
+            push_arg_entry_of("scale", dnnl::impl::float2int(scale), true);
+            push_arg_entry_of("shift", dnnl::impl::float2int(shift), true);
+            break;
+        }
+        default: {
+            OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+        }
+    }
 }
 
 std::set<std::vector<element::Type>> jit_power_static_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32, element::f32}};
+    return {{element::f16, element::f16}, {element::f32, element::f32}};
 }
 
 void jit_power_static_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const {
@@ -505,7 +555,7 @@ void jit_power_static_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs,
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (exec_prc_ != ov::element::f32) {
+    if ((exec_prc_ != ov::element::f16) && (exec_prc_ != ov::element::f32)) {
         OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
     }
 
@@ -513,7 +563,19 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
     TReg dst = TReg(out_vec_idxs[0]);
 
     if (power == 0.f) {
-        h->fmov(dst.s, 1.);
+        switch (exec_prc_) {
+            case ov::element::f16: {
+                h->fmov(dst.h, 1.);
+                break;
+            }
+            case ov::element::f32: {
+                h->fmov(dst.s, 1.);
+                break;
+            }
+            default: {
+                OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+            }
+        }
         return;
     }
 
@@ -525,15 +587,42 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
     TReg aux = TReg(aux_vec_idxs[0]);
     if (scale != 1.f) {
         auto adr = table_val2("scale");
-        h->ld1r(aux.s, adr);
-        h->fmul(dst.s, src().s, aux.s);
+        switch (exec_prc_) {
+            case ov::element::f16: {
+                h->ld1r(aux.s, adr);
+                h->ld1r(aux.h, adr);
+                h->fmul(dst.h, src().h, aux.h);
+                break;
+            }
+            case ov::element::f32: {
+                h->ld1r(aux.s, adr);
+                h->fmul(dst.s, src().s, aux.s);
+                break;
+            }
+            default: {
+                OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+            }
+        }
         get_from_dst = true;
     }
 
     if (shift != 0.f) {
         auto adr = table_val2("shift");
-        h->ld1r(aux.s, adr);
-        h->fadd(dst.s, src().s, aux.s);
+        switch (exec_prc_) {
+            case ov::element::f16: {
+                h->ld1r(aux.h, adr);
+                h->fadd(dst.h, src().h, aux.h);
+                break;
+            }
+            case ov::element::f32: {
+                h->ld1r(aux.s, adr);
+                h->fadd(dst.s, src().s, aux.s);
+                break;
+            }
+            default: {
+                OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+            }
+        }
         get_from_dst = true;
     }
 
@@ -546,15 +635,51 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
 
     if (std::floor(power) == power && power > 0) {
         h->mov(aux.b16, src().b16);
-        h->fmov(dst.s, 1.);
+        switch (exec_prc_) {
+            case ov::element::f16: {
+                h->fmov(dst.h, 1.);
+                break;
+            }
+            case ov::element::f32: {
+                h->fmov(dst.s, 1.);
+                break;
+            }
+            default: {
+                OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+            }
+        }
 
         auto current_power = static_cast<size_t>(power);
         while (current_power > 0) {
             if (current_power & 1) {
-                h->fmul(dst.s, dst.s, aux.s);
+                switch (exec_prc_) {
+                    case ov::element::f16: {
+                        h->fmul(dst.h, dst.h, aux.h);
+                        break;
+                    }
+                    case ov::element::f32: {
+                        h->fmul(dst.s, dst.s, aux.s);
+                        break;
+                    }
+                    default: {
+                        OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+                    }
+                }
             }
             if (current_power > 1) {
-                h->fmul(aux.s, aux.s, aux.s);
+                switch (exec_prc_) {
+                    case ov::element::f16: {
+                        h->fmul(aux.h, aux.h, aux.h);
+                        break;
+                    }
+                    case ov::element::f32: {
+                        h->fmul(dst.s, dst.s, aux.s);
+                        break;
+                    }
+                    default: {
+                        OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+                    }
+                }
             }
             current_power = current_power >> 1;
         }
@@ -569,8 +694,23 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
 
         const std::unordered_set<size_t> exclude = {src().getIdx(), dst.getIdx()};
         store_context(exclude);
-        for (auto i = 0; i < 4; i++) {
-            h->mov(s0, src().s[i]);
+        const auto amount = exec_prc_ == ov::element::f32 ? 4 : 8;
+        for (auto i = 0; i < amount; i++) {
+            switch (exec_prc_) {
+                case ov::element::f16: {
+                    Xbyak_aarch64::HReg h0(0);
+                    h->mov(h0, src().h[i]);
+                    h->fcvt(s0, h0);
+                    break;
+                }
+                case ov::element::f32: {
+                    h->mov(s0, src().s[i]);
+                    break;
+                }
+                default: {
+                    OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+                }
+            }
             h->ldr(s1, table_val("power"));
 
             h->str(Xbyak_aarch64::QReg(dst.getIdx()), pre_ptr(h->sp, -16));
@@ -579,9 +719,24 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
             h->ldr(Xbyak_aarch64::QReg(src().getIdx()), post_ptr(h->sp, 16));
             h->ldr(Xbyak_aarch64::QReg(dst.getIdx()), post_ptr(h->sp, 16));
 
-            Xbyak_aarch64::WReg w0(0);
-            h->fmov(w0, s0);
-            h->mov(dst.s[i], w0);
+            switch (exec_prc_) {
+                case ov::element::f16: {
+                    Xbyak_aarch64::WReg w0(0);
+                    Xbyak_aarch64::HReg h0(0);
+                    h->fcvt(h0, s0);
+                    h->mov(dst.h[i], w0);
+                    break;
+                }
+                case ov::element::f32: {
+                    Xbyak_aarch64::WReg w0(0);
+                    h->fmov(w0, s0);
+                    h->mov(dst.s[i], w0);
+                    break;
+                }
+                default: {
+                    OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+                }
+            }
         }
         restore_context(exclude);
     }
@@ -652,7 +807,7 @@ size_t jit_relu_emitter::get_inputs_count() const { return 1; }
 size_t jit_relu_emitter::get_aux_vecs_count() const { return 1; }
 
 std::set<std::vector<element::Type>> jit_relu_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32}};
+    return {{element::f16}, {element::f32}};
 }
 
 void jit_relu_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const {
@@ -665,7 +820,7 @@ void jit_relu_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const s
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (exec_prc_ != ov::element::f32) {
+    if ((exec_prc_ != ov::element::f16) && (exec_prc_ != ov::element::f32)) {
         OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
     }
 
@@ -675,8 +830,21 @@ void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
     TReg src = TReg(in_vec_idxs[0]);
     TReg dst = TReg(out_vec_idxs[0]);
 
-    h->movi(tmp.s, 0);
-    h->fmaxnm(dst.s, src.s, tmp.s);
+    switch (exec_prc_) {
+        case ov::element::f16: {
+            h->movi(tmp.h, 0);
+            h->fmaxnm(dst.h, src.h, tmp.h);
+            break;
+        }
+        case ov::element::f32: {
+            h->movi(tmp.s, 0);
+            h->fmaxnm(dst.s, src.s, tmp.s);
+            break;
+        }
+        default: {
+            OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+        }
+    }
 }
 
 /// SELECT ///
