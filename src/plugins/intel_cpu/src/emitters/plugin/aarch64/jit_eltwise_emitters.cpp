@@ -400,16 +400,149 @@ void jit_relu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
     h->fmaxnm(dst.s, src.s, tmp.s);
 }
 
+// TODO: jit_uni_eltwise_injector_f32 ???
+/// SIGMOID ///
+jit_sigmoid_emitter::jit_sigmoid_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
+                                         dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                         const std::shared_ptr<ov::Node>& node)
+                                         : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
+}
+
+jit_sigmoid_emitter::jit_sigmoid_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
+                                         dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                         const ov::element::Type exec_prc) : jit_emitter(host, host_isa, exec_prc) {
+}
+
+size_t jit_sigmoid_emitter::get_inputs_count() const { return 1; }
+
+void jit_sigmoid_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
+    } else {
+        OPENVINO_THROW("Can't create jit eltwise kernel");
+    }
+}
+
+#define IDX(a) static_cast<uint32_t>(a.getIdx())
+
+// TODO: read date from memory once only
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+void jit_sigmoid_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (exec_prc_ != ov::element::f32) {
+        OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+    }
+
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    TReg vmm_src = TReg(in_vec_idxs[0]);
+    //TReg dst = TReg(out_vec_idxs[0]);
+
+    //using TRegS = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TRegS;
+    TReg vmm_mask {0}, vmm_aux0 {0}, vmm_aux1 {0}, vmm_aux2 {0}, vmm_aux3 {0},
+            vmm_aux4 {0}, vmm_aux5 {0}, vmm_aux6 {0}, vmm_aux7 {0}, vmm_tmp {0};
+    TReg z_tmp {31};
+
+    h->mov(vmm_aux3.b16, vmm_src.b16);
+    // we store the original sign and make x negative
+
+    h->ld1r(z_tmp.s, table_val2("sign_mask"));
+    h->and_(vmm_aux3.b16, vmm_aux3.b16, z_tmp.b16);
+
+    // z_tmp = sign_mask
+    h->orr(vmm_src.b16, vmm_src.b16, z_tmp.b16);
+
+    const auto exp_compute_vector_fwd = [&](){
+        const TReg t0(in_vec_idxs[0]);
+        const TReg t1(aux_vec_idxs[0]);
+        const TReg t2(aux_vec_idxs[1]);
+        h->ld1r(z_tmp.s, table_val2("exp_ln_flt_max_f"));
+        h->fmin(t0.s, t0.s, z_tmp.s);
+        h->ld1r(z_tmp.s, table_val2("exp_ln_flt_min_f"));
+        h->fmax(t0.s, t0.s, z_tmp.s);
+        h->ld1r(z_tmp.s, table_val2("exp_log2ef"));
+        h->fmul(t0.s, t0.s, z_tmp.s);
+        // h->movprfx(t1, p_all, t0);
+        h->frintm(t1.s, t0.s);
+        h->fcvtzs(t2.s, t1.s);
+        h->fsub(t1.s, t0.s, t1.s);
+
+        h->ld1r(z_tmp.s, table_val2("one"));
+        h->fadd(t0.s, t1.s, z_tmp.s);
+
+        // TODO: 0 & 1 registers are used
+        Xbyak_aarch64::WReg w0(0);
+        Xbyak_aarch64::WReg w1(1);
+        for (auto i = 0; i < 4; i++) {
+            h->mov(w0, t0.s[i]);
+            h->lsr(w1, w0, 17);
+            h->mov(t1.s[i], w1);
+            // TODO: looks like it doesn't work
+            h->frecpx(Xbyak_aarch64::SReg(w1.getIdx()), Xbyak_aarch64::SReg(w1.getIdx()));
+        }
+
+        // FRECPX
+        //h->frecpx(t1.s, t1.s);
+        //h->fscale(t1.s, p_all, t1.s);
+        h->ld1r(z_tmp.s, table_val2("exp_not_mask17"));
+        h->and_(t2.b16, t0.b16, z_tmp.b16);
+        h->fsub(t2.s, t0.s, t2.s);
+        // h->movprfx(t0, p_all, ZRegS(IDX(table_val(exp_coeff2, z_tmp))));
+
+        h->ld1r(z_tmp.s, table_val2("exp_coeff1"));
+        h->fmla(t0.s, t2.s, z_tmp.s);
+
+        h->ld1r(z_tmp.s, table_val2("one"));
+        h->fmla(z_tmp.s, t2.s, t0.s);
+
+        h->mov(t0.b16, z_tmp.b16);
+        h->fmul(t0.s, t1.s, t0.s);
+    };
+
+    exp_compute_vector_fwd();
+
+    // dup exp(x)
+    h->mov(vmm_aux1.b16, vmm_src.b16);
+    // (exp(x) + 1)
+    h->ld1r(z_tmp.s, table_val2("one"));
+    h->add(vmm_aux1.s, vmm_aux1.s, z_tmp.s);
+    // y = exp(x) / (exp(x) + 1)
+    h->fdiv(vmm_src.s, vmm_src.s, vmm_aux1.s);
+
+    // Now we have to apply the "symmetry" based on original sign
+    // z_tmp = one
+    h->mov(vmm_aux2.b16, z_tmp.b16);
+    h->uni_fsub(vmm_aux2.s, vmm_aux2.s, vmm_src.s);
+
+    h->and_(z_tmp.b16, vmm_aux3.b16, vmm_aux3.b16);
+    // h->cmpne(PRegS(IDX(p_mask)), p_all / T_z, z_tmp, 0);
+
+    // blend_with_mask(vmm_aux2, vmm_src);
+
+    h->mov(vmm_src.b16, vmm_aux2.b16);
+}
+
+void jit_sigmoid_emitter::register_table_entries() {
+    push_arg_entry_of("sign_mask", 0x80000000, true);
+    push_arg_entry_of("exp_ln_flt_max_f", 0x42b17218, true);
+    push_arg_entry_of("exp_ln_flt_min_f", 0xc2aeac50, true);
+    push_arg_entry_of("exp_log2ef", 0x3fb8aa3b, true);
+    push_arg_entry_of("exp_coeff1", 0x3f31721c, true);
+    push_arg_entry_of("one", 0x3f800000, true);
+}
+
+std::set<std::vector<element::Type>> jit_sigmoid_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
+    return {{element::f32, element::f32}};
+}
+
 /// SUBTRACT ///
 jit_subtract_emitter::jit_subtract_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
-                                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                 const std::shared_ptr<ov::Node>& node)
-                                 : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
+                                           dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                           const std::shared_ptr<ov::Node>& node)
+                                           : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
 }
 
 jit_subtract_emitter::jit_subtract_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
-                                 dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                 const ov::element::Type exec_prc) : jit_emitter(host, host_isa, exec_prc) {
+                                           dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                           const ov::element::Type exec_prc) : jit_emitter(host, host_isa, exec_prc) {
 }
 
 size_t jit_subtract_emitter::get_inputs_count() const { return 2; }
