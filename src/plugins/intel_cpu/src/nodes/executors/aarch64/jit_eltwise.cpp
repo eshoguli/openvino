@@ -19,6 +19,7 @@ bool JitEltwiseExecutor::isSupported(
     const float gamma) {
     const auto is_supported = one_of(algorithm,
                                      Algorithm::EltwiseAdd,
+                                     Algorithm::EltwiseDivide,
                                      Algorithm::EltwiseMultiply,
                                      Algorithm::EltwiseMulAdd,
                                      Algorithm::EltwisePowerStatic,
@@ -57,13 +58,18 @@ bool JitEltwiseExecutor::isSupported(
         return true;
     };
 
-    static const std::set<ov::element::Type> supported_precisions = {
-        ov::element::f16,
-        ov::element::f32,
-        ov::element::i32,
-        ov::element::i8,
-        ov::element::u8
-    };
+    const std::set<ov::element::Type> supported_precisions =
+        (algorithm == Algorithm::EltwiseDivide) ?
+            // Divide operation doesn't support int32 tensor inference in fp32 precision.
+            // As result Divide operation supports fp16 and fp32 only.
+            std::set<ov::element::Type> { ov::element::f16, ov::element::f32 } :
+            std::set<ov::element::Type> {
+                    ov::element::f16,
+                    ov::element::f32,
+                    ov::element::i32,
+                    ov::element::i8,
+                    ov::element::u8
+            };
 
     if (!check_precisions(input_precisions, output_precisions, supported_precisions)) {
         return false;
