@@ -19,6 +19,7 @@ bool JitEltwiseExecutor::isSupported(
     const float gamma) {
     const auto is_supported = one_of(algorithm,
                                      Algorithm::EltwiseAdd,
+                                     Algorithm::EltwiseExp,
                                      Algorithm::EltwiseMultiply,
                                      Algorithm::EltwiseMulAdd,
                                      Algorithm::EltwisePowerStatic,
