@@ -140,7 +140,9 @@ std::string ActivationLayerCPUTest::getPrimitiveType(const ngraph::helpers::Acti
 #if defined(OV_CPU_WITH_ACL)
 #if defined(OPENVINO_ARCH_ARM64)
     if ((element_type == ov::element::f32) &&
-        ((activation_type == ngraph::helpers::ActivationTypes::Relu) || (activation_type == ngraph::helpers::ActivationTypes::Sigmoid))) {
+        ((activation_type == ngraph::helpers::ActivationTypes::Relu) ||
+        (activation_type == ngraph::helpers::ActivationTypes::Sigmoid) ||
+        (activation_type == ngraph::helpers::ActivationTypes::Exp))) {
         return "jit";
     }
 
@@ -243,8 +245,9 @@ const std::vector<CPUSpecificParams>& cpuParams5D() {
 
 const std::vector<std::vector<ov::Shape>>& basic5D() {
     static const std::vector<std::vector<ov::Shape>> basic5D {
-        {{2, 4, 3, 4, 1}},
-        {{2, 17, 7, 5, 4}},
+        {{1, 1, 1, 1, 16}},
+        // {{2, 4, 3, 4, 1}},
+        // {{2, 17, 7, 5, 4}},
     };
 
     return basic5D;

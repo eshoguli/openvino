@@ -111,6 +111,169 @@ std::set<std::vector<element::Type>> jit_divide_emitter::get_supported_precision
     return {{element::f32, element::f32}};
 }
 
+// TODO: jit_uni_eltwise_injector_f32 ???
+/// EXPONENT ///
+jit_exp_emitter::jit_exp_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
+                                         dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                         const std::shared_ptr<ov::Node>& node)
+                                         : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
+    prepare_table();
+}
+
+jit_exp_emitter::jit_exp_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
+                                         dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
+                                         const ov::element::Type exec_prc) : jit_emitter(host, host_isa, exec_prc) {
+    prepare_table();
+}
+
+size_t jit_exp_emitter::get_inputs_count() const { return 1; }
+
+size_t jit_exp_emitter::get_aux_vecs_count() const { return 3; }
+
+size_t jit_exp_emitter::get_aux_gprs_count() const { return 2; }
+
+void jit_exp_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
+        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
+    } else {
+        OPENVINO_THROW("Can't create jit eltwise kernel");
+    }
+}
+
+#define IDX(a) static_cast<uint32_t>(a.getIdx())
+
+// TODO: read date from memory once only
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
+    if (exec_prc_ != ov::element::f32) {
+        OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
+    }
+
+    std::cout << "in_vec_idxs: ";
+    for (const auto i : in_vec_idxs) std::cout << i << ", ";
+    std::cout << std::endl;
+
+    std::cout << "out_vec_idxs: ";
+    for (const auto i : out_vec_idxs) std::cout << i << ", ";
+    std::cout << std::endl;
+
+    std::cout << "aux_vec_idxs: ";
+    for (const auto i : aux_vec_idxs) std::cout << i << ", ";
+    std::cout << std::endl;
+
+    std::cout << "aux_gpr_idxs: ";
+    for (const auto i : aux_gpr_idxs) std::cout << i << ", ";
+    std::cout << std::endl;
+
+    float result = expf(12.382);
+    result = result + 1.f;
+    std::cout << result << std::endl;
+
+
+    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    //TReg vmm_src = TReg(in_vec_idxs[0]);
+    TReg vmm_dst = TReg(out_vec_idxs[0]);
+
+    const TReg t0(in_vec_idxs[0]);
+    const TReg t1(aux_vec_idxs[0]);
+    const TReg t2(aux_vec_idxs[1]);
+    const TReg tmp(aux_vec_idxs[2]);
+    const TReg z_tmp(31);
+
+    h->ld1r(z_tmp.s, table_val2("one"));
+    h->ld1r(z_tmp.s, table_val2("exp_ln_flt_max_f"));
+    h->fmin(t0.s, t0.s, z_tmp.s);
+    h->ld1r(z_tmp.s, table_val2("exp_ln_flt_min_f"));
+    h->fmax(t0.s, t0.s, z_tmp.s);
+
+    h->ld1r(z_tmp.s, table_val2("exp_log2ef"));
+    h->fmul(t0.s, t0.s, z_tmp.s);
+
+    // ignore hardware hint for ASIMD
+    // h->movprfx(t1, p_all, t0);
+
+    // Floating-point Round to Integral, toward Minus infinity (vector).
+    // This instruction rounds a vector of floating-point values in the SIMD&FP source register to integral floating-point values
+    // of the same size using the Round towards Minus Infinity rounding mode, and writes the result to the SIMD&FP destination register.
+    h->frintm(t1.s, t0.s);
+
+    // Multi-vector floating-point convert to signed integer, rounding toward zero
+    // h->fcvtzs(t2.s, t1.s);
+
+    h->fsub(t1.s, t0.s, t1.s);
+
+
+
+
+    h->ld1r(z_tmp.s, table_val2("one"));
+    h->fadd(t0.s, t1.s, z_tmp.s);
+
+    // TODO: 0 & 1 registers are used
+    Xbyak_aarch64::WReg w0(aux_gpr_idxs[0]);
+    // Xbyak_aarch64::WReg w1(aux_gpr_idxs[1]);
+
+    Xbyak_aarch64::SReg tmp_s(z_tmp.getIdx());
+    // Xbyak_aarch64::VReg v0(0);
+    // Xbyak_aarch64::VReg4S v0_s(0);
+
+    // TODO: fix me: SRegList => WReg => SReg => [calculation] => SReg => WReg => SRegList
+    // TODO: avoid acalar register: use SRegList => SReg and back
+    for (auto i = 0; i < 4; i++) {
+        h->mov(w0, t0.s[i]);
+        // TODO: why don't use the same register?
+        h->lsr(w0, w0, 17);
+        h->fmov(tmp_s, w0);
+
+        // TODO: looks like it doesn't work
+        //h->frecpx(Xbyak_aarch64::SReg(w1.getIdx()), Xbyak_aarch64::SReg(w1.getIdx()));
+        //h->frecpx(t1.s[0], t1.s[0]);
+
+        h->frecpx(tmp_s, tmp_s);
+        //h->fscale(tmp_s, tmp_s);
+
+        h->fmov(w0, tmp_s);
+        h->mov(t1.s[i], w0);
+    }
+
+
+    h->mov(vmm_dst.b16, t0.b16);
+
+
+
+
+
+    // // FRECPX
+    // //h->frecpx(t1.s, t1.s);
+    // //h->fscale(t1.s, p_all, t1.s);
+    // h->ld1r(z_tmp.s, table_val2("exp_not_mask17"));
+    // h->and_(t2.b16, t0.b16, z_tmp.b16);
+    // h->fsub(t2.s, t0.s, t2.s);
+
+    // // ignore hardware hint for ASIMD
+    // // h->movprfx(t0, p_all, ZRegS(IDX(table_val(exp_coeff2, z_tmp))));
+
+    // h->ld1r(z_tmp.s, table_val2("exp_coeff1"));
+    // h->fmla(t0.s, t2.s, z_tmp.s);
+
+    // h->ld1r(z_tmp.s, table_val2("one"));
+    // h->fmla(t0.s, t2.s, z_tmp.s);
+
+    // h->fmul(vmm_dst.s, t1.s, t0.s);
+}
+
+void jit_exp_emitter::register_table_entries() {
+    push_arg_entry_of("exp_ln_flt_max_f", 0x42b17218, true);
+    push_arg_entry_of("exp_ln_flt_min_f", 0xc2aeac50, true);
+    push_arg_entry_of("exp_log2ef", 0x3fb8aa3b, true);
+    push_arg_entry_of("exp_coeff1", 0x3f31721c, true);
+    push_arg_entry_of("one", 0x3f800000, true);
+    push_arg_entry_of("exp_not_mask17", ~((1u << 17) - 1), true);
+}
+
+std::set<std::vector<element::Type>> jit_exp_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
+    return {{element::f32, element::f32}};
+}
+
 /// MUL_ADD ///
 jit_mul_add_emitter::jit_mul_add_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                                          dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,

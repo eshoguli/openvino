@@ -172,7 +172,8 @@ private:
     // 09      | dst
     // 10      | aux
     // 11      | aux
-    // 12-15   | [not used]
+    // 12      | aux
+    // 14-15   | [not used]
     // 16      | src
     // 17      | src
     // 18      | src
