@@ -254,60 +254,26 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     h->ld1r(vmm_src.s, table_val2("exp_pol4"));
     h->fmla(vmm_src.s, vmm_aux1.s, z_tmp.s);
 
-    h->mov(vmm_dst.b16, vmm_src.b16);
+    h->ld1r(z_tmp.s, table_val2("exp_pol3"));
+    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
+    h->mov(vmm_src.b16, z_tmp.b16);
 
-    // h->ld1r(z_tmp.s, table_val2("one"));
-    // h->fadd(t0.s, t1.s, z_tmp.s);
+    h->ld1r(z_tmp.s, table_val2("exp_pol2"));
+    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
+    h->mov(vmm_src.b16, z_tmp.b16);
 
-    // // TODO: 0 & 1 registers are used
-    // Xbyak_aarch64::WReg w0(aux_gpr_idxs[0]);
-    // // Xbyak_aarch64::WReg w1(aux_gpr_idxs[1]);
+    h->ld1r(z_tmp.s, table_val2("exp_pol1"));
+    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
+    h->mov(vmm_src.b16, z_tmp.b16);
 
-    // Xbyak_aarch64::SReg tmp_s(z_tmp.getIdx());
-    // // Xbyak_aarch64::VReg v0(0);
-    // // Xbyak_aarch64::VReg4S v0_s(0);
+    h->ld1r(z_tmp.s, table_val2("one"));
+    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
+    // h->mov(vmm_src.b16, z_tmp.b16);
 
-    // // TODO: fix me: SRegList => WReg => SReg => [calculation] => SReg => WReg => SRegList
-    // // TODO: avoid acalar register: use SRegList => SReg and back
-    // for (auto i = 0; i < 4; i++) {
-    //     h->mov(w0, t0.s[i]);
-    //     // TODO: why don't use the same register?
-    //     h->lsr(w0, w0, 17);
-    //     h->fmov(tmp_s, w0);
-
-    //     // https://developer.arm.com/documentation/ddi0602/2023-12/SVE-Instructions/FEXPA--Floating-point-exponential-accelerator-?lang=en
-    //     // FEXPA <Zd>.<T>, <Zn>.<T>
-
-    //     // TODO: looks like it doesn't work
-    //     //h->frecpx(Xbyak_aarch64::SReg(w1.getIdx()), Xbyak_aarch64::SReg(w1.getIdx()));
-    //     //h->frecpx(t1.s[0], t1.s[0]);
-
-    //     //h->frecpx(tmp_s, tmp_s);
-    //     //h->fscale(tmp_s, tmp_s);
-
-    //     h->fmov(w0, tmp_s);
-    //     h->mov(t1.s[i], w0);
-    // }
-
-
-
-    // // FRECPX
-    // //h->frecpx(t1.s, t1.s);
-    // //h->fscale(t1.s, p_all, t1.s);
-    // h->ld1r(z_tmp.s, table_val2("exp_not_mask17"));
-    // h->and_(t2.b16, t0.b16, z_tmp.b16);
-    // h->fsub(t2.s, t0.s, t2.s);
-
-    // // ignore hardware hint for ASIMD
-    // // h->movprfx(t0, p_all, ZRegS(IDX(table_val(exp_coeff2, z_tmp))));
-
-    // h->ld1r(z_tmp.s, table_val2("exp_coeff1"));
-    // h->fmla(t0.s, t2.s, z_tmp.s);
-
-    // h->ld1r(z_tmp.s, table_val2("one"));
-    // h->fmla(t0.s, t2.s, z_tmp.s);
-
-    // h->fmul(vmm_dst.s, t1.s, t0.s);
+    // y = y * 2^n
+    h->fmul(vmm_src.s, z_tmp.s, vmm_aux2.s);
+    h->ld1r(z_tmp.s, table_val2("two"));
+    h->fmul(vmm_dst.s, vmm_src.s, z_tmp.s);
 }
 
 // // TODO: read date from memory once only
@@ -430,6 +396,7 @@ void jit_exp_emitter::register_table_entries() {
     push_arg_entry_of("exp_log2ef", 0x3fb8aa3b, true);
     push_arg_entry_of("exp_coeff1", 0x3f31721c, true);
     push_arg_entry_of("one", 0x3f800000, true);
+    push_arg_entry_of("two", 0x40000000, true);
     push_arg_entry_of("half", 0x3f000000, true);
     push_arg_entry_of("ln2f", 0x3f317218, true);
     push_arg_entry_of("exponent_bias", 0x0000007f, true);
