@@ -173,43 +173,31 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
     TReg vmm_dst = TReg(out_vec_idxs[0]);
 
-    // TODO: don't update source
     const TReg vmm_src(in_vec_idxs[0]);
 
-    const TReg vmm_aux1(aux_vec_idxs[0]);
-    const TReg vmm_aux2(aux_vec_idxs[1]);
-    const TReg tmp(aux_vec_idxs[2]);
+    const TReg vmm_aux0(aux_vec_idxs[0]);
+    const TReg vmm_aux1(aux_vec_idxs[1]);
+    const TReg vmm_aux2(aux_vec_idxs[2]);
     const TReg z_tmp(31);
 
     h->ld1r(z_tmp.s, table_val2("exp_ln_flt_max_f"));
-    h->fmin(vmm_src.s, vmm_src.s, z_tmp.s);
+    h->fmin(vmm_aux0.s, vmm_src.s, z_tmp.s);
     h->ld1r(z_tmp.s, table_val2("exp_ln_flt_min_f"));
-    h->fmax(vmm_src.s, vmm_src.s, z_tmp.s);
-    h->mov(vmm_aux1.b16, vmm_src.b16);
+    h->fmax(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
+    h->mov(vmm_aux1.b16, vmm_aux0.b16);
 
 
     // calculate exp(x)
     // fx = x * log2ef + 0.5
     // TODO: fma
     h->ld1r(z_tmp.s, table_val2("exp_log2ef"));
-    h->fmul(vmm_src.s, vmm_src.s, z_tmp.s);
+    h->fmul(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
 
     h->ld1r(z_tmp.s, table_val2("half"));
-    h->fadd(vmm_src.s, vmm_src.s, z_tmp.s);
-
-
-    // ignore hardware hint for ASIMD
-    // h->movprfx(t1, p_all, t0);
+    h->fadd(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
 
     // tmp = floorf(fx)
-    // Floating-point Round to Integral, toward Minus infinity (vector).
-    // This instruction rounds a vector of floating-point values in the SIMD&FP source register to integral floating-point values
-    // of the same size using the Round towards Minus Infinity rounding mode, and writes the result to the SIMD&FP destination register.
-    h->frintm(vmm_aux2.s, vmm_src.s);
-
-    // Multi-vector floating-point convert to signed integer, rounding toward zero
-    // h->fcvtzs(t2.s, t1.s);
-    //h->fsub(t1.s, t0.s, t1.s);
+    h->frintm(vmm_aux2.s, vmm_aux0.s);
 
     // keep vmm_src = fx for further computations
     h->mov(vmm_dst.b16, vmm_aux2.b16);
@@ -227,14 +215,12 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
 
     // compute 2^(n-1)
     h->ld1r(z_tmp.s, table_val2("one"));
-    h->fsub(vmm_src.s, vmm_src.s, z_tmp.s);
-    h->fcvtzs(vmm_aux2.s, vmm_src.s);
+    h->fsub(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
+    h->fcvtzs(vmm_aux2.s, vmm_aux0.s);
 
     h->ld1r(z_tmp.s, table_val2("exponent_bias"));
     h->add(vmm_aux2.s, vmm_aux2.s, z_tmp.s);
 
-    // TODO: vshl???
-    //h->sshl(vmm_aux2.s, vmm_aux2.s, 23);
     h->sqshl(vmm_aux2.s, vmm_aux2.s, 23);
 
     // use vmm_src as tmp vmm_zero when applying mask
@@ -242,153 +228,31 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     // set zeroes at those points which were < log(FLT_MIN)
     //blend_with_mask(vmm_aux2, vmm_src);
 
-    // // compute polynomial
-    // h->ld1r(vmm_src.s, table_val2("exp_pol5"));
-    // h->ld1r(z_tmp.s, table_val2("exp_pol4"));
-    // // TODO: fma
-    // h->fmul(vmm_aux1.s, vmm_aux1.s, vmm_src.s);
-    // h->fadd(vmm_src.s, z_tmp.s, vmm_aux1.s);
-
     // compute polynomial
     h->ld1r(z_tmp.s, table_val2("exp_pol5"));
-    h->ld1r(vmm_src.s, table_val2("exp_pol4"));
-    h->fmla(vmm_src.s, vmm_aux1.s, z_tmp.s);
+    h->ld1r(vmm_aux0.s, table_val2("exp_pol4"));
+    h->fmla(vmm_aux0.s, vmm_aux1.s, z_tmp.s);
 
     h->ld1r(z_tmp.s, table_val2("exp_pol3"));
-    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
-    h->mov(vmm_src.b16, z_tmp.b16);
+    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
+    h->mov(vmm_aux0.b16, z_tmp.b16);
 
     h->ld1r(z_tmp.s, table_val2("exp_pol2"));
-    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
-    h->mov(vmm_src.b16, z_tmp.b16);
+    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
+    h->mov(vmm_aux0.b16, z_tmp.b16);
 
     h->ld1r(z_tmp.s, table_val2("exp_pol1"));
-    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
-    h->mov(vmm_src.b16, z_tmp.b16);
+    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
+    h->mov(vmm_aux0.b16, z_tmp.b16);
 
     h->ld1r(z_tmp.s, table_val2("one"));
-    h->fmla(z_tmp.s, vmm_src.s, vmm_aux1.s);
-    // h->mov(vmm_src.b16, z_tmp.b16);
+    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
 
     // y = y * 2^n
-    h->fmul(vmm_src.s, z_tmp.s, vmm_aux2.s);
+    h->fmul(vmm_aux0.s, z_tmp.s, vmm_aux2.s);
     h->ld1r(z_tmp.s, table_val2("two"));
-    h->fmul(vmm_dst.s, vmm_src.s, z_tmp.s);
+    h->fmul(vmm_dst.s, vmm_aux0.s, z_tmp.s);
 }
-
-// // TODO: read date from memory once only
-// template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-// void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-//     if (exec_prc_ != ov::element::f32) {
-//         OPENVINO_THROW("unsupported precision: " + exec_prc_.to_string());
-//     }
-
-//     std::cout << "in_vec_idxs: ";
-//     for (const auto i : in_vec_idxs) std::cout << i << ", ";
-//     std::cout << std::endl;
-
-//     std::cout << "out_vec_idxs: ";
-//     for (const auto i : out_vec_idxs) std::cout << i << ", ";
-//     std::cout << std::endl;
-
-//     std::cout << "aux_vec_idxs: ";
-//     for (const auto i : aux_vec_idxs) std::cout << i << ", ";
-//     std::cout << std::endl;
-
-//     std::cout << "aux_gpr_idxs: ";
-//     for (const auto i : aux_gpr_idxs) std::cout << i << ", ";
-//     std::cout << std::endl;
-
-//     float result = expf(12.382);
-//     result = result + 1.f;
-//     std::cout << result << std::endl;
-
-
-//     using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-//     //TReg vmm_src = TReg(in_vec_idxs[0]);
-//     TReg vmm_dst = TReg(out_vec_idxs[0]);
-
-//     const TReg t0(in_vec_idxs[0]);
-//     const TReg t1(aux_vec_idxs[0]);
-//     const TReg t2(aux_vec_idxs[1]);
-//     const TReg tmp(aux_vec_idxs[2]);
-//     const TReg z_tmp(31);
-
-//     h->ld1r(z_tmp.s, table_val2("one"));
-//     h->ld1r(z_tmp.s, table_val2("exp_ln_flt_max_f"));
-//     h->fmin(t0.s, t0.s, z_tmp.s);
-//     h->ld1r(z_tmp.s, table_val2("exp_ln_flt_min_f"));
-//     h->fmax(t0.s, t0.s, z_tmp.s);
-
-//     h->ld1r(z_tmp.s, table_val2("exp_log2ef"));
-//     h->fmul(t0.s, t0.s, z_tmp.s);
-
-//     // ignore hardware hint for ASIMD
-//     // h->movprfx(t1, p_all, t0);
-
-//     // Floating-point Round to Integral, toward Minus infinity (vector).
-//     // This instruction rounds a vector of floating-point values in the SIMD&FP source register to integral floating-point values
-//     // of the same size using the Round towards Minus Infinity rounding mode, and writes the result to the SIMD&FP destination register.
-//     h->frintm(t1.s, t0.s);
-
-//     // Multi-vector floating-point convert to signed integer, rounding toward zero
-//     // h->fcvtzs(t2.s, t1.s);
-
-//     h->fsub(t1.s, t0.s, t1.s);
-
-//     h->ld1r(z_tmp.s, table_val2("one"));
-//     h->fadd(t0.s, t1.s, z_tmp.s);
-
-//     // TODO: 0 & 1 registers are used
-//     Xbyak_aarch64::WReg w0(aux_gpr_idxs[0]);
-//     // Xbyak_aarch64::WReg w1(aux_gpr_idxs[1]);
-
-//     Xbyak_aarch64::SReg tmp_s(z_tmp.getIdx());
-//     // Xbyak_aarch64::VReg v0(0);
-//     // Xbyak_aarch64::VReg4S v0_s(0);
-
-//     // TODO: fix me: SRegList => WReg => SReg => [calculation] => SReg => WReg => SRegList
-//     // TODO: avoid acalar register: use SRegList => SReg and back
-//     for (auto i = 0; i < 4; i++) {
-//         h->mov(w0, t0.s[i]);
-//         // TODO: why don't use the same register?
-//         h->lsr(w0, w0, 17);
-//         h->fmov(tmp_s, w0);
-
-//         // https://developer.arm.com/documentation/ddi0602/2023-12/SVE-Instructions/FEXPA--Floating-point-exponential-accelerator-?lang=en
-//         // FEXPA <Zd>.<T>, <Zn>.<T>
-
-//         // TODO: looks like it doesn't work
-//         //h->frecpx(Xbyak_aarch64::SReg(w1.getIdx()), Xbyak_aarch64::SReg(w1.getIdx()));
-//         //h->frecpx(t1.s[0], t1.s[0]);
-
-//         //h->frecpx(tmp_s, tmp_s);
-//         //h->fscale(tmp_s, tmp_s);
-
-//         h->fmov(w0, tmp_s);
-//         h->mov(t1.s[i], w0);
-//     }
-
-//     h->mov(vmm_dst.b16, t0.b16);
-
-//     // // FRECPX
-//     // //h->frecpx(t1.s, t1.s);
-//     // //h->fscale(t1.s, p_all, t1.s);
-//     // h->ld1r(z_tmp.s, table_val2("exp_not_mask17"));
-//     // h->and_(t2.b16, t0.b16, z_tmp.b16);
-//     // h->fsub(t2.s, t0.s, t2.s);
-
-//     // // ignore hardware hint for ASIMD
-//     // // h->movprfx(t0, p_all, ZRegS(IDX(table_val(exp_coeff2, z_tmp))));
-
-//     // h->ld1r(z_tmp.s, table_val2("exp_coeff1"));
-//     // h->fmla(t0.s, t2.s, z_tmp.s);
-
-//     // h->ld1r(z_tmp.s, table_val2("one"));
-//     // h->fmla(t0.s, t2.s, z_tmp.s);
-
-//     // h->fmul(vmm_dst.s, t1.s, t0.s);
-// }
 
 void jit_exp_emitter::register_table_entries() {
     push_arg_entry_of("exp_ln_flt_max_f", 0x42b17218, true);
@@ -400,14 +264,11 @@ void jit_exp_emitter::register_table_entries() {
     push_arg_entry_of("half", 0x3f000000, true);
     push_arg_entry_of("ln2f", 0x3f317218, true);
     push_arg_entry_of("exponent_bias", 0x0000007f, true);
-
     push_arg_entry_of("exp_pol1", 0x3f7ffffb, true);
     push_arg_entry_of("exp_pol2", 0x3efffee3, true);
     push_arg_entry_of("exp_pol3", 0x3e2aad40, true);
     push_arg_entry_of("exp_pol4", 0x3d2b9d0d, true);
     push_arg_entry_of("exp_pol5", 0x3c07cfce, true);
-
-    push_arg_entry_of("exp_not_mask17", ~((1u << 17) - 1), true);
 }
 
 std::set<std::vector<element::Type>> jit_exp_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
