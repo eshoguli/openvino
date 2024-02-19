@@ -2820,6 +2820,7 @@ std::ostream& operator<<(std::ostream& os, const dnnl::memory::data_type& type) 
 size_t data_type_size(const dnnl::memory::data_type& type) {
     switch (type) {
         case dnnl::memory::data_type::f32:
+        case dnnl::memory::data_type::s32:
             return 4;
         case dnnl::memory::data_type::f16:
             return 2;
@@ -2876,17 +2877,17 @@ void Eltwise::execute(dnnl::stream strm) {
 
         execPtr->exec(args_ptrs, dims_out);
 
-        // {
-        //     // TODO: debug
-        //     std::cout << std::endl << "output:" << std::endl;
-        //     const auto size = memPtrs.back()->getSize();
-        //     const size_t length = size / data_type_size(memPtrs.back()->getDataType());
-        //     const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
-        //     for (size_t i = 0; i < length; i++) {
-        //         std::cout << src_ptr[i] << " ";
-        //     }
-        //     std::cout << std::endl << std::endl;
-        // }
+        {
+            // TODO: debug
+            std::cout << std::endl << "output:" << std::endl;
+            const auto size = memPtrs.back()->getSize();
+            const size_t length = size / data_type_size(memPtrs.back()->getDataType());
+            const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
+            for (size_t i = 0; i < length; i++) {
+                std::cout << src_ptr[i] << " ";
+            }
+            std::cout << std::endl << std::endl;
+        }
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
         for (size_t i = 0; i < getParentEdges().size(); i++) {
