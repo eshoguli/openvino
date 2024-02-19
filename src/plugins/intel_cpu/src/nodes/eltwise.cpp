@@ -2849,20 +2849,20 @@ void Eltwise::execute(dnnl::stream strm) {
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
 
-        {
-            // TODO: debug
-            std::cout << std::endl << "input:" << std::endl;
-            for (size_t source_i = 0; source_i < memPtrs.size() - 1; source_i++) {
-                std::cout << "src_ptr[" << source_i << "]: " << memPtrs[source_i]->getDataType() << std::endl;
-                const size_t size = memPtrs[source_i]->getSize();
-                const size_t length = size / data_type_size(memPtrs[source_i]->getDataType());
-                const auto src_ptr = static_cast<const float*>(args_ptrs.src_ptr[source_i]);
-                for (size_t i = 0; i < length; i++) {
-                    std::cout << src_ptr[i] << " ";
-                }
-                std::cout << std::endl << std::endl;
-            }
-        }
+        // {
+        //     // TODO: debug
+        //     std::cout << std::endl << "input:" << std::endl;
+        //     for (size_t source_i = 0; source_i < memPtrs.size() - 1; source_i++) {
+        //         std::cout << "src_ptr[" << source_i << "]: " << memPtrs[source_i]->getDataType() << std::endl;
+        //         const size_t size = memPtrs[source_i]->getSize();
+        //         const size_t length = size / data_type_size(memPtrs[source_i]->getDataType());
+        //         const auto src_ptr = static_cast<const float*>(args_ptrs.src_ptr[source_i]);
+        //         for (size_t i = 0; i < length; i++) {
+        //             std::cout << src_ptr[i] << " ";
+        //         }
+        //         std::cout << std::endl << std::endl;
+        //     }
+        // }
 
         // TODO: debug
         if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
@@ -2877,17 +2877,17 @@ void Eltwise::execute(dnnl::stream strm) {
 
         execPtr->exec(args_ptrs, dims_out);
 
-        {
-            // TODO: debug
-            std::cout << std::endl << "output:" << std::endl;
-            const auto size = memPtrs.back()->getSize();
-            const size_t length = size / data_type_size(memPtrs.back()->getDataType());
-            const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
-            for (size_t i = 0; i < length; i++) {
-                std::cout << src_ptr[i] << " ";
-            }
-            std::cout << std::endl << std::endl;
-        }
+        // {
+        //     // TODO: debug
+        //     std::cout << std::endl << "output:" << std::endl;
+        //     const auto size = memPtrs.back()->getSize();
+        //     const size_t length = size / data_type_size(memPtrs.back()->getDataType());
+        //     const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
+        //     for (size_t i = 0; i < length; i++) {
+        //         std::cout << src_ptr[i] << " ";
+        //     }
+        //     std::cout << std::endl << std::endl;
+        // }
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
         for (size_t i = 0; i < getParentEdges().size(); i++) {

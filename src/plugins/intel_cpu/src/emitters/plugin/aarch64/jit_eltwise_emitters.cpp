@@ -171,42 +171,40 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
 
 
     using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
-    TReg vmm_dst = TReg(out_vec_idxs[0]);
 
     const TReg vmm_src(in_vec_idxs[0]);
 
-    const TReg vmm_aux0(aux_vec_idxs[0]);
-    const TReg vmm_aux1(aux_vec_idxs[1]);
-    const TReg vmm_aux2(aux_vec_idxs[2]);
-    const TReg z_tmp(31);
+    const TReg vmm_dst(out_vec_idxs[0]);
+    const TReg vmm_aux1(aux_vec_idxs[0]);
+    const TReg vmm_aux2(aux_vec_idxs[1]);
+    const TReg vmm_aux0(aux_vec_idxs[2]);
 
-    h->ld1r(z_tmp.s, table_val2("exp_ln_flt_max_f"));
-    h->fmin(vmm_aux0.s, vmm_src.s, z_tmp.s);
-    h->ld1r(z_tmp.s, table_val2("exp_ln_flt_min_f"));
-    h->fmax(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
-    h->mov(vmm_aux1.b16, vmm_aux0.b16);
+    h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_max_f"));
+    h->fmin(vmm_dst.s, vmm_src.s, vmm_aux0.s);
+    h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_min_f"));
+    h->fmax(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
+    h->mov(vmm_aux1.b16, vmm_dst.b16);
 
 
     // calculate exp(x)
     // fx = x * log2ef + 0.5
-    // TODO: fma
-    h->ld1r(z_tmp.s, table_val2("exp_log2ef"));
-    h->fmul(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
-
-    h->ld1r(z_tmp.s, table_val2("half"));
-    h->fadd(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
+    h->ld1r(vmm_aux0.s, table_val2("exp_log2ef"));
+    h->ld1r(vmm_aux2.s, table_val2("half"));
+    h->fmla(vmm_aux2.s, vmm_dst.s, vmm_aux0.s);
 
     // tmp = floorf(fx)
-    h->frintm(vmm_aux2.s, vmm_aux0.s);
+    h->frintm(vmm_aux2.s, vmm_aux2.s);
 
     // keep vmm_src = fx for further computations
     h->mov(vmm_dst.b16, vmm_aux2.b16);
 
     // x = x - fx * ln2
-    // TODO: fma
-    h->ld1r(z_tmp.s, table_val2("ln2f"));
-    h->fmul(vmm_aux2.s, vmm_aux2.s, z_tmp.s);
-    h->fsub(vmm_aux1.s, vmm_aux1.s, vmm_aux2.s);
+    // TODO: fms
+    h->ld1r(vmm_aux0.s, table_val2("ln2f"));
+    // h->fmul(vmm_aux2.s, vmm_aux2.s, vmm_aux0.s);
+    // h->fsub(vmm_aux1.s, vmm_aux1.s, vmm_aux2.s);
+
+    h->fmls(vmm_aux1.s, vmm_aux2.s, vmm_aux0.s);
 
     // We do not count 2^n here, because n can reach 128 and 2^128 is not
     // representable by fp32, so to get around this problem, instead of computing
@@ -214,12 +212,12 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     // and 2 are numbers representable in fp32.
 
     // compute 2^(n-1)
-    h->ld1r(z_tmp.s, table_val2("one"));
-    h->fsub(vmm_aux0.s, vmm_aux0.s, z_tmp.s);
-    h->fcvtzs(vmm_aux2.s, vmm_aux0.s);
+    h->ld1r(vmm_aux0.s, table_val2("one"));
+    h->fsub(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
+    h->fcvtzs(vmm_aux2.s, vmm_dst.s);
 
-    h->ld1r(z_tmp.s, table_val2("exponent_bias"));
-    h->add(vmm_aux2.s, vmm_aux2.s, z_tmp.s);
+    h->ld1r(vmm_aux0.s, table_val2("exponent_bias"));
+    h->add(vmm_aux2.s, vmm_aux2.s, vmm_aux0.s);
 
     h->sqshl(vmm_aux2.s, vmm_aux2.s, 23);
 
@@ -229,29 +227,29 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     //blend_with_mask(vmm_aux2, vmm_src);
 
     // compute polynomial
-    h->ld1r(z_tmp.s, table_val2("exp_pol5"));
-    h->ld1r(vmm_aux0.s, table_val2("exp_pol4"));
-    h->fmla(vmm_aux0.s, vmm_aux1.s, z_tmp.s);
+    h->ld1r(vmm_aux0.s, table_val2("exp_pol5"));
+    h->ld1r(vmm_dst.s, table_val2("exp_pol4"));
+    h->fmla(vmm_dst.s, vmm_aux1.s, vmm_aux0.s);
 
-    h->ld1r(z_tmp.s, table_val2("exp_pol3"));
-    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
-    h->mov(vmm_aux0.b16, z_tmp.b16);
+    h->ld1r(vmm_aux0.s, table_val2("exp_pol3"));
+    h->fmla(vmm_aux0.s, vmm_dst.s, vmm_aux1.s);
+    h->mov(vmm_dst.b16, vmm_aux0.b16);
 
-    h->ld1r(z_tmp.s, table_val2("exp_pol2"));
-    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
-    h->mov(vmm_aux0.b16, z_tmp.b16);
+    h->ld1r(vmm_aux0.s, table_val2("exp_pol2"));
+    h->fmla(vmm_aux0.s, vmm_dst.s, vmm_aux1.s);
+    h->mov(vmm_dst.b16, vmm_aux0.b16);
 
-    h->ld1r(z_tmp.s, table_val2("exp_pol1"));
-    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
-    h->mov(vmm_aux0.b16, z_tmp.b16);
+    h->ld1r(vmm_aux0.s, table_val2("exp_pol1"));
+    h->fmla(vmm_aux0.s, vmm_dst.s, vmm_aux1.s);
+    h->mov(vmm_dst.b16, vmm_aux0.b16);
 
-    h->ld1r(z_tmp.s, table_val2("one"));
-    h->fmla(z_tmp.s, vmm_aux0.s, vmm_aux1.s);
+    h->ld1r(vmm_aux0.s, table_val2("one"));
+    h->fmla(vmm_aux0.s, vmm_dst.s, vmm_aux1.s);
 
     // y = y * 2^n
-    h->fmul(vmm_aux0.s, z_tmp.s, vmm_aux2.s);
-    h->ld1r(z_tmp.s, table_val2("two"));
-    h->fmul(vmm_dst.s, vmm_aux0.s, z_tmp.s);
+    h->fmul(vmm_dst.s, vmm_aux0.s, vmm_aux2.s);
+    h->ld1r(vmm_aux0.s, table_val2("two"));
+    h->fmul(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
 }
 
 void jit_exp_emitter::register_table_entries() {
