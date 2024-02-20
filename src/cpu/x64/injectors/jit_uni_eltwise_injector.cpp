@@ -307,12 +307,12 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::exp_compute_vector_fwd(
     blend_with_mask(vmm_aux2, vmm_src);
 
     // compute polynomial
-    h->uni_vmovups(vmm_src, table_val(exp_pol, 4));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 3));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 2));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 1));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 0));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(one));
+    //h->uni_vmovups(vmm_src, table_val(exp_pol, 4));
+    //h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 3));
+    //h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 2));
+    //h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 1));
+    //h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 0));
+    //h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(one));
     // y = y * 2^n
     h->uni_vmulps(vmm_src, vmm_src, vmm_aux2);
     h->uni_vmulps(vmm_src, vmm_src, table_val(two));
