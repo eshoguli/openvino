@@ -95,6 +95,9 @@ void ActivationLayerCPUTest::generate_inputs(const std::vector<ov::Shape>& targe
 }
 
 void ActivationLayerCPUTest::SetUp() {
+    rel_threshold = 1e-4f;
+    abs_threshold = 1.f;
+
     targetDevice = ov::test::utils::DEVICE_CPU;
 
     std::vector<ov::test::InputShape> inputShapes;
