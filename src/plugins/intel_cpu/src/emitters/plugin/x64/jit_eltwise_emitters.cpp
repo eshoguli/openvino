@@ -40,13 +40,13 @@ size_t jit_add_emitter::get_inputs_num() const { return 2; }
 
 void jit_add_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
     if (host_isa_ == x64::sse41) {
-        emit_isa<x64::sse41>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == x64::avx2) {
-        emit_isa<x64::avx2>(in_vec_idxs, out_vec_idxs);
-    } else if (host_isa_ == x64::avx512_core) {
-        emit_isa<x64::avx512_core>(in_vec_idxs, out_vec_idxs);
-    } else {
-        OV_CPU_JIT_EMITTER_THROW("Unsupported ISA ", host_isa_);
+    //    emit_isa<x64::sse41>(in_vec_idxs, out_vec_idxs);
+    //} else if (host_isa_ == x64::avx2) {
+    //    emit_isa<x64::avx2>(in_vec_idxs, out_vec_idxs);
+    //} else if (host_isa_ == x64::avx512_core) {
+    //    emit_isa<x64::avx512_core>(in_vec_idxs, out_vec_idxs);
+    //} else {
+    //    OV_CPU_JIT_EMITTER_THROW("Unsupported ISA ", host_isa_);
     }
 }
 
