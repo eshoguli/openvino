@@ -25,6 +25,7 @@ bool JitEltwiseExecutor::isSupported(
                                      Algorithm::EltwisePowerStatic,
                                      Algorithm::EltwisePrelu,
                                      Algorithm::EltwiseRelu,
+                                     Algorithm::EltwiseSigmoid,
                                      Algorithm::EltwiseSubtract);
     if (!is_supported) {
         return false;
