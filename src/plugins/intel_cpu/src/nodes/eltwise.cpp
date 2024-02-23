@@ -91,6 +91,7 @@ bool jitIsSupported(const Node* node,
                                      Algorithm::EltwiseMulAdd,
                                      Algorithm::EltwisePowerStatic,
                                      Algorithm::EltwiseRelu,
+                                     Algorithm::EltwiseSigmoid,
                                      Algorithm::EltwiseSubtract);
     if (!is_supported) {
         return false;

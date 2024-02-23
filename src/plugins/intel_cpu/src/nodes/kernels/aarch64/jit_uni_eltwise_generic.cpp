@@ -619,6 +619,7 @@ std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitte
     OV_CASE(Algorithm::EltwiseMultiply, jit_multiply_emitter),
     OV_CASE(Algorithm::EltwisePowerStatic, jit_power_static_emitter),
     OV_CASE(Algorithm::EltwiseRelu, jit_relu_emitter),
+    OV_CASE(Algorithm::EltwiseSigmoid, jit_sigmoid_emitter),
     OV_CASE(Algorithm::EltwiseSubtract, jit_subtract_emitter));
 
     if (!ctx.emitter)
@@ -771,6 +772,7 @@ std::set<std::vector<element::Type>> eltwise_precision_helper::get_supported_pre
         OV_CASE(Algorithm::EltwiseMultiply, jit_multiply_emitter),
         OV_CASE(Algorithm::EltwisePowerStatic, jit_power_static_emitter),
         OV_CASE(Algorithm::EltwiseRelu, jit_relu_emitter),
+        OV_CASE(Algorithm::EltwiseSigmoid, jit_sigmoid_emitter),
         OV_CASE(Algorithm::EltwiseSubtract, jit_subtract_emitter));
 
     if (precisions.empty())
