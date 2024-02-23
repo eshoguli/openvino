@@ -211,7 +211,7 @@ private:
     }
 
     inline TReg get_aux_vmm(const uint32_t idx) {
-        if (idx > 3) {
+        if (idx > 4) {
             OPENVINO_THROW("aux vector register " + std::to_string(idx) + " is not supported");
         }
         return TReg(10 + idx);
