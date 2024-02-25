@@ -134,9 +134,6 @@ public:
 
 private:
     void emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const override;
-
-    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-    void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 };
 
 class jit_mul_add_emitter : public jit_emitter {
@@ -313,9 +310,6 @@ public:
 
 private:
     void emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const override;
-
-    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
-    void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 };
 
 class jit_subtract_emitter : public jit_emitter {
