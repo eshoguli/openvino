@@ -20,6 +20,7 @@ bool JitEltwiseExecutor::isSupported(
     const auto is_supported = one_of(algorithm,
                                      Algorithm::EltwiseAdd,
                                      Algorithm::EltwiseDivide,
+                                     Algorithm::EltwiseEqual,
                                      Algorithm::EltwiseMultiply,
                                      Algorithm::EltwiseMulAdd,
                                      Algorithm::EltwisePowerStatic,
