@@ -126,8 +126,8 @@ private:
     // X10    | ker temporary| R10 | src ptr
     // X11    | ker temporary| R11 | src ptr
     // X12    | ker temporary (abi_not_param1)   | R12 | src ptr
-    // X13    | [not used]   | R13 | src ptr
-    // X14    | [not used]   | R14 | src ptr
+    // X13    | temporary    | R13 | src ptr
+    // X14    | temporary    | R14 | src ptr
     // X15    | dst          | R15 | temporary
     // X16    | [not used: IP1]
     // X17    | [not used: IP0]
@@ -138,12 +138,12 @@ private:
     // X20    | src ptr
     // X21    | src ptr
     // X22    | src ptr
-    // X23    | src ptr
+    // X23    | kernel used (oneDNN: X_TMP_0)
     // X24    | src ptr
     // X25    | src ptr
-    // X26    | temporary
+    // X26    | src ptr
     // X27    | temporary
-    // X28    | kernel used (X_DEFAULT_ADDR)
+    // X28    | kernel used (oneDNN: X_DEFAULT_ADDR)
 
     // X29    | [not used: The Frame Pointer (FP)]
     // X30    | [not used: The Link Register (LR)]
@@ -156,14 +156,21 @@ private:
         if (idx > MAX_ELTWISE_INPUTS) {
             OPENVINO_THROW("source vector ptr register " + std::to_string(idx) + " is not supported");
         }
-        return XReg(19 + idx);
+
+        const uint32_t base = 19;
+        if ((base + idx) == 23) {
+            idx++;
+        }
+
+        return XReg(base + idx);
     }
 
     inline XReg get_aux_gpr(const uint32_t idx) {
-        if (idx > 2) {
+        if (idx > 3) {
             OPENVINO_THROW("aux gpr register " + std::to_string(idx) + " is not supported");
         }
-        return XReg(26 + idx);
+        static std::vector<uint32_t> registers = {13, 14, 27};
+        return XReg(registers[idx]);
     }
 
     // Vector registers mapping
