@@ -335,6 +335,22 @@ INSTANTIATE_TEST_SUITE_P(smoke_EltwiseChain_dyn, EltwiseChainTest,
                                 ::testing::Values(ov::test::utils::DEVICE_CPU)),
                         EltwiseChainTest::getTestCaseName);
 
+    std::vector<std::vector<EltwiseTypes>> eltwiseOpsConvertInt8 = {
+            { EltwiseTypes::MULTIPLY },
+            { EltwiseTypes::ADD },
+            { EltwiseTypes::DIVIDE }
+    };
+
+    INSTANTIATE_TEST_SUITE_P(smoke_EltwiseChain_MergeConvert_int8, EltwiseChainTest,
+                             ::testing::Combine(
+                                     ::testing::ValuesIn(static_shapes_to_test_representation(inputShapesConvert())),
+                                     ::testing::Values(InputLayerType::CONSTANT),
+                                     ::testing::ValuesIn(inputPrecisionsConvert()),
+                                     ::testing::ValuesIn(eltwiseOpsConvertInt8),
+                                     ::testing::Values(false),
+                                     ::testing::ValuesIn({ov::element::i8, ov::element::u8}),
+                                     ::testing::Values(ov::test::utils::DEVICE_CPU)),
+                             EltwiseChainTest::getTestCaseName);
 }  // namespace
 }  // namespace test
 }  // namespace ov
