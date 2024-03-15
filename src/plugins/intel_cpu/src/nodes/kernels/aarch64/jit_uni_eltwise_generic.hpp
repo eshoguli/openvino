@@ -166,16 +166,18 @@ private:
     }
 
     inline XReg get_aux_gpr(const uint32_t idx) {
-        if (idx > 3) {
+        if (idx > 2) {
             OPENVINO_THROW("aux gpr register " + std::to_string(idx) + " is not supported");
         }
 
-        if (idx == 0) {
-            return XReg(23);
-        }
+//        if (idx == 0) {
+//            return XReg(23);
+//        }
+//
+//        const uint32_t base = 27;
+//        return XReg(base + idx - 1);
 
-        const uint32_t base = 27;
-        return XReg(base + idx - 1);
+        return XReg(27 + idx);
     }
 
     // Vector registers mapping
