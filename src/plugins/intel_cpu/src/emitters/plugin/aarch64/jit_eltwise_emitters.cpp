@@ -582,11 +582,10 @@ void jit_sigmoid_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
         h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_max_f"));
         h->fmin(vmm_dst.s, vmm_src.s, vmm_aux0.s);
         h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_min_f"));
+        h->fmax(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
 
         // get mask of values lower than log(FLT_MIN) to zero them in the output
-        h->facgt(vmm_mask.s, vmm_aux0.s, vmm_src.s);
-
-        h->fmax(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
+        h->fcmgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
         h->mov(vmm_aux1.b16, vmm_dst.b16);
 
         // calculate exp(x)
@@ -663,8 +662,10 @@ void jit_sigmoid_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
     // IMPORTANT: we use vmm_mask for the mask as exp_compute does not use it.
     // we store the original sign and make x negative
     h->eor(vmm_aux0.b16, vmm_aux0.b16, vmm_aux0.b16);
-    h->facgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
-    h->orr(vmm_dst.b16, vmm_dst.b16, vmm_aux0.b16);
+    h->fcmgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
+
+    h->ld1r(vmm_aux0.s, table_val2("sign_mask"));
+    h->orr(vmm_src.b16, vmm_src.b16, vmm_aux0.b16);
 
     exp_compute_vector_fwd();
 
@@ -680,7 +681,7 @@ void jit_sigmoid_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
     h->ld1r(vmm_aux2.s, table_val2("one"));
     h->fsub(vmm_aux2.s, vmm_aux2.s, vmm_dst.s);
 
-    h->bsl(vmm_mask.b16, vmm_dst.b16, vmm_aux2.b16);
+    h->bsl(vmm_mask.b16, vmm_aux2.b16, vmm_dst.b16);
     h->mov(vmm_dst.b16, vmm_mask.b16);
 }
 
