@@ -2808,6 +2808,7 @@ size_t data_type_size(const dnnl::memory::data_type& type) {
 namespace func {
 float sigmoid(const float value) {
     return 1 / (1 + std::exp(-value));
+    //return std::exp(value);
 }
 }  // namespace func
 
@@ -2858,7 +2859,7 @@ void Eltwise::execute(dnnl::stream strm) {
                 const size_t length = size / data_type_size(memPtrs[source_i]->getDataType());
                 const auto src_ptr = static_cast<const float*>(args_ptrs.src_ptr[source_i]);
                 for (size_t i = 0; i < length; i++) {
-                    if (i > 64) {
+                    if (i > 160) {
                         break;
                     }
 
@@ -2880,7 +2881,7 @@ void Eltwise::execute(dnnl::stream strm) {
             const size_t length = size / data_type_size(memPtrs.back()->getDataType());
             const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
             for (size_t i = 0; i < length; i++) {
-                if (i > 64) {
+                if (i > 160) {
                     break;
                 }
 
