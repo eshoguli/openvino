@@ -118,11 +118,8 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_max_f"));
     h->fmin(vmm_dst.s, vmm_src.s, vmm_aux0.s);
     h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_min_f"));
-    //h->fmax(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
 
     // get mask of values lower than log(FLT_MIN) to zero them in the output
-    // not correct
-    //h->facgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
     h->fcmgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
 
     h->fmax(vmm_dst.s, vmm_dst.s, vmm_aux0.s);

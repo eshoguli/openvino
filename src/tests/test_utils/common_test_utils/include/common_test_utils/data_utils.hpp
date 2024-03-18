@@ -243,10 +243,13 @@ void inline fill_data_random(T* pointer,
         start_from = 0;
     }
 
+//    for (std::size_t i = 0; i < size; i++) {
+//        pointer[i] = static_cast<T>(start_from + static_cast<T>(random.Generate(k_range)) / k);
+//    }
+
     auto value = -90.f;
     const float step = 1.f;
     for (std::size_t i = 0; i < size; i++) {
-//        pointer[i] = static_cast<T>(start_from + static_cast<T>(random.Generate(k_range)) / k);
         pointer[i] = value;
         value += step;
     }
