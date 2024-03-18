@@ -411,6 +411,15 @@ void compare(const ov::Tensor& expected,
     for (size_t i = 0; i < shape_size_cnt; ++i) {
         double expected_value = expected_data[i];
         double actual_value = actual_data[i];
+
+        if (i < 64) {
+            std::cout << i <<
+                      ": act: " << actual_value <<
+                      ", exp: " << expected_value <<
+                      ", diff: " << (expected_value != 0.0 ? std::to_string(::abs((expected_value - actual_value) / expected_value)) : "n/a") <<
+                      std::endl;;
+        }
+
         if ((std::isinf(expected_value) || expected_value >= max_type_expected) &&
             (std::isinf(actual_value) || actual_value >= max_type_actual)) {
             continue;
@@ -435,6 +444,14 @@ void compare(const ov::Tensor& expected,
         double rel = expected_value ? (abs / std::fabs(expected_value)) : abs;
         abs_error.update(abs, i);
         rel_error.update(rel, i);
+
+        if (i < 64) {
+            std::cout << i <<
+                      ": act: " << actual_value <<
+                      ", exp: " << expected_value <<
+                      ", diff: " << (expected_value != 0.0 ? std::to_string(::abs((expected_value - actual_value) / expected_value)) : "n/a") <<
+                      ", abs: " << abs << ", rel: " << rel << std::endl;
+        }
     }
     abs_error.mean /= shape_size_cnt;
     rel_error.mean /= shape_size_cnt;

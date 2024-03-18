@@ -138,7 +138,7 @@ private:
     // X20    | src ptr
     // X21    | src ptr
     // X22    | src ptr
-    // X23    | temporary & kernel used (oneDNN: X_TMP_0)
+    // X23    | kernel used (oneDNN: X_TMP_0)
     // X24    | src ptr
     // X25    | src ptr
     // X26    | src ptr
@@ -166,16 +166,21 @@ private:
     }
 
     inline XReg get_aux_gpr(const uint32_t idx) {
-        if (idx > 3) {
+//        if (idx > 3) {
+//            OPENVINO_THROW("aux gpr register " + std::to_string(idx) + " is not supported");
+//        }
+//
+//        if (idx == 0) {
+//            return XReg(23);
+//        }
+//
+//        const uint32_t base = 27;
+//        return XReg(base + idx - 1);
+
+        if (idx > 2) {
             OPENVINO_THROW("aux gpr register " + std::to_string(idx) + " is not supported");
         }
-
-        if (idx == 0) {
-            return XReg(23);
-        }
-
-        const uint32_t base = 27;
-        return XReg(base + idx - 1);
+        return XReg(27 + idx);
     }
 
     // Vector registers mapping

@@ -52,9 +52,10 @@ void ActivationLayerCPUTest::generate_inputs(const std::vector<ov::Shape>& targe
     uint32_t range = 0;
     int32_t resolution = 0;
 
-    if (activationType == utils::ActivationTypes::Exp && netPrecision == ov::element::bf16) {
-        startFrom = 0;
-        range = 2;
+    if (activationType == utils::ActivationTypes::Exp) {
+        //netPrecision == ov::element::bf16
+        startFrom = -100;
+        range = 20;
         resolution = 32768;
     } else if (activationType == utils::ActivationTypes::Acosh) {
         startFrom = 2;

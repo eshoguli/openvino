@@ -118,9 +118,12 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_max_f"));
     h->fmin(vmm_dst.s, vmm_src.s, vmm_aux0.s);
     h->ld1r(vmm_aux0.s, table_val2("exp_ln_flt_min_f"));
+    //h->fmax(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
 
     // get mask of values lower than log(FLT_MIN) to zero them in the output
-    h->facgt(vmm_mask.s, vmm_aux0.s, vmm_src.s);
+    // not correct
+    //h->facgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
+    h->fcmgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
 
     h->fmax(vmm_dst.s, vmm_dst.s, vmm_aux0.s);
     h->mov(vmm_aux1.b16, vmm_dst.b16);
@@ -154,7 +157,8 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     h->ld1r(vmm_aux0.s, table_val2("exponent_bias"));
     h->add(vmm_aux2.s, vmm_aux2.s, vmm_aux0.s);
 
-    h->sqshl(vmm_aux2.s, vmm_aux2.s, 23);
+    const int n_mantissa_bits = 23;
+    h->sqshl(vmm_aux2.s, vmm_aux2.s, n_mantissa_bits);
 
     // set zeroes at those points which were < log(FLT_MIN)
     h->and_(vmm_aux2.b16, vmm_mask.b16, vmm_aux2.b16);
