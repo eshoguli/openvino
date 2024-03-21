@@ -14,6 +14,8 @@ namespace reference {
 namespace func {
 template <class T, typename std::enable_if<ov::is_floating_point<T>()>::type* = nullptr>
 T tanh(const T in) {
+    //return std::exp(in);
+    //return 1 / (1 + std::exp(-in));
     return std::tanh(in);
 }
 

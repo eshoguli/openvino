@@ -171,7 +171,7 @@ void jit_exp_injector::push_entry_map(std::multimap<std::string, jit_emitter::ma
 }
 
 size_t jit_sigmoid_injector::get_aux_vecs_count() {
-    return jit_exp_injector::get_aux_vecs_count();
+    return jit_exp_injector::get_aux_vecs_count() + 1;
 }
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
@@ -194,7 +194,7 @@ void jit_sigmoid_injector::emit_impl(dnnl::impl::cpu::aarch64::jit_generator* h,
     const TReg vmm_dst(out_vec_idxs[0]);
     const TReg vmm_aux1(aux_vec_idxs[0]);
     const TReg vmm_aux2(aux_vec_idxs[1]);
-    const TReg vmm_aux0(aux_vec_idxs[2]);
+    const TReg vmm_aux0(aux_vec_idxs[jit_exp_injector::get_aux_vecs_count()]);
 
     const TReg vmm_mask(jit_exp_injector::get_aux_vecs_count());
 
@@ -207,14 +207,14 @@ void jit_sigmoid_injector::emit_impl(dnnl::impl::cpu::aarch64::jit_generator* h,
     h->fcmgt(vmm_mask.s, vmm_src.s, vmm_aux0.s);
 
     h->ld1r(vmm_aux0.s, table.value("sign_mask"));
-    h->orr(vmm_src.b16, vmm_src.b16, vmm_aux0.b16);
+    h->orr(vmm_aux0.b16, vmm_src.b16, vmm_aux0.b16);
 
     jit_exp_injector::emit_impl<dnnl::impl::cpu::aarch64::asimd>(
             h,
             host_isa,
             entry_map,
             exec_prc,
-            in_vec_idxs,
+            { vmm_aux0.getIdx() },
             aux_vec_idxs,
             out_vec_idxs,
             p_table);
@@ -239,7 +239,7 @@ void jit_sigmoid_injector::push_entry_map(std::multimap<std::string, jit_emitter
     jit_exp_injector::push_entry_map(entry_map);
 
     utils::PushTable table(&entry_map);
-    table.push("sign_mask", 0x807fffff, true);
+    table.push("sign_mask", 0x80000000, true);
 }
 
 template void jit_exp_injector::emit_impl<dnnl::impl::cpu::aarch64::asimd>(

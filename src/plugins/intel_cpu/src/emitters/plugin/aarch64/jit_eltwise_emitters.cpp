@@ -352,7 +352,6 @@ void jit_tanh_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
     TReg dst = TReg(out_vec_idxs[0]);
 
     TReg aux = TReg(aux_vec_idxs[jit_sigmoid_injector::get_aux_vecs_count()]);
-    std::vector<size_t> in_vec_idxs_injector = { aux.getIdx() };
 
     h->ld1r(dst.s, table_val2("two"));
     h->uni_fmul(aux.s, src.s, dst.s);
@@ -362,7 +361,7 @@ void jit_tanh_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
         host_isa_,
         entry_map_,
         exec_prc_,
-        in_vec_idxs_injector,
+        { aux.getIdx() },
         aux_vec_idxs,
         out_vec_idxs,
         p_table);
@@ -376,8 +375,13 @@ void jit_tanh_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
 void jit_tanh_emitter::register_table_entries() {
     jit_sigmoid_injector::push_entry_map(entry_map_);
 
-    push_arg_entry_of("one", dnnl::impl::float2int(0x3f800000), true);
-    push_arg_entry_of("two", dnnl::impl::float2int(0x40000000), true);
+    push_arg_entry_of("one", 0x3f800000, true);
+    push_arg_entry_of("two", 0x40000000, true);
+
+
+//    jit_exp_injector::push_entry_map(entry_map_);
+//
+//    push_arg_entry_of("sign_mask", 0x80000000, true);
 }
 
 std::set<std::vector<element::Type>> jit_tanh_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
@@ -648,9 +652,7 @@ void jit_sigmoid_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, cons
 }
 
 void jit_sigmoid_emitter::register_table_entries() {
-    jit_exp_injector::push_entry_map(entry_map_);
-
-    push_arg_entry_of("sign_mask", 0x80000000, true);
+    jit_sigmoid_injector::push_entry_map(entry_map_);
 }
 
 std::set<std::vector<element::Type>> jit_sigmoid_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
