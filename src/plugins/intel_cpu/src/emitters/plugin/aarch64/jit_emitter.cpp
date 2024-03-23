@@ -106,15 +106,7 @@ void jit_emitter::emitter_preamble(const std::vector<size_t>& in_idxs,
         OPENVINO_THROW("Failed to allocate required number of gpr registers");
     }
 
-//    for (auto idx : pool_aux_vec_idxs) {
-//        aux_vec_idxs.push_back(static_cast<uint32_t>(idx));
-//    }
-//
-//    for (auto idx : pool_aux_gpr_idxs) {
-//        aux_gpr_idxs.push_back(static_cast<uint32_t>(idx));
-//        preserved_gpr_idxs.push_back(static_cast<uint32_t>(idx));
-//    }
-
+    // vector registers
     for (auto idx : pool_aux_vec_idxs) {
         aux_vec_idxs.push_back(static_cast<uint32_t>(idx));
     }
@@ -134,9 +126,10 @@ void jit_emitter::emitter_preamble(const std::vector<size_t>& in_idxs,
     if (aux_vec_idxs.size() < get_aux_vecs_count())
         OV_CPU_JIT_EMITTER_THROW("Failed to allocate required number of vector registers");
 
-    // Same logic but to allocate gprs
-    for (auto idx : pool_aux_gpr_idxs)
+    // gpr registers
+    for (auto idx : pool_aux_gpr_idxs) {
         aux_gpr_idxs.push_back(idx);
+    }
 
     const uint32_t end_gpr_idx = Xbyak_aarch64::Operand::X28;
     for (size_t gpr_idx = 0; gpr_idx <= end_gpr_idx; ++gpr_idx) {
@@ -186,94 +179,14 @@ void jit_emitter::store_context(
         const std::vector<size_t>& vec_regs,
         const std::unordered_set<size_t>& ignore_vec_regs) const {
     for (const auto i : gpr_regs) {
-        //std::cout << "store_context: gpr=" << i << std::endl;
         h->str(Xbyak_aarch64::XReg(i), pre_ptr(h->sp, -get_gpr_length() * 2));
     }
 
     for (const auto i : vec_regs) {
         if (ignore_vec_regs.find(i) != ignore_vec_regs.end()) {
-            //std::cout << "store_context: vec=" << i << ", skipped" << std::endl;
             continue;
         }
-        //std::cout << "store_context: vec=" << i << std::endl;
         h->str(Xbyak_aarch64::QReg(i), pre_ptr(h->sp, -get_vec_length()));
-    }
-
-    return;
-
-
-    // 1. General-purpose Registers
-    // 1.1. store pair registers
-    const auto store_gpr_regs_size = gpr_regs.size();
-    const auto last = store_gpr_regs_size % 2;
-    for (size_t i = 0; i < (store_gpr_regs_size - last); i += 2) {
-        h->stp(Xbyak_aarch64::XReg(gpr_regs[i]),
-               Xbyak_aarch64::XReg(gpr_regs[i + 1]),
-               pre_ptr(h->sp, -get_gpr_length() * 2));
-    }
-
-    // 1.1. store the remaining register
-    if (last != 0) {
-        h->str(Xbyak_aarch64::XReg(gpr_regs[store_gpr_regs_size - 1]),
-               pre_ptr(h->sp, -get_gpr_length() * 2));
-    }
-
-
-    // 2. SIMD and Floating-Point registers
-    // 2.1. store pair registers
-    int prev_reg_idx = -1;
-    size_t ignore_registers_count = 0;
-    for (size_t reg_idx = 0; reg_idx < get_asimd_vectors_count(); reg_idx++) {
-        if (ignore_vec_regs.find(reg_idx) != ignore_vec_regs.end()) {
-            ignore_registers_count++;
-            continue;
-        }
-
-        if (prev_reg_idx == -1) {
-            prev_reg_idx = static_cast<int>(reg_idx);
-            continue;
-        }
-
-        h->stp(Xbyak_aarch64::QReg(prev_reg_idx),
-               Xbyak_aarch64::QReg(reg_idx),
-               pre_ptr(h->sp, -get_vec_length() * 2));
-        prev_reg_idx = -1;
-    }
-
-//    const auto stp = [&](const size_t reg_idx) {
-//        if (ignore_vec_regs.find(reg_idx) != ignore_vec_regs.end()) {
-//            ignore_registers_count++;
-//            return;
-//        }
-//
-//        if (prev_reg_idx == -1) {
-//            prev_reg_idx = static_cast<int>(reg_idx);
-//            return;
-//        }
-//
-//        h->stp(Xbyak_aarch64::QReg(prev_reg_idx),
-//               Xbyak_aarch64::QReg(reg_idx),
-//               pre_ptr(h->sp, -get_vec_length() * 2));
-//        prev_reg_idx = -1;
-//    };
-//
-//    if (vec_regs.empty()) {
-//        for (size_t reg_idx = 0; reg_idx < get_asimd_vectors_count(); reg_idx++) {
-//            stp(reg_idx);
-//        }
-//    } else {
-//        for (const size_t reg_idx : vec_regs) {
-//            stp(reg_idx);
-//        }
-//    }
-
-    OPENVINO_ASSERT(ignore_registers_count == ignore_vec_regs.size(),
-                    "ignored registers size is not equal actual ignored registers count");
-
-    // 2.1. store the remaining register
-    if (prev_reg_idx != -1) {
-        h->str(Xbyak_aarch64::QReg(prev_reg_idx),
-               pre_ptr(h->sp, -get_vec_length()));
     }
 }
 
@@ -288,96 +201,14 @@ void jit_emitter::restore_context(
     const int vec_regs_size = static_cast<int>(vec_regs.size());
     for (int i = (vec_regs_size - 1); i >= 0; --i) {
         if (ignore_vec_regs.find(i) != ignore_vec_regs.end()) {
-            //std::cout << "restore_context: vec=" << vec_regs[i] << ", skipped" << std::endl;
             continue;
         }
-        //std::cout << "restore_context: vec=" << vec_regs[i] << std::endl;
         h->ldr(Xbyak_aarch64::QReg(vec_regs[i]), post_ptr(h->sp, get_vec_length()));
     }
 
     const int gpr_regs_size = static_cast<int>(gpr_regs.size());
     for (int i = (gpr_regs_size - 1); i >= 0; --i) {
-        //std::cout << "restore_context: gpr=" << gpr_regs[i] << std::endl;
         h->ldr(Xbyak_aarch64::XReg(gpr_regs[i]), post_ptr(h->sp, get_gpr_length() * 2));
-    }
-
-    return;
-
-    // 1. SIMD and Floating-Point registers
-    // 1.1. restore the remaining register
-    const auto v_last = (get_asimd_vectors_count() - ignore_vec_regs.size()) % 2;
-    if (v_last != 0) {
-        const auto reg_idx = get_asimd_vectors_count() - 1;
-        h->ldr(Xbyak_aarch64::QReg(reg_idx),
-               post_ptr(h->sp, get_vec_length()));
-    }
-
-    // 2.2. restore pair registers
-    size_t ignore_registers_count = 0;
-    int prev_reg_idx = -1;
-    for (size_t i = v_last; i < get_asimd_vectors_count(); i++) {
-        const auto reg_idx = get_asimd_vectors_count() - 1 - i;
-        if (ignore_vec_regs.find(reg_idx) != ignore_vec_regs.end()) {
-            ignore_registers_count++;
-            continue;
-        }
-
-        if (prev_reg_idx == -1) {
-            prev_reg_idx = static_cast<int>(reg_idx);
-            continue;
-        }
-
-        h->ldp(Xbyak_aarch64::QReg(reg_idx),
-               Xbyak_aarch64::QReg(prev_reg_idx),
-               post_ptr(h->sp, get_vec_length() * 2));
-        prev_reg_idx = -1;
-    }
-
-//    const auto ldp = [&](const size_t i){
-//        const auto reg_idx = get_asimd_vectors_count() - 1 - i;
-//        if (ignore_registers.find(reg_idx) != ignore_registers.end()) {
-//            ignore_registers_count++;
-//            return;
-//        }
-//
-//        if (prev_reg_idx == -1) {
-//            prev_reg_idx = static_cast<int>(reg_idx);
-//            return;
-//        }
-//
-//        h->ldp(Xbyak_aarch64::QReg(reg_idx),
-//               Xbyak_aarch64::QReg(prev_reg_idx),
-//               post_ptr(h->sp, get_vec_length() * 2));
-//        prev_reg_idx = -1;
-//    };
-//
-//    if (vec_regs.empty()) {
-//        for (size_t i = v_last; i < get_asimd_vectors_count(); i++) {
-//            ldp(i);
-//        }
-//    } else {
-//        for (const size_t i : vec_regs) {
-//            ldp(i);
-//        }
-//    }
-
-    OPENVINO_ASSERT(ignore_registers_count == ignore_vec_regs.size(),
-                    "ignored registers size is not equal actual ignored registers count");
-
-    // 2. General-purpose Registers
-    // 2.1. restore the remaining register
-    const auto save_gpr_regs_size = gpr_regs.size();
-    const auto last = save_gpr_regs_size % 2;
-    if (last != 0) {
-        h->ldr(Xbyak_aarch64::XReg(gpr_regs[save_gpr_regs_size - 1]),
-               post_ptr(h->sp, get_gpr_length() * 2));
-    }
-
-    // 2.2. restore pair registers
-    for (size_t i = last; i < save_gpr_regs_size; i += 2) {
-        h->ldp(Xbyak_aarch64::XReg(gpr_regs[save_gpr_regs_size - 1 - (i + 1)]),
-               Xbyak_aarch64::XReg(gpr_regs[save_gpr_regs_size - 1 - i]),
-               post_ptr(h->sp, get_gpr_length() * 2));
     }
 }
 
