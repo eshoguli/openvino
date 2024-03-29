@@ -13,7 +13,7 @@ namespace node {
 #define MAX_ELTWISE_DIM_RANK 12
 
 struct jit_eltwise_call_args_ptrs {
-    const void *src_ptr[MAX_ELTWISE_INPUTS];
+    void *src_ptr[MAX_ELTWISE_INPUTS];
     void *dst_ptr;
     //ptr to array of post op inputs pointers (flat list)
     const void** post_op_data;

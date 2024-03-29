@@ -395,10 +395,10 @@ public:
 
     void check_results() {
         if (!incorrect_values_abs.empty()) {
-#ifdef NDEBUG
-            std::string msg = "[ COMPARATION ] COMPARATION IS FAILED!";
-            msg += "  Use DEBUG mode to print `incorrect_values_abs` and get detailed information!";
-#else
+//#ifdef NDEBUG
+//            std::string msg = "[ COMPARATION ] COMPARATION IS FAILED!";
+//            msg += "  Use DEBUG mode to print `incorrect_values_abs` and get detailed information!";
+//#else
             std::string msg = "[ COMPARATION ] COMPARATION IS FAILED! incorrect elem counter: ";
             msg += std::to_string(incorrect_values_abs.size());
             msg += " among ";
@@ -410,7 +410,7 @@ public:
                           << " calculated_abs_threshold: " << val.threshold << " abs_threshold: " << abs_threshold
                           << " rel_threshold: " << rel_threshold << "\n";
             }
-#endif
+//#endif
             throw std::runtime_error(msg);
         }
     }
@@ -445,11 +445,24 @@ void compare(const ov::Tensor& expected, const ov::Tensor& actual, double abs_th
         double expected_value = expected_data[i];
         double actual_value = actual_data[i];
 
+//        if (i < 32) {
+//            std::cout << i <<
+//                      ": act: " << actual_value <<
+//                      ", exp: " << expected_value <<
+//                      ", diff: " << (expected_value != 0.0 ? std::to_string(abs((expected_value - actual_value) / expected_value)) : "n/a") << std::endl;
+//        }
+
         if (!check_values_suitable_for_comparison<ExpectedT, ActualT>(expected_value, actual_value)) {
             continue;
         }
 
         bool status = error.update(actual_value, expected_value, i);
+//        if (!status) {
+//            std::cout << i <<
+//                      ": act: " << actual_value <<
+//                      ", exp: " << expected_value <<
+//                      ", diff: " << (expected_value != 0.0 ? std::to_string(abs((expected_value - actual_value) / expected_value)) : "n/a") << std::endl;
+//        }
 #ifdef NDEBUG
         if (!status) {
             break;

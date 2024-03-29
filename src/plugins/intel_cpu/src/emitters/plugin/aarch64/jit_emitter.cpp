@@ -36,6 +36,17 @@ void jit_emitter::emit_code(const std::vector<size_t> &in_idxs,
                             const std::vector<size_t> &out_idxs,
                             const std::vector<size_t> &pool_vec_idxs,
                             const std::vector<size_t> &pool_gpr_idxs) const {
+//    std::cout << std::endl << "jit_emitter::emit_code:";
+//    std::cout << std::endl << "\tin_idxs: ";
+//    for (const auto indx : in_idxs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << "\tout_idxs: ";
+//    for (const auto indx : out_idxs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << "\tpool_vec_idxs: ";
+//    for (const auto indx : pool_vec_idxs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << "\tpool_gpr_idxs: ";
+//    for (const auto indx : pool_gpr_idxs) { std::cout << indx << ", "; }
+//    std::cout << std::endl;
+
     emitter_preamble(in_idxs, out_idxs, pool_vec_idxs, pool_gpr_idxs);
 
     emit_impl(in_idxs, out_idxs);
@@ -176,6 +187,10 @@ void jit_emitter::emitter_preamble(const std::vector<size_t>& in_idxs,
         aux_gpr_idxs.erase(aux_gpr_idxs.end() - 1);
     }
 
+//    std::cout << "jit_emitter::emitter_preamble: " <<
+//        "preserved_gpr_idxs: " << preserved_gpr_idxs.size() << ", " <<
+//        "preserved_vec_idxs: " << preserved_vec_idxs.size() <<
+//        std::endl;
     store_context(preserved_gpr_idxs, preserved_vec_idxs);
 
     if (!entry_map_.empty()) {
@@ -201,6 +216,13 @@ void jit_emitter::store_context(
         const std::vector<size_t>& gpr_regs,
         const std::vector<size_t>& vec_regs,
         const std::unordered_set<size_t>& ignore_vec_regs) const {
+//    std::cout << std::endl << "jit_emitter::store_context: ";
+//    std::cout << std::endl << "\tgpr_regs: ";
+//    for (const auto indx : gpr_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << "\tvec_regs: ";
+//    for (const auto indx : vec_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << std::endl;
+
     // 1. General-purpose Registers
     // 1.1. store pair registers
     const auto store_gpr_regs_size = gpr_regs.size();
@@ -220,7 +242,7 @@ void jit_emitter::store_context(
     // 2.1. store pair registers
     int prev_reg_idx = -1;
     size_t ignore_registers_count = 0;
-    for (size_t reg_idx = 0; reg_idx < vec_regs.size(); reg_idx++) {
+    for (const auto reg_idx : vec_regs) {
         if (ignore_vec_regs.find(reg_idx) != ignore_vec_regs.end()) {
             ignore_registers_count++;
             continue;
@@ -257,6 +279,13 @@ void jit_emitter::restore_context(
         const std::vector<size_t>& gpr_regs,
         const std::vector<size_t>& vec_regs,
         const std::unordered_set<size_t>& ignore_vec_regs) const {
+//    std::cout << std::endl << "jit_emitter::restore_context: ";
+//    std::cout << std::endl << "\tgpr_regs: ";
+//    for (const auto indx : gpr_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << "\tvec_regs: ";
+//    for (const auto indx : vec_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << std::endl;
+
     // 1. SIMD and Floating-Point registers
     // 1.1. restore the remaining register
     auto v_last = (vec_regs.size() - ignore_vec_regs.size()) % 2;

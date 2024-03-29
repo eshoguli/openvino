@@ -30,9 +30,148 @@ jit_uni_eltwise_generic<isa>::jit_uni_eltwise_generic(const jit_eltwise_params& 
                                                       ops_list_(ops_list),
                                                       post_ops_(post_ops) {}
 
+namespace utils {
+
+int32_t get_gpr_length(jit_generator* h) {
+    return h->x0.getBit() / 8;
+}
+
+int32_t get_vec_length(jit_generator* h) {
+    return 16;
+}
+
+void store_context(
+        jit_generator* h,
+        const std::vector<size_t>& gpr_regs,
+        const std::vector<size_t>& vec_regs,
+        const std::unordered_set<size_t>& ignore_vec_regs) {
+//    std::cout << std::endl << "jit_emitter::store_context: ";
+//    std::cout << std::endl << "\tgpr_regs: ";
+//    for (const auto indx : gpr_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << "\tvec_regs: ";
+//    for (const auto indx : vec_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << std::endl;
+
+    // 1. General-purpose Registers
+    // 1.1. store pair registers
+    const auto store_gpr_regs_size = gpr_regs.size();
+    const auto last = store_gpr_regs_size % 2;
+    for (size_t i = 0; i < (store_gpr_regs_size - last); i += 2) {
+        h->stp(Xbyak_aarch64::XReg(gpr_regs[i]),
+               Xbyak_aarch64::XReg(gpr_regs[i + 1]),
+               pre_ptr(h->sp, -get_gpr_length(h) * 2));
+    }
+    // 1.2. store the remaining register
+    if (last != 0) {
+        h->str(Xbyak_aarch64::XReg(gpr_regs[store_gpr_regs_size - 1]),
+               pre_ptr(h->sp, -get_gpr_length(h)));
+    }
+
+    // 2. SIMD and Floating-Point registers
+    // 2.1. store pair registers
+    int prev_reg_idx = -1;
+    size_t ignore_registers_count = 0;
+    for (const size_t reg_idx : vec_regs) {
+        if (ignore_vec_regs.find(reg_idx) != ignore_vec_regs.end()) {
+            ignore_registers_count++;
+            continue;
+        }
+        if (prev_reg_idx == -1) {
+            prev_reg_idx = static_cast<int>(reg_idx);
+            continue;
+        }
+        h->stp(Xbyak_aarch64::QReg(prev_reg_idx),
+               Xbyak_aarch64::QReg(reg_idx),
+               pre_ptr(h->sp, -get_vec_length(h) * 2));
+        prev_reg_idx = -1;
+    }
+
+    // 2.1. store the remaining register
+    if (prev_reg_idx != -1) {
+        if (ignore_vec_regs.find(prev_reg_idx) == ignore_vec_regs.end()) {
+            h->str(Xbyak_aarch64::QReg(prev_reg_idx),
+                   pre_ptr(h->sp, -get_vec_length(h)));
+        } else {
+            ignore_registers_count++;
+        }
+    }
+
+    OPENVINO_ASSERT(ignore_registers_count == ignore_vec_regs.size(),
+                    "ignored registers size is not equal actual ignored registers count");
+}
+
+void restore_context(
+        jit_generator* h,
+        const std::vector<size_t>& gpr_regs,
+        const std::vector<size_t>& vec_regs,
+        const std::unordered_set<size_t>& ignore_vec_regs) {
+//    std::cout << std::endl << "jit_emitter::restore_context: ";
+//    std::cout << std::endl << "\tgpr_regs: ";
+//    for (const auto indx : gpr_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << "\tvec_regs: ";
+//    for (const auto indx : vec_regs) { std::cout << indx << ", "; }
+//    std::cout << std::endl << std::endl;
+
+    // 1. SIMD and Floating-Point registers
+    // 1.1. restore the remaining register
+    auto v_last = (vec_regs.size() - ignore_vec_regs.size()) % 2;
+    if (v_last != 0) {
+        for (size_t i = 0; i < vec_regs.size(); i++) {
+            const auto reg_idx = vec_regs[vec_regs.size() - 1 - i];
+            if (ignore_vec_regs.find(reg_idx) != ignore_vec_regs.end()) {
+                v_last++;
+                continue;
+            }
+
+            h->ldr(Xbyak_aarch64::QReg(reg_idx),
+                   post_ptr(h->sp, get_vec_length(h)));
+            break;
+        }
+    }
+    // 1.2. restore pair registers
+    size_t ignore_registers_count = 0;
+    int prev_reg_idx = -1;
+    for (size_t i = v_last; i < vec_regs.size(); i++) {
+        const auto reg_idx = vec_regs[vec_regs.size() - 1 - i];
+        if (ignore_vec_regs.find(reg_idx) != ignore_vec_regs.end()) {
+            ignore_registers_count++;
+            continue;
+        }
+        if (prev_reg_idx == -1) {
+            prev_reg_idx = static_cast<int>(reg_idx);
+            continue;
+        }
+        h->ldp(Xbyak_aarch64::QReg(reg_idx),
+               Xbyak_aarch64::QReg(prev_reg_idx),
+               post_ptr(h->sp, get_vec_length(h) * 2));
+        prev_reg_idx = -1;
+    }
+
+    OPENVINO_ASSERT(ignore_registers_count == ignore_vec_regs.size(),
+                    "ignored registers size is not equal actual ignored registers count");
+
+    // 2. General-purpose Registers
+    // 2.1. restore the remaining register
+    const auto save_gpr_regs_size = gpr_regs.size();
+    const auto last = save_gpr_regs_size % 2;
+    if (last != 0) {
+        h->ldr(Xbyak_aarch64::XReg(gpr_regs[save_gpr_regs_size - 1]),
+               post_ptr(h->sp, get_gpr_length(h)));
+    }
+
+    // 2.2. restore pair registers
+    for (size_t i = last; i < save_gpr_regs_size; i += 2) {
+        h->ldp(Xbyak_aarch64::XReg(gpr_regs[save_gpr_regs_size - 1 - (i + 1)]),
+               Xbyak_aarch64::XReg(gpr_regs[save_gpr_regs_size - 1 - i]),
+               post_ptr(h->sp, get_gpr_length(h) * 2));
+    }
+}
+} // namespace utils
+
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::generate() {
     preamble();
+    //utils::store_context(this, {}, { 16, 17, 18, 19}, {});
 
     auto const exec_prc = eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
 
@@ -264,6 +403,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
     }
     L(tail_loop_end_label);
 
+    //utils::restore_context(this, {}, { 16, 17, 18, 19}, {});
     postamble();
 
     eltwise_emitter->emit_data();
@@ -621,7 +761,8 @@ std::shared_ptr<jit_emitter> jit_uni_eltwise_generic<isa>::create_eltwise_emitte
     OV_CASE(Algorithm::EltwiseRelu, ov::intel_cpu::aarch64::jit_relu_emitter),
     OV_CASE(Algorithm::EltwiseSelect, ov::intel_cpu::aarch64::jit_select_emitter),
     OV_CASE(Algorithm::EltwiseSigmoid, ov::intel_cpu::aarch64::jit_sigmoid_emitter),
-    OV_CASE(Algorithm::EltwiseSubtract, ov::intel_cpu::aarch64::jit_subtract_emitter));
+    OV_CASE(Algorithm::EltwiseSubtract, ov::intel_cpu::aarch64::jit_subtract_emitter),
+    OV_CASE(Algorithm::EltwiseTanh, ov::intel_cpu::aarch64::jit_tanh_emitter));
 
     if (!ctx.emitter)
         OPENVINO_THROW("Unsupported operation type '" + algToString(data.algo) + "' for Eltwise emitter");
@@ -778,7 +919,8 @@ std::set<std::vector<element::Type>> eltwise_precision_helper::get_supported_pre
         OV_CASE(Algorithm::EltwisePowerStatic, jit_power_static_emitter),
         OV_CASE(Algorithm::EltwiseSelect, jit_select_emitter),
         OV_CASE(Algorithm::EltwiseSigmoid, jit_sigmoid_emitter),
-        OV_CASE(Algorithm::EltwiseSubtract, jit_subtract_emitter));
+        OV_CASE(Algorithm::EltwiseSubtract, jit_subtract_emitter),
+        OV_CASE(Algorithm::EltwiseTanh, jit_tanh_emitter));
     if (precisions.empty())
         OPENVINO_THROW("Unsupported operation type for Eltwise emitter");
 

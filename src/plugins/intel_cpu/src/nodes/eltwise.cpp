@@ -2722,12 +2722,95 @@ void Eltwise::selectOptimalPrimitiveDescriptor() {
     selectPreferPrimitiveDescriptor(getImplPriority(), true);
 }
 
+namespace {
+std::ostream& operator<<(std::ostream& os, const Algorithm& algorithm) {
+    switch (algorithm) {
+        case Algorithm::EltwiseMulAdd:
+            os << "EltwiseMulAdd";
+            break;
+        case Algorithm::EltwiseAdd:
+            os << "EltwiseAdd";
+            break;
+        case Algorithm::EltwiseDivide:
+            os << "EltwiseDivide";
+            break;
+        case Algorithm::EltwiseMultiply:
+            os << "EltwiseMultiply";
+            break;
+        case Algorithm::EltwisePowerStatic:
+            os << "EltwisePowerStatic";
+            break;
+        case Algorithm::EltwiseSigmoid:
+            os << "EltwiseSigmoid";
+            break;
+        case Algorithm::EltwiseExp:
+            os << "EltwiseExp";
+            break;
+        case Algorithm::EltwiseSwish:
+            os << "EltwiseSwish";
+            break;
+        case Algorithm::EltwiseHswish:
+            os << "EltwiseHswish";
+            break;
+        case Algorithm::EltwiseEqual:
+            os << "EltwiseEqual";
+            break;
+        case Algorithm::EltwiseTanh:
+            os << "EltwiseTanh";
+            break;
+        default:
+            os << "[other]";
+            break;
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const dnnl::memory::data_type& type) {
+    switch (type) {
+        case dnnl::memory::data_type::f32:
+            os << "f32";
+            break;
+        case dnnl::memory::data_type::f16:
+            os << "f16";
+            break;
+        case dnnl::memory::data_type::s32:
+            os << "s32";
+            break;
+        case dnnl::memory::data_type::s8:
+            os << "s8";
+            break;
+        case dnnl::memory::data_type::u8:
+            os << "u8";
+            break;
+        default:
+            os << "[other]";
+            break;
+    }
+    return os;
+}
+
+size_t data_type_size(const dnnl::memory::data_type& type) {
+    switch (type) {
+        case dnnl::memory::data_type::f32:
+        case dnnl::memory::data_type::s32:
+            return 4;
+        case dnnl::memory::data_type::f16:
+            return 2;
+        case dnnl::memory::data_type::s8:
+        case dnnl::memory::data_type::u8:
+            return 1;
+        default:
+            OPENVINO_ASSERT(true, "unknow type");
+    }
+}
+} // namespace
+
 void Eltwise::execute(dnnl::stream strm) {
     if (execPtr) {
         jit_eltwise_call_args_ptrs args_ptrs = {};
         VectorDims dims_out = implType == EltwiseImplType::optimizedShapeAgnostic ? execParams.outDims : execPtr->getOutDims();
         for (size_t i = 0; i < memPtrs.size() - 1; i++)
-            args_ptrs.src_ptr[i] = memPtrs[i]->getDataAs<const uint8_t>() + start_offset_in[i];
+            args_ptrs.src_ptr[i] = memPtrs[i]->getDataAs<uint8_t>() + start_offset_in[i];
         args_ptrs.dst_ptr = memPtrs.back()->getDataAs<uint8_t>() + start_offset_out;
 
         args_ptrs.post_op_data = fqDataPtrs.data();
@@ -2740,7 +2823,84 @@ void Eltwise::execute(dnnl::stream strm) {
             }
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
+
+//        std::vector<float> inputs;
+//        {
+//            // TODO: debug
+//            std::cout << std::endl << "input:" << std::endl;
+//            for (size_t source_i = 0; source_i < memPtrs.size() - 1; source_i++) {
+//                std::cout << "src_ptr[" << source_i << "]: " << memPtrs[source_i]->getDataType() << std::endl;
+//                const size_t size = memPtrs[source_i]->getSize();
+//                const size_t length = size / data_type_size(memPtrs[source_i]->getDataType());
+//                auto src_ptr = static_cast<float *>(args_ptrs.src_ptr[source_i]);
+//                float value;
+//                for (size_t i = 0; i < length; i++) {
+////                    if (i == 33) {
+////                        value = src_ptr[i];
+////                    }
+////
+////                    if (i > 33) {
+////                        src_ptr[i] = value;
+////                    }
+//
+//                    if (i > 96) {
+//                        break;
+//                    }
+//                    std::cout << i << ": " << static_cast<float>(src_ptr[i]) << std::endl;
+//                    inputs.push_back(src_ptr[i]);
+//                }
+//                std::cout << std::endl << std::endl;
+//            }
+//        }
+//
+//        {
+//            // TODO: debug
+//            if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
+//                std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+//                          << this->getAlgorithm() << std::endl;
+//            } else if (
+//                    (std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
+//                    (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
+//                std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+//                          << this->getAlgorithm() << std::endl;
+//            } else {
+//                std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+//                          << this->getAlgorithm() << std::endl;
+//            }
+//        }
+
         execPtr->exec(args_ptrs, dims_out);
+
+//        {
+//            // TODO: debug
+//            std::cout << std::endl << "output:" << memPtrs.back()->getDataType() << std::endl;
+//            const auto size = memPtrs.back()->getSize();
+//            const size_t length = size / data_type_size(memPtrs.back()->getDataType());
+//            const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
+//
+//            auto reference_fun = [](const float value) {
+//                return std::exp(value);
+//                // sigmoid
+//                //return 1 / (1 + std::exp(-value));
+//                //return std::tanh(value);
+//            };
+//
+//            for (size_t i = 0; i < length; i++) {
+//                if (i > 96) {
+//                    break;
+//                }
+//
+//                double expected_value = reference_fun(inputs[i]);
+//                double actual_value = static_cast<float>(src_ptr[i]);
+//
+//                std::cout << i << ": in: " << inputs[i] <<
+//                    ", act: " << actual_value <<
+//                    ", exp: " << expected_value <<
+//                    ", diff: " << (expected_value != 0.0 ? std::to_string(abs((expected_value - actual_value) / expected_value)) : "n/a") <<
+//                    std::endl;
+//            }
+//            std::cout << std::endl << std::endl;
+//        }
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
         for (size_t i = 0; i < getParentEdges().size(); i++) {
@@ -2748,6 +2908,9 @@ void Eltwise::execute(dnnl::stream strm) {
         }
         std::vector<MemoryPtr> dstMemory;
         dstMemory.push_back(getDstMemoryAtPort(0));
+
+        std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+                  << this->getAlgorithm() << std::endl;
 
         aclExecPtr->exec(srcMemory, dstMemory, fqDataPtrs.data());
     } else {
