@@ -190,11 +190,13 @@ if (ENABLE_MLAS_FOR_CPU)
     target_include_directories(${TARGET_NAME} SYSTEM PRIVATE $<TARGET_PROPERTY:mlas,INCLUDE_DIRECTORIES>)
     add_definitions(-DOV_CPU_WITH_MLAS)
 endif()
+
 if (ENABLE_SNIPPETS_LIBXSMM_TPP)
     target_compile_definitions(xsmm PRIVATE __BLAS=0)
     target_link_libraries(${TARGET_NAME} PRIVATE xsmm)
     target_include_directories(${TARGET_NAME} SYSTEM PRIVATE $<TARGET_PROPERTY:xsmm,INCLUDE_DIRECTORIES>)
 endif ()
+
 target_include_directories(${TARGET_NAME} SYSTEM PRIVATE $<TARGET_PROPERTY:dnnl,INCLUDE_DIRECTORIES>)
 
 # Temporal solution to use template reference implementations in cases where optimizied implementation
