@@ -19,6 +19,7 @@
 #include "nodes/executors/fullyconnected_config.hpp"
 #include "nodes/executors/memory_arguments.hpp"
 #include "nodes/executors/mlas/mlas_gemm.hpp"
+#include "nodes/executors/shl/shl_fullyconnected.hpp"
 #include "nodes/executors/precision_matcher.hpp"
 #include "nodes/executors/precision_translation.hpp"
 #include "nodes/executors/type_mask.hpp"
@@ -169,6 +170,41 @@ OV_CPU_MAYBE_UNUSED_FUNCTION static inline bool noPostOps(const FCConfig& config
 template <>
 const std::vector<ExecutorImplementation<FCAttrs>>& getImplementations() {
     static const std::vector<ExecutorImplementation<FCAttrs>> fullyconnectedImplementations {
+        OV_CPU_INSTANCE_SHL_RISCV64(
+            "fullyconnected_shl",
+            ExecutorType::Shl,
+            OperationType::FullyConnected,
+            ShapeTolerance::Agnostic,
+            // supports
+            [](const FCConfig& config) -> bool {
+                VERIFY(noPostOps(config), UNSUPPORTED_POST_OPS);
+                VERIFY(noSparseDecompression(config), UNSUPPORTED_SPARSE_WEIGHTS);
+                VERIFY(noWeightsDecompression(config), UNSUPPORTED_WEIGHTS_DECOMPRESSION);
+                VERIFY(everyone_is(f32, srcType(config), weiType(config), dstType(config)), UNSUPPORTED_SRC_PRECISIONS);
+
+                return ShlFCExecutor::supports(config);
+            },
+            // requiresFallback
+            [](const FCConfig& config) -> ov::optional<executor::Config<FCAttrs>> {
+                // @todo Implement proper handling for the cases when fallback is not expected
+                // throwing exception is not an option, since requiresFallback is used in two contexts:
+                // 1) getting proper memory descriptors configuration
+                // 2) actual fallback to subgraph
+                return {};
+            },
+            // acceptsShapes
+            [](const MemoryArgs& memory) -> bool {
+                // @todo create syntactic sugar (functor) for shape agnostic lambda
+                return true;
+            },
+            // create
+            [](const FCAttrs& attrs,
+               const PostOps& postOps,
+               const MemoryArgs& memory,
+               const ExecutorContext::CPtr context) {
+                return std::make_shared<ShlFCExecutor>(attrs, postOps, memory, context);
+            }
+        )
         OV_CPU_INSTANCE_MLAS_X64(
             "fullyconnected_mlas",
             ExecutorType::Mlas,

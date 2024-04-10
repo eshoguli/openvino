@@ -10,7 +10,7 @@
 namespace ov {
 namespace intel_cpu {
 
-enum impl_desc_type {
+enum impl_desc_type : int64_t {
     unknown = 0x00000000,
     undef,
     // Optimization approach
@@ -47,6 +47,9 @@ enum impl_desc_type {
     sve256 = 1<<29,
     sve384 = 1<<30,
     sve512 = 1<<31,
+
+    // shl backend
+    shl = int64_t(1)<<32,
 
     // real types
     ref_any             = ref  | any,
