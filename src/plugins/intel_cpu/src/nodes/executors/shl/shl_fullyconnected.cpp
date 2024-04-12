@@ -12,9 +12,6 @@
 namespace ov {
 namespace intel_cpu {
 
-using namespace executor;
-using namespace ov::element;
-
 bool ShlFCExecutor::supports(const FCConfig& config) {
     if (!config.postOps.empty()) {
         DEBUG_LOG("ShlFCExecutor: PostOps are not supported");
@@ -52,7 +49,7 @@ ShlFCExecutor::ShlFCExecutor(const FCAttrs& attrs,
                              const PostOps& postOps,
                              const MemoryArgs& memory,
                              const ExecutorContext::CPtr context) {
-    const auto& strDesc = memory.at(ARG_SRC)->getDescPtr();
+    const auto& srcDesc = memory.at(ARG_SRC)->getDescPtr();
     const auto& weiDesc = memory.at(ARG_WEI)->getDescPtr();
     const auto& dstDesc = memory.at(ARG_DST)->getDescPtr();
 
@@ -67,12 +64,12 @@ ShlFCExecutor::ShlFCExecutor(const FCAttrs& attrs,
     bias = allocateShlTensor(sess);
 
     // Init precisions
-    src->dtype = precisionToShlDataType(strDesc->getPrecision());
+    src->dtype = precisionToShlDataType(srcDesc->getPrecision());
     wei->dtype = precisionToShlDataType(weiDesc->getPrecision());
     dst->dtype = precisionToShlDataType(dstDesc->getPrecision());
 
     // Init layouts
-    src->layout = getShlDataLayoutByMemoryDesc(strDesc, false);
+    src->layout = getShlDataLayoutByMemoryDesc(srcDesc, false);
     wei->layout = getShlDataLayoutByMemoryDesc(weiDesc, true);
     dst->layout = getShlDataLayoutByMemoryDesc(dstDesc, false);
 
@@ -88,8 +85,8 @@ ShlFCExecutor::ShlFCExecutor(const FCAttrs& attrs,
     params = allocateShlParams<csinn_fc_params>(sess);
     params->base.api = CSINN_RVV;
 
-    int status = csinn_fullyconnected_init(src.get(), dst.get(), wei.get(), bias.get(), params.get());
-    OPENVINO_ASSERT(status > 0, "ShlFCExecutor: failed to init FC");
+    OPENVINO_ASSERT(csinn_fullyconnected_init(src.get(), dst.get(), wei.get(), bias.get(), params.get()) == CSINN_TRUE,
+                    "ShlFCExecutor: failed to init FC");
 }
 
 bool ShlFCExecutor::update(const MemoryArgs& memory) {
@@ -104,8 +101,8 @@ void ShlFCExecutor::execute(const MemoryArgs& memory) {
     wei->data = memory.at(ARG_WEI)->getData();
     dst->data = memory.at(ARG_DST)->getData();
 
-    int status = csinn_fullyconnected(src.get(), dst.get(), wei.get(), bias.get(), params.get());
-    OPENVINO_ASSERT(status > 0, "ShlFCExecutor: failed to execute");
+    OPENVINO_ASSERT(csinn_fullyconnected(src.get(), dst.get(), wei.get(), bias.get(), params.get()) == CSINN_TRUE,
+                    "ShlFCExecutor: failed to execute");
 }
 
 }  // namespace intel_cpu
