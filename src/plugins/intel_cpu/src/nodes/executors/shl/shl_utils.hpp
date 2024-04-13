@@ -57,7 +57,7 @@ inline csinn_dtype_enum precisionToShlDataType(ov::element::Type precision) {
 */
 inline csinn_layout_enum getShlDataLayoutByMemoryDesc(const MemoryDescPtr& desc, bool is_weights = false) {
     if (desc->hasLayoutType(LayoutType::ncsp)) {
-        switch((desc->getShape().getRank())) {
+        switch (desc->getShape().getRank()) {
             case 1: return is_weights ? CSINN_LAYOUT_O     : CSINN_LAYOUT_N;
             case 2: return is_weights ? CSINN_LAYOUT_OI    : CSINN_LAYOUT_NC;
             case 3: return is_weights ? CSINN_LAYOUT_OIW   : CSINN_LAYOUT_NCW;
@@ -65,7 +65,7 @@ inline csinn_layout_enum getShlDataLayoutByMemoryDesc(const MemoryDescPtr& desc,
             case 5: return is_weights ? CSINN_LAYOUT_OIDHW : CSINN_LAYOUT_NCDHW;
         }
     } else if (desc->hasLayoutType(LayoutType::nspc)) {
-        switch((desc->getShape().getRank())) {
+        switch (desc->getShape().getRank()) {
             case 3: return is_weights ? CSINN_LAYOUT_OWI   : CSINN_LAYOUT_NWC;
             case 4: return is_weights ? CSINN_LAYOUT_OHWI  : CSINN_LAYOUT_NHWC;
             case 5: return is_weights ? CSINN_LAYOUT_ODHWI : CSINN_LAYOUT_NDHWC;

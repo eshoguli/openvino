@@ -49,7 +49,7 @@ enum impl_desc_type : int64_t {
     sve512 = 1<<31,
 
     // shl backend
-    shl = int64_t(1)<<32,
+    shl = 1ll<<32,
 
     // real types
     ref_any             = ref  | any,
@@ -115,7 +115,9 @@ enum impl_desc_type : int64_t {
     jit_sve128        = jit | sve128,
     jit_sve256        = jit | sve256,
     jit_sve384        = jit | sve384,
-    jit_sve512        = jit | sve512
+    jit_sve512        = jit | sve512,
+
+    gemm_shl          = gemm | shl
 };
 
 std::vector<std::string> extractTypeAndImplName(const std::string& priority);

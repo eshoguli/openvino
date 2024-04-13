@@ -20,7 +20,7 @@ public:
     void execute(const MemoryArgs& memory) override;
 
     impl_desc_type implType() const override {
-        return impl_desc_type::shl;
+        return impl_desc_type::gemm_shl;
     }
 
     // offloads execution data preparation from the exec call

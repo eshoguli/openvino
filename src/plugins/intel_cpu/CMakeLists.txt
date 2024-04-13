@@ -93,10 +93,6 @@ else()
     set(ENABLE_SHL_FOR_CPU_DEFAULT OFF)
 endif()
 ov_option(ENABLE_SHL_FOR_CPU "Enable SHL for OpenVINO CPU Plugin" ${ENABLE_SHL_FOR_CPU_DEFAULT})
-if (ENABLE_SHL_FOR_CPU)
-    add_definitions(-DOV_CPU_WITH_SHL)
-    set(OV_CPU_WITH_SHL ON)
-endif()
 
 add_subdirectory(thirdparty)
 
@@ -125,6 +121,11 @@ endif()
 
 if(OV_CPU_WITH_ACL)
     set(CMAKE_CXX_STANDARD 14)
+endif()
+
+if (ENABLE_SHL_FOR_CPU)
+    add_definitions(-DOV_CPU_WITH_SHL)
+    set(OV_CPU_WITH_SHL ON)
 endif()
 
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
