@@ -1082,6 +1082,9 @@ const std::map<const ov::DiscreteTypeInfo, Eltwise::Initializer>& Eltwise::getIn
         {ov::op::v1::Mod::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Eltwise& node) {
             node.algorithm = Algorithm::EltwiseMod;
         }},
+        {ov::op::v0::Floor::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Eltwise& node) {
+            node.algorithm = Algorithm::EltwiseFloor;
+        }},
         {ov::op::v1::FloorMod::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Eltwise& node) {
             node.algorithm = Algorithm::EltwiseFloorMod;
         }},
@@ -1875,6 +1878,7 @@ public:
                     case Algorithm::EltwiseSubtract:          *dst_ptr_f = src_f[0] - src_f[1]; break;
                     case Algorithm::EltwiseMultiply:          *dst_ptr_f = src_f[0] * src_f[1]; break;
                     case Algorithm::EltwiseDivide:            *dst_ptr_f = src_f[0] / src_f[1]; break;
+                    case Algorithm::EltwiseFloor:             *dst_ptr_f = floorf(src_f[0]); break;
                     case Algorithm::EltwiseFloorMod:          *dst_ptr_f = src_f[0] - floorf(src_f[0] / src_f[1]) * src_f[1]; break;
                     case Algorithm::EltwiseMod:               *dst_ptr_f = src_f[0] - truncf(src_f[0] / src_f[1]) * src_f[1]; break;
                     case Algorithm::EltwiseMaximum:           *dst_ptr_f = std::max(src_f[0], src_f[1]); break;
@@ -2072,6 +2076,7 @@ size_t Eltwise::getOpInputsNum() const {
         case Algorithm::EltwiseRelu:
         case Algorithm::EltwiseGeluErf:
         case Algorithm::EltwiseGeluTanh:
+        case Algorithm::EltwiseFloor:
         case Algorithm::EltwiseElu:
         case Algorithm::EltwiseTanh:
         case Algorithm::EltwiseSigmoid:
@@ -2722,6 +2727,98 @@ void Eltwise::selectOptimalPrimitiveDescriptor() {
     selectPreferPrimitiveDescriptor(getImplPriority(), true);
 }
 
+namespace {
+std::ostream& operator<<(std::ostream& os, const Algorithm& algorithm) {
+    switch (algorithm) {
+        case Algorithm::EltwiseMulAdd:
+            os << "EltwiseMulAdd";
+            break;
+        case Algorithm::EltwiseAdd:
+            os << "EltwiseAdd";
+            break;
+        case Algorithm::EltwiseDivide:
+            os << "EltwiseDivide";
+            break;
+        case Algorithm::EltwiseMultiply:
+            os << "EltwiseMultiply";
+            break;
+        case Algorithm::EltwisePowerStatic:
+            os << "EltwisePowerStatic";
+            break;
+        case Algorithm::EltwiseSigmoid:
+            os << "EltwiseSigmoid";
+            break;
+        case Algorithm::EltwiseExp:
+            os << "EltwiseExp";
+            break;
+        case Algorithm::EltwiseFloor:
+            os << "EltwiseFloor";
+            break;
+        case Algorithm::EltwiseGeluErf:
+            os << "EltwiseGeluErf";
+            break;
+        case Algorithm::EltwiseGeluTanh:
+            os << "EltwiseGeluTanh";
+            break;
+        case Algorithm::EltwiseSwish:
+            os << "EltwiseSwish";
+            break;
+        case Algorithm::EltwiseHswish:
+            os << "EltwiseHswish";
+            break;
+        case Algorithm::EltwiseEqual:
+            os << "EltwiseEqual";
+            break;
+        case Algorithm::EltwiseTanh:
+            os << "EltwiseTanh";
+            break;
+        default:
+            os << "[other]";
+            break;
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const dnnl::memory::data_type& type) {
+    switch (type) {
+        case dnnl::memory::data_type::f32:
+            os << "f32";
+            break;
+        case dnnl::memory::data_type::f16:
+            os << "f16";
+            break;
+        case dnnl::memory::data_type::s32:
+            os << "s32";
+            break;
+        case dnnl::memory::data_type::s8:
+            os << "s8";
+            break;
+        case dnnl::memory::data_type::u8:
+            os << "u8";
+            break;
+        default:
+            os << "[other]";
+            break;
+    }
+    return os;
+}
+
+size_t data_type_size(const dnnl::memory::data_type& type) {
+    switch (type) {
+        case dnnl::memory::data_type::f32:
+        case dnnl::memory::data_type::s32:
+            return 4;
+        case dnnl::memory::data_type::f16:
+            return 2;
+        case dnnl::memory::data_type::s8:
+        case dnnl::memory::data_type::u8:
+            return 1;
+        default:
+            OPENVINO_ASSERT(true, "unknow type");
+    }
+}
+} // namespace
+
 void Eltwise::execute(dnnl::stream strm) {
     if (execPtr) {
         jit_eltwise_call_args_ptrs args_ptrs = {};
@@ -2740,7 +2837,51 @@ void Eltwise::execute(dnnl::stream strm) {
             }
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
+
+        {
+            // TODO: debug
+            std::cout << std::endl << "input:" << std::endl;
+            for (size_t source_i = 0; source_i < memPtrs.size() - 1; source_i++) {
+                std::cout << "src_ptr[" << source_i << "]: " << memPtrs[source_i]->getDataType() << std::endl;
+                const size_t size = memPtrs[source_i]->getSize();
+                const size_t length = size / data_type_size(memPtrs[source_i]->getDataType());
+                const auto src_ptr = static_cast<const int*>(args_ptrs.src_ptr[source_i]);
+                for (size_t i = 0; i < length; i++) {
+                    std::cout << i << ": " << static_cast<int>(src_ptr[i]) << std::endl;
+                }
+                std::cout << std::endl << std::endl;
+            }
+        }
+
+        {
+            // TODO: debug
+            if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
+                std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+                          << this->getAlgorithm() << std::endl;
+            } else if (
+                    (std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
+                    (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
+                std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+                          << this->getAlgorithm() << std::endl;
+            } else {
+                std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+                          << this->getAlgorithm() << std::endl;
+            }
+        }
+
         execPtr->exec(args_ptrs, dims_out);
+
+        {
+            // TODO: debug
+            std::cout << std::endl << "output:" << memPtrs.back()->getDataType() << std::endl;
+            const auto size = memPtrs.back()->getSize();
+            const size_t length = size / data_type_size(memPtrs.back()->getDataType());
+            const auto src_ptr = static_cast<const int*>(args_ptrs.dst_ptr);
+            for (size_t i = 0; i < length; i++) {
+                std::cout << i << ": " << static_cast<float>(src_ptr[i]) << std::endl;
+            }
+            std::cout << std::endl << std::endl;
+        }
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
         for (size_t i = 0; i < getParentEdges().size(); i++) {
@@ -2749,7 +2890,37 @@ void Eltwise::execute(dnnl::stream strm) {
         std::vector<MemoryPtr> dstMemory;
         dstMemory.push_back(getDstMemoryAtPort(0));
 
+        {
+            // TODO: debug
+            std::cout << std::endl << "input:" << std::endl;
+            for (size_t source_i = 0; source_i < srcMemory.size() - 1; source_i++) {
+                std::cout << "src_ptr[" << source_i << "]: " << srcMemory[source_i]->getDataType() << std::endl;
+                const size_t size = srcMemory[source_i]->getSize();
+                const size_t length = size / data_type_size(srcMemory[source_i]->getDataType());
+                const auto src_ptr = static_cast<const float*>(srcMemory[source_i]->getData());
+                for (size_t i = 0; i < length; i++) {
+                    std::cout << i << ": " << static_cast<float>(src_ptr[i]) << std::endl;
+                }
+                std::cout << std::endl << std::endl;
+            }
+        }
+
+        std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+                  << this->getAlgorithm() << std::endl;
+
         aclExecPtr->exec(srcMemory, dstMemory, fqDataPtrs.data());
+
+        {
+            // TODO: debug
+            std::cout << std::endl << "output:" << dstMemory.back()->getDataType() << std::endl;
+            const auto size = dstMemory.back()->getSize();
+            const size_t length = size / data_type_size(dstMemory.back()->getDataType());
+            const auto src_ptr = static_cast<const float*>(dstMemory.back()->getData());
+            for (size_t i = 0; i < length; i++) {
+                std::cout << i << ": " << static_cast<float>(src_ptr[i]) << std::endl;
+            }
+            std::cout << std::endl << std::endl;
+        }
     } else {
         OPENVINO_THROW("Can't execute eltwise node with name: ", getName(), ". Primitive isn't created");
     }

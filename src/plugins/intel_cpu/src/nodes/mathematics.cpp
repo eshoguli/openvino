@@ -123,11 +123,6 @@ void Math::execute(dnnl::stream strm) {
                 dst_data[i] = coshf(src_data[i]);
             });
             break;
-        case Algorithm::MathFloor:
-            parallel_for(dataSize, [&](size_t i) {
-                dst_data[i] = floorf(src_data[i]);
-            });
-            break;
         case Algorithm::MathHardSigmoid:
             alpha = (alpha == 0.0f) ? 0.2f : alpha;
             beta = (beta == 0.0f) ? 0.5f : beta;
@@ -228,9 +223,6 @@ std::map<const ov::DiscreteTypeInfo, std::function<void(const std::shared_ptr<ov
             }},
             {ov::op::v0::Cosh::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Math& node) {
                 node.algorithm = Algorithm::MathCosh;
-            }},
-            {ov::op::v0::Floor::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Math& node) {
-                node.algorithm = Algorithm::MathFloor;
             }},
             {ov::op::v0::HardSigmoid::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Math& node) {
                 node.algorithm = Algorithm::MathHardSigmoid;

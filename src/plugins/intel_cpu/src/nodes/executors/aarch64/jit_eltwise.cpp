@@ -24,6 +24,7 @@ bool JitEltwiseExecutor::isSupported(
                                      Algorithm::EltwiseDivide,
                                      Algorithm::EltwiseEqual,
                                      Algorithm::EltwiseExp,
+                                     Algorithm::EltwiseFloor,
                                      Algorithm::EltwiseMultiply,
                                      Algorithm::EltwiseMulAdd,
                                      Algorithm::EltwisePowerStatic,
