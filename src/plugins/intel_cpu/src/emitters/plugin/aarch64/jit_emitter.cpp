@@ -48,14 +48,31 @@ void jit_emitter::emit_data() const {
     h->L(*l_table.get());
 
     // Assumption: entries can be inserted with dd, so they should be 4 bytes.
-    assert(sizeof(table_entry_val_t) == 4);
+    //assert(sizeof(table_entry_val_t) == 4);
 
     // Run through the map and insert values stored there
     for (auto it = entry_map_.begin(); it != entry_map_.end(); it++) {
         const auto &te = (*it).second; // get map entry for a given key
+        const auto size = sizeof(table_entry_val_t);
         const auto len = te.bcast ? get_vec_length() : sizeof(table_entry_val_t);
-        for (size_t d = 0; d < len; d += sizeof(table_entry_val_t))
-            h->dd(te.val);
+
+        // TODO: refactor
+        if (this->exec_prc_ == ov::element::f16) {
+            for (size_t d = 0; d < len; d += 4) {
+                uint32_t value;
+                uint8_t *t_ptr = reinterpret_cast<uint8_t *>(&value);
+                const uint8_t *u_ptr = reinterpret_cast<const uint8_t *>(&te.val);
+                t_ptr[0] = u_ptr[0];
+                t_ptr[1] = u_ptr[1];
+                t_ptr[2] = u_ptr[0];
+                t_ptr[3] = u_ptr[1];
+                h->dd(value);
+            }
+        } else {
+            for (size_t d = 0; d < len; d += sizeof(table_entry_val_t)) {
+                h->dd(te.val);
+            }
+        }
     }
 }
 

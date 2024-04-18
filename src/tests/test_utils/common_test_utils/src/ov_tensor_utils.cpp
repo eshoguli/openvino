@@ -561,6 +561,21 @@ void compare(const ov::Tensor& expected,
     tensor_comparation::Error error(abs_threshold, rel_threshold, topk_threshold, mvn_threshold, shape_size_cnt);
     const auto expected_data = expected.data<ExpectedT>();
     const auto actual_data = actual.data<ActualT>();
+
+//    for (size_t i = 0; i < shape_size_cnt; ++i) {
+//        double expected_value = expected_data[i];
+//        double actual_value = actual_data[i];
+//
+//        if (i < 32) {
+//            std::cout << i <<
+//                      ": act: " << actual_value <<
+//                      ", exp: " << expected_value <<
+//                      ", diff: "
+//                      << (expected_value != 0.0 ? std::to_string(abs((expected_value - actual_value) / expected_value))
+//                                                : "n/a") << std::endl;
+//        }
+//    }
+
     for (size_t i = 0; i < shape_size_cnt; ++i) {
         double expected_value = expected_data[i];
         double actual_value = actual_data[i];

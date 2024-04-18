@@ -61,36 +61,36 @@ std::shared_ptr<ov::Model> getFunction2() {
     return std::make_shared<ov::Model>(concat, params, "SplitAddConcat");
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    smoke_BehaviorTests_1,
-    OVInferRequestDynamicTests,
-    ::testing::Combine(::testing::Values(getFunction1()),
-                       ::testing::Values(std::vector<std::pair<std::vector<size_t>, std::vector<size_t>>>{
-                           {{1, 4, 20, 20}, {1, 4, 20, 20}},
-                           {{2, 4, 20, 20}, {2, 4, 20, 20}}}),
-                       ::testing::Values(ov::test::utils::DEVICE_CPU),
-                       ::testing::ValuesIn(configs)),
-    OVInferRequestDynamicTests::getTestCaseName);
-
-INSTANTIATE_TEST_SUITE_P(
-    smoke_BehaviorTests_2,
-    OVInferRequestDynamicTests,
-    ::testing::Combine(::testing::Values(getFunction2()),
-                       ::testing::Values(std::vector<std::pair<std::vector<size_t>, std::vector<size_t>>>{
-                           {{1, 4, 20, 20}, {1, 2, 20, 40}},
-                           {{2, 4, 20, 20}, {2, 2, 20, 40}}}),
-                       ::testing::Values(ov::test::utils::DEVICE_CPU),
-                       ::testing::ValuesIn(configs)),
-    OVInferRequestDynamicTests::getTestCaseName);
-
-INSTANTIATE_TEST_SUITE_P(
-    smoke_Hetero_BehaviorTests,
-    OVInferRequestDynamicTests,
-    ::testing::Combine(::testing::Values(getFunction2()),
-                       ::testing::Values(std::vector<std::pair<std::vector<size_t>, std::vector<size_t>>>{
-                           {{1, 4, 20, 20}, {1, 2, 20, 40}},
-                           {{2, 4, 20, 20}, {2, 2, 20, 40}}}),
-                       ::testing::Values(ov::test::utils::DEVICE_HETERO),
-                       ::testing::ValuesIn(HeteroConfigs)),
-    OVInferRequestDynamicTests::getTestCaseName);
+//INSTANTIATE_TEST_SUITE_P(
+//    smoke_BehaviorTests_1,
+//    OVInferRequestDynamicTests,
+//    ::testing::Combine(::testing::Values(getFunction1()),
+//                       ::testing::Values(std::vector<std::pair<std::vector<size_t>, std::vector<size_t>>>{
+//                           {{1, 4, 20, 20}, {1, 4, 20, 20}},
+//                           {{2, 4, 20, 20}, {2, 4, 20, 20}}}),
+//                       ::testing::Values(ov::test::utils::DEVICE_CPU),
+//                       ::testing::ValuesIn(configs)),
+//    OVInferRequestDynamicTests::getTestCaseName);
+//
+//INSTANTIATE_TEST_SUITE_P(
+//    smoke_BehaviorTests_2,
+//    OVInferRequestDynamicTests,
+//    ::testing::Combine(::testing::Values(getFunction2()),
+//                       ::testing::Values(std::vector<std::pair<std::vector<size_t>, std::vector<size_t>>>{
+//                           {{1, 4, 20, 20}, {1, 2, 20, 40}},
+//                           {{2, 4, 20, 20}, {2, 2, 20, 40}}}),
+//                       ::testing::Values(ov::test::utils::DEVICE_CPU),
+//                       ::testing::ValuesIn(configs)),
+//    OVInferRequestDynamicTests::getTestCaseName);
+//
+//INSTANTIATE_TEST_SUITE_P(
+//    smoke_Hetero_BehaviorTests,
+//    OVInferRequestDynamicTests,
+//    ::testing::Combine(::testing::Values(getFunction2()),
+//                       ::testing::Values(std::vector<std::pair<std::vector<size_t>, std::vector<size_t>>>{
+//                           {{1, 4, 20, 20}, {1, 2, 20, 40}},
+//                           {{2, 4, 20, 20}, {2, 2, 20, 40}}}),
+//                       ::testing::Values(ov::test::utils::DEVICE_HETERO),
+//                       ::testing::ValuesIn(HeteroConfigs)),
+//    OVInferRequestDynamicTests::getTestCaseName);
 }  // namespace

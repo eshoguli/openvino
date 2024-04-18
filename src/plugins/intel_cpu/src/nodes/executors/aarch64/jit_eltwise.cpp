@@ -89,6 +89,10 @@ bool JitEltwiseExecutor::isSupported(
         return false;
     }
 
+    if (algorithm == Algorithm::EltwisePowerStatic) {
+        std::cout << "JitEltwiseExecutor::isSupported: Algorithm::EltwisePowerStatic" << std::endl;
+    }
+
     return true;
 }
 

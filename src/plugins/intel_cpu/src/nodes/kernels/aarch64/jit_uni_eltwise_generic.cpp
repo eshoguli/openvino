@@ -34,7 +34,33 @@ template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 void jit_uni_eltwise_generic<isa>::generate() {
     preamble();
 
-    auto const exec_prc = eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
+    const auto check_src_prc = [](
+            const ov::element::Type src_prc[MAX_ELTWISE_INPUTS],
+            const ov::element::Type& type) {
+        for (auto i = 0; i <= MAX_ELTWISE_INPUTS; ++i) {
+            if (src_prc[i] == ov::element::undefined) {
+                break;
+            }
+
+            if (src_prc[i] != type) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    auto const exec_prc =
+            (jep_.dst_prc != jep_.src_prc[0]) &&
+            (check_src_prc(jep_.src_prc, element::f16)) &&
+            (jep_.dst_prc == element::f32) ?
+                jep_.dst_prc :
+                eltwise_precision_helper::get_precision(jep_.inputs_number, jep_.src_prc, eltwise_data_);
+    //std::cout << "exec_prc = " << exec_prc << std::endl;
+
+//    if (eltwise_data_.size() > 1) {
+//        fused_operations += eltwise_data_.size();
+//        std::cout << "eltwise_data_.size() = " << eltwise_data_.size() << std::endl;
+//    }
 
     eltwise_emitter = create_eltwise_emitter(eltwise_data_.front(), exec_prc);
     for (size_t i = 1; i < eltwise_data_.size(); ++i) {
@@ -42,6 +68,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
     }
 
     const auto &jep = jep_;
+    //std::cout << "jep.work_amount = " << jep.work_amount << std::endl;
 
     XReg param2 = abi_param2;
     const int offset_count = jep.input_size - 1;
@@ -195,8 +222,11 @@ void jit_uni_eltwise_generic<isa>::generate() {
         L(main_loop_label);
         {
             const size_t vlen = cpu_isa_traits<isa>::vlen;
+            //std::cout << "vlen = " << vlen << std::endl;
             const size_t exec_prc_size = exec_prc.size();
+            //std::cout << "exec_prc_size = " << exec_prc_size << std::endl;
             const size_t loop_step = vlen / exec_prc_size;
+            //std::cout << "loop_step = " << loop_step << std::endl;
 
             cmp(reg_work_amount, loop_step);
             b(LO, main_loop_end_label);
@@ -305,6 +335,11 @@ void jit_uni_eltwise_generic<isa>::load_vector(const TReg& data,
                                                const ov::element::Type& dst_prc,
                                                const bool broadcast,
                                                const int32_t ptr_offset) {
+    if ((src_prc == dst_prc) && (!broadcast)) {
+        jit_generator::uni_ldr(data, ptr_reg, ptr_offset);
+        return;
+    }
+
     switch (src_prc) {
         case ov::element::f16: {
             utils::load_vector(data.h, data.h4, ptr_reg, ptr_offset, broadcast, this);
@@ -472,6 +507,11 @@ void jit_uni_eltwise_generic<isa>::store_vector(const XReg& ptr,
                 OPENVINO_THROW("src_prc " + src_prc.to_string() + " is not supported, dst_prc is " + dst_prc.to_string());
             }
         }
+    }
+
+    if (src_prc == dst_prc) {
+        str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+        return;
     }
 
     switch (dst_prc) {

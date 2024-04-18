@@ -53,7 +53,7 @@ void ActivationLayerCPUTest::generate_inputs(const std::vector<ov::Shape>& targe
     int32_t resolution = 0;
 
     if (activationType == utils::ActivationTypes::Exp) {
-        if (netPrecision == ov::element::bf16) {
+        if ((netPrecision == ov::element::bf16) || (netPrecision == ov::element::f16)) {
             startFrom = 0;
             range = 2;
         } else {
@@ -115,7 +115,7 @@ void ActivationLayerCPUTest::SetUp() {
     inType  = inPrecision;
     outType = outPrecision;
     const auto primitiveType = getPrimitiveType(activationType, inType, inputShapes);
-    selectedType = primitiveType.empty() ? "" : getPrimitiveType(activationType, inType, inputShapes) + "_" + netPrecision.to_string();
+    selectedType = primitiveType.empty() ? "" : primitiveType + "_" + netPrecision.to_string();
 
 #if defined(OPENVINO_ARCH_ARM) || defined(OPENVINO_ARCH_ARM64)
 #    if defined(OPENVINO_ARCH_ARM)
@@ -141,11 +141,17 @@ void ActivationLayerCPUTest::SetUp() {
 #if defined(OPENVINO_ARCH_ARM) || defined(OPENVINO_ARCH_ARM64)
     if (netPrecision == ov::element::f32 && outPrecision == ov::element::f32) {
         abs_threshold = 8e-4;
+    } else if (netPrecision == ov::element::f16) {
+        abs_threshold = 6e-3;
+        configuration.insert({hint::inference_precision.name(), netPrecision.to_string()});
+        //std::cout << "abs_threshold: " << abs_threshold << std::endl;
     }
 #endif
     if (netPrecision == ov::element::bf16 && outPrecision == ov::element::f32) {
         abs_threshold = 6e-2;
     }
+
+    //std::cout << "netPrecision: " << netPrecision << std::endl;
 }
 
 std::string ActivationLayerCPUTest::getPrimitiveType(const utils::ActivationTypes& activation_type,
@@ -161,6 +167,17 @@ std::string ActivationLayerCPUTest::getPrimitiveType(const utils::ActivationType
         (activation_type == utils::ActivationTypes::HardSigmoid) ||
         (activation_type == utils::ActivationTypes::Mish) ||
         (activation_type == utils::ActivationTypes::GeluErf) ||
+        (activation_type == utils::ActivationTypes::Relu) ||
+        (activation_type == utils::ActivationTypes::Sigmoid) ||
+        (activation_type == utils::ActivationTypes::Swish) ||
+        (activation_type == utils::ActivationTypes::Tanh))) {
+        return "jit";
+    }
+
+    if ((element_type == ov::element::f16) &&
+        ((activation_type == utils::ActivationTypes::Exp) ||
+        (activation_type == utils::ActivationTypes::HSwish) ||
+        (activation_type == utils::ActivationTypes::PReLu) ||
         (activation_type == utils::ActivationTypes::Relu) ||
         (activation_type == utils::ActivationTypes::Sigmoid) ||
         (activation_type == utils::ActivationTypes::Swish) ||
@@ -211,8 +228,22 @@ const std::map<utils::ActivationTypes, std::vector<std::vector<float>>>& activat
     return activationTypes;
 }
 
+const std::map<utils::ActivationTypes, std::vector<std::vector<float>>>& activationTypesFp16() {
+    static const std::map<utils::ActivationTypes, std::vector<std::vector<float>>> activationTypes {
+        {Exp,         {{}}},
+        {HSwish,      {{}}},
+        {PReLu,       {{-0.f}}},
+        {Relu,        {{}}},
+        {Sigmoid,     {{}}},
+        {Swish,       {{0.1f}}},
+        {Tanh,        {{}}},
+    };
+
+    return activationTypes;
+}
+
 const std::vector<ov::element::Type>& netPrc() {
-    static const std::vector<ov::element::Type> netPrc{ov::element::f32};
+    static const std::vector<ov::element::Type> netPrc {ov::element::f32};
 
     return netPrc;
 }

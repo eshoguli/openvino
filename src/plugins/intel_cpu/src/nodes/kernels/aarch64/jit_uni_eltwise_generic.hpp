@@ -77,6 +77,8 @@ struct jit_uni_eltwise_kernel {
     jit_eltwise_params jep_;
 };
 
+//static size_t fused_operations = 0;
+
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
 struct jit_uni_eltwise_generic : public jit_uni_eltwise_kernel, jit_generator {
 public:

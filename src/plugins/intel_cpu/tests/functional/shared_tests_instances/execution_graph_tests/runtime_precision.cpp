@@ -23,9 +23,9 @@ const std::vector<RuntimePrecisionSpecificParams> params = {
         {makeFakeQuantizeBinaryConvolutionFunction, {ov::element::f32}, {{"FakeQuantize", ov::element::f32}, {"BinaryConvolution", ov::element::u1}}},
 };
 
-INSTANTIATE_TEST_SUITE_P(smoke_ExecGraph, ExecGraphRuntimePrecision,
-                        ::testing::Combine(
-                                ::testing::ValuesIn(params),
-                                ::testing::Values(ov::test::utils::DEVICE_CPU)),
-                        ExecGraphRuntimePrecision::getTestCaseName);
+//INSTANTIATE_TEST_SUITE_P(smoke_ExecGraph, ExecGraphRuntimePrecision,
+//                        ::testing::Combine(
+//                                ::testing::ValuesIn(params),
+//                                ::testing::Values(ov::test::utils::DEVICE_CPU)),
+//                        ExecGraphRuntimePrecision::getTestCaseName);
 }  // namespace

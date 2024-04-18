@@ -237,7 +237,15 @@ void inline fill_data_random(T* pointer,
         start_from = 0;
     }
     for (std::size_t i = 0; i < size; i++) {
-        pointer[i] = static_cast<T>(start_from + static_cast<double>(random.Generate(k_range)) / k);
+        //pointer[i] = static_cast<T>(start_from + static_cast<double>(random.Generate(k_range)) / k);
+        const auto generated_range = random.Generate(k_range);
+        const auto value = static_cast<T>(start_from + static_cast<T>(generated_range) / k);
+        const auto value2 = static_cast<float>(value);
+
+        pointer[i] = value;
+//        if (i < 16) {
+//            std::cout << "fill_data_random: " << i << ": " << pointer[i] << std::endl;
+//        }
     }
 }
 
