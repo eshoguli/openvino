@@ -50,6 +50,18 @@ const auto basicCases5D = ::testing::Combine(
 
 INSTANTIATE_TEST_SUITE_P(smoke_Activation5D_Eltwise_CPU, ActivationLayerCPUTest, basicCases5D, ActivationLayerCPUTest::getTestCaseName);
 
+const auto basicCasesFp16 = ::testing::Combine(
+        ::testing::ValuesIn(static_shapes_to_test_representation(basic5D())),
+        ::testing::Values(activationShapes()),
+        ::testing::ValuesIn(ov::test::utils::combineParams(activationTypesFp16())),
+        ::testing::ValuesIn({ov::element::f16}),
+        ::testing::ValuesIn({ov::element::f16}),
+        ::testing::ValuesIn({ov::element::f16}),
+        ::testing::ValuesIn(filterCPUSpecificParams(cpuParams5D()))
+);
+
+INSTANTIATE_TEST_SUITE_P(smoke_Activation_Eltwise_CPU_fp16, ActivationLayerCPUTest, basicCasesFp16, ActivationLayerCPUTest::getTestCaseName);
+
 const auto dynamicMathBasicCases = ::testing::Combine(
     ::testing::ValuesIn(dynamicMathBasic()),
     ::testing::Values(activationShapes()),
