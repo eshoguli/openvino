@@ -137,6 +137,7 @@ void EltwiseLayerTest::SetUp() {
 
     auto eltwise = ov::test::utils::make_eltwise(parameters[0], secondary_input, eltwise_type);
     function = std::make_shared<ov::Model>(eltwise, parameters, "Eltwise");
+    ov::pass::Serialize("test.eltwise.xml", "test.eltwise.bin").run_on_model(function);
 }
 } //  namespace test
 } //  namespace ov

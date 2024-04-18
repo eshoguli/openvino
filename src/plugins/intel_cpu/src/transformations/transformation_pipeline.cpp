@@ -282,6 +282,8 @@ void Transformations::CpuSpecificOpSet(void) {
 void Transformations::PreLpt(const std::vector<ov::element::Type>& defaultPrecisions) {
     CPU_DEBUG_CAP_TRANSFORMATION_SCOPE(this, PreLpt);
 
+    //std::cout << "Transformations::PreLpt: inferencePrecision=" << inferencePrecision << std::endl;
+
     // Decompression handling related transformations must be run separately from common preLPT pipeline
     // since there is used the same transformations as in LPT related transformations, but with the specific settings.
     // This must be done in order to keep compressed MatMul weights with decompression operations as is

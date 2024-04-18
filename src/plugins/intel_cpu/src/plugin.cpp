@@ -323,6 +323,8 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
             denormals_as_zero(false);
         }
     }
+
+    //ov::pass::Serialize("cpu.transformed.xml", "cpu.transformed.bin").run_on_model(cloned_model);
     return std::make_shared<CompiledModel>(cloned_model, shared_from_this(), conf, false);
 }
 

@@ -131,6 +131,7 @@ const auto params_4D_int_jit = ::testing::Combine(
         ::testing::Combine(
                 ::testing::ValuesIn(static_shapes_to_test_representation(inShapes_4D())),
                 ::testing::ValuesIn({ utils::EltwiseTypes::ADD, utils::EltwiseTypes::MULTIPLY }),
+                //::testing::ValuesIn({ utils::EltwiseTypes::DIVIDE }),
                 ::testing::ValuesIn(secondaryInputTypes()),
                 ::testing::ValuesIn(opTypes()),
                 ::testing::ValuesIn({ ElementType::i8, ElementType::u8, ElementType::f16, ElementType::i32, ElementType::f32 }),
