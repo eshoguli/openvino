@@ -9,6 +9,8 @@
 #include "openvino/op/constant.hpp"
 #include "precomp.hpp"
 
+#include "openvino/util/env_util.hpp"
+
 namespace ov {
 namespace test {
 namespace utils {
@@ -424,12 +426,12 @@ public:
             msg += " among ";
             msg += std::to_string(tensor_size);
             msg += " shapes.";
-            for (auto val : incorrect_values_abs) {
-                std::cout << "\nExpected: " << val.expected_value << " Actual: " << val.actual_value
-                          << " Diff: " << std::fabs(val.expected_value - val.actual_value)
-                          << " calculated_abs_threshold: " << val.threshold << " abs_threshold: " << abs_threshold
-                          << " rel_threshold: " << rel_threshold << "\n";
-            }
+//            for (auto val : incorrect_values_abs) {
+//                std::cout << "\nExpected: " << val.expected_value << " Actual: " << val.actual_value
+//                          << " Diff: " << std::fabs(val.expected_value - val.actual_value)
+//                          << " calculated_abs_threshold: " << val.threshold << " abs_threshold: " << abs_threshold
+//                          << " rel_threshold: " << rel_threshold << "\n";
+//            }
 #endif
             throw std::runtime_error(msg);
         } else if (!less_or_equal(mvn_results, mvn_threshold)) {
@@ -546,6 +548,19 @@ void compare(const ov::Tensor& expected,
     tensor_comparation::Error error(abs_threshold, rel_threshold, topk_threshold, mvn_threshold, shape_size_cnt);
     const auto expected_data = expected.data<ExpectedT>();
     const auto actual_data = actual.data<ActualT>();
+
+    // TODO: debug
+    const auto print_tensors_data_num = ov::util::getenv_int("OV_PRINT_TENSORS_DATA_NUM_TEST");
+    for (size_t i = 0; i < std::min<size_t>(shape_size_cnt, print_tensors_data_num); ++i) {
+        double expected_value = expected_data[i];
+        double actual_value = actual_data[i];
+
+        std::cout << i <<
+                ": act: " << actual_value <<
+                ", exp: " << expected_value <<
+                ", diff: " << (expected_value != 0.0 ? std::to_string(abs((expected_value - actual_value) / expected_value)) : "n/a") << std::endl;
+    }
+
     for (size_t i = 0; i < shape_size_cnt; ++i) {
         double expected_value = expected_data[i];
         double actual_value = actual_data[i];

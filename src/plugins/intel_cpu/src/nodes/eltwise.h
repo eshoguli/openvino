@@ -18,11 +18,15 @@
 #include "kernels/aarch64/jit_uni_eltwise_generic.hpp"
 #endif
 
+#if defined(OPENVINO_ARCH_RISCV64)
+#include "kernels/riscv64/jit_uni_eltwise_generic.hpp"
+#endif
+
 namespace ov {
 namespace intel_cpu {
 namespace node {
 
-#ifndef OPENVINO_ARCH_ARM64
+#if !defined(OPENVINO_ARCH_ARM64) && !defined(OPENVINO_ARCH_RISCV64)
 
 struct jit_eltwise_params {
     size_t inputs_number;
@@ -132,6 +136,12 @@ public:
     static bool isSupportedOperation(const std::shared_ptr<const ov::Node>& op, std::string& errorMessage) noexcept;
 
 private:
+    // TODO: debug caps
+    bool print_tensors = false;
+    size_t print_tensors_data_num = 0;
+    bool fill_tensors = false;
+    bool can_fuse = true;
+
     executorPtr execPtr = nullptr;
     BroadcastingPolicy broadcastingPolicy;
 

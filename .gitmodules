@@ -88,3 +88,6 @@
 	path = src/plugins/intel_cpu/thirdparty/shl
 	url = https://github.com/a-sidorova/csi-nn2.git
 	branch = dev
+[submodule "src/plugins/intel_cpu/thirdparty/xbyak_riscv"]
+	path = src/plugins/intel_cpu/thirdparty/xbyak_riscv
+	url = https://github.com/herumi/xbyak_riscv.git
