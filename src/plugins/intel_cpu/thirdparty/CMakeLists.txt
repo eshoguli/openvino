@@ -158,4 +158,9 @@ if(ENABLE_MLAS_FOR_CPU)
     ov_install_static_lib(mlas ${OV_CPACK_COMP_CORE})
 endif()
 
+if(RISCV64)
+    add_subdirectory(xbyak_riscv)
+    ov_install_static_lib(xbyak_riscv ${OV_CPACK_COMP_CORE})
+endif()
+
 ov_add_onednn()
