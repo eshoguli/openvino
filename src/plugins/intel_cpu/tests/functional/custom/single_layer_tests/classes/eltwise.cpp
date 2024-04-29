@@ -182,6 +182,8 @@ void EltwiseLayerCPUTest::SetUp() {
     }
 #endif
 
+    std::cout << "selectedType=" << selectedType << std::endl;
+
     if (enforceSnippets) {
         configuration.insert(ov::intel_cpu::snippets_mode(ov::intel_cpu::SnippetsMode::IGNORE_CALLBACK));
     } else {
@@ -262,6 +264,15 @@ std::string EltwiseLayerCPUTest::getPrimitiveType(const utils::EltwiseTypes& elt
     }
 #endif
     return "acl";
+#elif defined(OPENVINO_RISCV_ARM64)
+    if ((eltwise_type == utils::EltwiseTypes::ADD) ||
+       (eltwise_type == utils::EltwiseTypes::MULTIPLY) ||
+       (eltwise_type == utils::EltwiseTypes::SUBTRACT) ||
+       (eltwise_type == utils::EltwiseTypes::DIVIDE)) {
+        return "jit";
+    } else {
+        return "ref";
+    }
 #else
     return CPUTestsBase::getPrimitiveType();
 #endif
