@@ -9,6 +9,8 @@
 #include "openvino/op/constant.hpp"
 #include "precomp.hpp"
 
+#include "openvino/util/env_util.hpp"
+
 namespace ov {
 namespace test {
 namespace utils {
@@ -546,6 +548,20 @@ void compare(const ov::Tensor& expected,
     tensor_comparation::Error error(abs_threshold, rel_threshold, topk_threshold, mvn_threshold, shape_size_cnt);
     const auto expected_data = expected.data<ExpectedT>();
     const auto actual_data = actual.data<ActualT>();
+
+    const bool print_tensors_data = ov::util::getenv_bool("OV_PRINT_TENSORS_DATA");
+    if (print_tensors_data) {
+        for (size_t i = 0; i < std::min<size_t>(shape_size_cnt, 32); ++i) {
+            double expected_value = expected_data[i];
+            double actual_value = actual_data[i];
+
+            std::cout << i <<
+                    ": act: " << actual_value <<
+                    ", exp: " << expected_value <<
+                    ", diff: " << (expected_value != 0.0 ? std::to_string(abs((expected_value - actual_value) / expected_value)) : "n/a") << std::endl;
+        }
+    }
+
     for (size_t i = 0; i < shape_size_cnt; ++i) {
         double expected_value = expected_data[i];
         double actual_value = actual_data[i];

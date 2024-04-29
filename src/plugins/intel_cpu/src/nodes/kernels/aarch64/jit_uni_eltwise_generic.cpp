@@ -16,6 +16,11 @@ void jit_uni_eltwise_kernel::operator()(
     const node::jit_eltwise_call_args_ptrs* const_args,
     const jit_eltwise_call_args_indexes* indexes) {
     assert(ker_);
+    for (auto i = 0; i < MAX_ELTWISE_DIM_RANK; ++i) {
+        std::cout << indexes->indexes[i] << ", ";
+    }
+    std::cout << std::endl;
+
     ker_(const_args, indexes);
 }
 
@@ -83,6 +88,8 @@ void jit_uni_eltwise_generic<isa>::generate() {
                     XReg index_reg(get_aux_gpr(1));
                     ldr(index_reg, ptr(param2, static_cast<int32_t>(j * sizeof(size_t))));
                     madd(pointer, offset_reg, index_reg, pointer);
+
+                    std::cout << "init_ptrs_with_offsets: offset=" << (offsets[j] * j * sizeof(size_t)) << std::endl;
                 }
             }
         };
@@ -92,6 +99,11 @@ void jit_uni_eltwise_generic<isa>::generate() {
             init_ptrs_with_offsets(get_src_reg(i), jep.src_offsets[i]);
         }
 
+        // TODO: debug only
+        mov(x0, x0);
+        mov(x0, x0);
+        mov(x0, x0);
+
         ldr(reg_dst, ptr(reg_const_params, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr))));
         init_ptrs_with_offsets(reg_dst, jep.dst_offsets);
 
@@ -99,6 +111,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
         init_ptrs_with_offsets(reg_oc_off, jep.oc_offsets);
 
         mov(reg_work_amount, jep.work_amount);
+        std::cout << "jep.work_amount=" << jep.work_amount << std::endl;
     }
 
     Label unroll_loop_label;
@@ -110,6 +123,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
     for (size_t i = 0; i < jep.inputs_number; i++) {
         if (jep.src_size[i] == 1) {
+            std::cout << "input " << i << ": scalar" << std::endl;
             load_vector(get_vmm_reg(i), get_src_reg(i), jep.src_prc[i], exec_prc, true);
         }
     }
@@ -199,6 +213,8 @@ void jit_uni_eltwise_generic<isa>::generate() {
             const size_t loop_step = vlen / exec_prc_size;
 
             cmp(reg_work_amount, loop_step);
+            cmp(reg_work_amount, loop_step);
+            cmp(reg_work_amount, loop_step);
             b(LO, main_loop_end_label);
 
             for (size_t i = 0; i < jep.inputs_number; i++) {
@@ -215,6 +231,7 @@ void jit_uni_eltwise_generic<isa>::generate() {
 
             for (size_t i = 0; i < jep.inputs_number; i++) {
                 if (jep.src_size[i] != 1) {
+                    std::cout << "input " << i << ": vector" << std::endl;
                     add(get_src_reg(i), get_src_reg(i), jep.src_prc[i].size() * loop_step);
                 }
             }
@@ -233,6 +250,8 @@ void jit_uni_eltwise_generic<isa>::generate() {
     {
         const size_t loop_step = 1;
 
+        cmp(reg_work_amount, 0x0);
+        cmp(reg_work_amount, 0x0);
         cmp(reg_work_amount, 0x0);
         b(EQ, tail_loop_end_label);
 
