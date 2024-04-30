@@ -181,6 +181,24 @@ namespace ov {
 namespace intel_gpu {
 
 void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
+    // TODO: debug only
+    bool valid = true;
+    for (const auto op : func->get_ops()) {
+        const auto constant = as_type_ptr<ov::opset1::Constant>(op);
+        if (constant != nullptr) {
+            try {
+                constant->cast_vector<float>();
+            } catch (ov::AssertFailure& error) {
+                valid = false;
+                std::cout << "CPU plugin before pipeline: " << op->get_type_name() << ":" << op->get_friendly_name()
+                          << ": incorrect constant value: " << error.what() << std::endl;
+            }
+        }
+    }
+    if (valid) {
+        std::cout << "CPU plugin before pipeline: valid" << std::endl;
+    }
+
     OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "TransformationsPipeline::apply");
     using const_node_ptr = const std::shared_ptr<const ov::Node>;
 
@@ -567,6 +585,24 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         }
 
         manager.run_passes(func);
+    }
+
+    // TODO: debug only
+    valid = true;
+    for (const auto op : func->get_ops()) {
+        const auto constant = as_type_ptr<ov::opset1::Constant>(op);
+        if (constant != nullptr) {
+            try {
+                constant->cast_vector<float>();
+            } catch (ov::AssertFailure& error) {
+                valid = false;
+                std::cout << "CPU plugin before LPT: " << op->get_type_name() << ":" << op->get_friendly_name() <<
+                    ": incorrect constant value: " << error.what() << std::endl;
+            }
+        }
+    }
+    if (valid) {
+        std::cout << "CPU plugin before LPT: valid" << std::endl;
     }
 
     if (enableInt8) {
