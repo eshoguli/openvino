@@ -456,20 +456,19 @@ std::set<std::vector<element::Type>> jit_hswish_emitter::get_supported_precision
 
 jit_is_inf_emitter::jit_is_inf_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                                        dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                       const std::shared_ptr<ov::Node>& node,
-                                       const ov::element::Type exec_prc)
-    : jit_emitter(host, host_isa, node, exec_prc) {
+                                       const std::shared_ptr<ov::Node>& node)
+    : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
     prepare_table();
 }
 
 jit_is_inf_emitter::jit_is_inf_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                                        dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
                                        const ov::element::Type exec_prc,
-                                       bool detect_negative,
-                                       bool detect_positive)
+                                       const bool detect_negative,
+                                       const bool detect_positive)
     : jit_emitter(host, host_isa, exec_prc),
-      detect_negative(detect_negative),
-      detect_positive(detect_positive) {
+      detect_negative{detect_negative},
+      detect_positive{detect_positive} {
     prepare_table();
 }
 
@@ -513,7 +512,7 @@ void jit_is_inf_emitter::emit_isa(const std::vector<size_t>& in_vec_idxs,
         if (detect_positive) {
             if (detect_negative) {
                 // If both positive and negative infinity detection is requested
-                // Calculate the absolute value of 'src'.
+                // calculate the absolute value of 'src'.
                 h->fabs(src.s, src.s);
             }
             // Load 'aux' with positive infinity.
@@ -529,14 +528,14 @@ void jit_is_inf_emitter::emit_isa(const std::vector<size_t>& in_vec_idxs,
         h->and_(dst.b16, dst.b16, aux.b16);
 
     } else {
-        // If neither positive nor negative infinity detection is enabled, load 'dst' with zeros.
-        h->ld1r(dst.s, table_val2("zero"));
+        // If neither positive nor negative infinity detection is enabled,
+        // set 'dst' with zeros (a eor a is 0)
+        h->eor(dst.b16, dst.b16, dst.b16);
     }
 }
 
 void jit_is_inf_emitter::register_table_entries() {
     // Registers constant values that comply with the IEEE 754 standard.
-    push_arg_entry_of("zero", 0x00000000, true);
     push_arg_entry_of("one", 0x3F800000, true);
     push_arg_entry_of("inf", 0x7F800000, true);
     push_arg_entry_of("inf_neg", 0xFF800000, true);

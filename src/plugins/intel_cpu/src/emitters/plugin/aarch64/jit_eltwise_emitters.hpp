@@ -191,14 +191,13 @@ class jit_is_inf_emitter : public jit_emitter {
 public:
     jit_is_inf_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                        dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                       const ov::element::Type exec_prc = ov::element::f32,
-                       bool detect_negative = true,
-                       bool detect_positive = true);
+                       const std::shared_ptr<ov::Node>& node);
 
     jit_is_inf_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                        dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                       const std::shared_ptr<ov::Node>& n,
-                       const ov::element::Type exec_prc = ov::element::f32);
+                       const ov::element::Type exec_prc,
+                       const bool detect_negative = true,
+                       const bool detect_positive = true);
 
     size_t get_inputs_count() const override;
 
