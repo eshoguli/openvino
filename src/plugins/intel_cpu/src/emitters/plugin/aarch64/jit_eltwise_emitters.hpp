@@ -195,9 +195,9 @@ public:
 
     jit_is_inf_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                        dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                       const ov::element::Type exec_prc,
-                       const bool detect_negative = true,
-                       const bool detect_positive = true);
+                       const bool detect_negative,
+                       const bool detect_positive,
+                       const ov::element::Type exec_prc = ov::element::f32);
 
     size_t get_inputs_count() const override;
 

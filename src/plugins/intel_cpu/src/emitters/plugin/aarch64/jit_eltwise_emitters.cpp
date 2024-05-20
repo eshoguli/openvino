@@ -458,14 +458,24 @@ jit_is_inf_emitter::jit_is_inf_emitter(dnnl::impl::cpu::aarch64::jit_generator* 
                                        dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
                                        const std::shared_ptr<ov::Node>& node)
     : jit_emitter(host, host_isa, node, get_arithmetic_binary_exec_precision(node)) {
+
+    auto isInf = ov::as_type_ptr<ov::op::v10::IsInf>(node);
+    if (isInf == nullptr) {
+        OV_CPU_JIT_EMITTER_THROW("Can't cast to ov::op::v10::IsInf");
+    }
+
+    const auto& attributes = isInf->get_attributes();
+    detect_negative = attributes.detect_negative;
+    detect_positive = attributes.detect_positive;
+
     prepare_table();
 }
 
 jit_is_inf_emitter::jit_is_inf_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
                                        dnnl::impl::cpu::aarch64::cpu_isa_t host_isa,
-                                       const ov::element::Type exec_prc,
                                        const bool detect_negative,
-                                       const bool detect_positive)
+                                       const bool detect_positive,
+                                       const ov::element::Type exec_prc)
     : jit_emitter(host, host_isa, exec_prc),
       detect_negative{detect_negative},
       detect_positive{detect_positive} {

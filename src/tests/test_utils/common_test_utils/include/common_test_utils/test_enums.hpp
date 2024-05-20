@@ -60,8 +60,7 @@ enum EltwiseTypes {
     BITWISE_AND,
     BITWISE_NOT,
     BITWISE_OR,
-    BITWISE_XOR,
-    ELTWISE_IS_INF
+    BITWISE_XOR
 };
 
 enum SqueezeOpType {
@@ -122,7 +121,8 @@ enum ActivationTypes {
     RoundHalfAwayFromZero,
     GeluErf,
     GeluTanh,
-    SoftSign
+    SoftSign,
+    IsInf
 };
 
 enum MinMaxOpType {
