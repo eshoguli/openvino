@@ -41,7 +41,7 @@ static const MappingNotation dnnlFCMappingNotation{ARG_SRC, ARG_WEI, ARG_BIAS, A
 
 using LayoutConfig = std::vector<LayoutType>;
 static const LayoutConfig dnnlFCLayoutConfig{LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp};
-static const LayoutConfig aclFCLayoutConfig{LayoutType::nspc, LayoutType::nspc, LayoutType::nspc, LayoutType::nspc};
+static const LayoutConfig aclFCLayoutConfig{LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp};
 
 template<dnnl::impl::cpu::x64::cpu_isa_t ISA>
 struct Require {

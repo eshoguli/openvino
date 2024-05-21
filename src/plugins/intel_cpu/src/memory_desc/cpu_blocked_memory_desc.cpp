@@ -220,22 +220,18 @@ bool CpuBlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
 }
 
 bool CpuBlockedMemoryDesc::isTailCFormat() const {
-#if !defined(OPENVINO_ARCH_ARM) && !defined(OPENVINO_ARCH_ARM64)
     if (shape.getRank() < 3) {
         return false;
     }
-#endif
     if (shape.getRank() != order.size()) {
         return false;
     }
     if (!std::is_sorted(order.begin(), --order.end())) {
         return false;
     }
-#if !defined(OPENVINO_ARCH_ARM) && !defined(OPENVINO_ARCH_ARM64)
     if (order.back() != 1) {
         return false;
     }
-#endif
     return true;
 }
 
