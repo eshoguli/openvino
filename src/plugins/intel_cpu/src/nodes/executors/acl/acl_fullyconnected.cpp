@@ -55,7 +55,7 @@ bool ACLFullyConnectedExecutor::supports(const FCConfig &config) {
 arm_compute::Status ACLFullyConnectedExecutor::prepare_tensors_info() {
     auto wei_shape = list_acl_tensors_infos.at(ARG_WEI).tensor_shape();
     if (wei_shape.num_dimensions() == 3) {
-        list_acl_tensors_infos.at(ARG_WEI).set_tensor_shape({wei_shape[0], wei_shape[1] * wei_shape[2]});
+        list_acl_tensors_infos.at(ARG_WEI).set_tensor_shape({wei_shape[0] * wei_shape[1], wei_shape[2]});
         wei_shape = list_acl_tensors_infos.at(ARG_WEI).tensor_shape();
     }
 
