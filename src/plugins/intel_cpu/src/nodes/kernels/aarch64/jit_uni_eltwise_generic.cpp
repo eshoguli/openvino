@@ -99,11 +99,6 @@ void jit_uni_eltwise_generic<isa>::generate() {
             init_ptrs_with_offsets(get_src_reg(i), jep.src_offsets[i]);
         }
 
-        // TODO: debug only
-        mov(x0, x0);
-        mov(x0, x0);
-        mov(x0, x0);
-
         ldr(reg_dst, ptr(reg_const_params, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr))));
         init_ptrs_with_offsets(reg_dst, jep.dst_offsets);
 
@@ -213,8 +208,6 @@ void jit_uni_eltwise_generic<isa>::generate() {
             const size_t loop_step = vlen / exec_prc_size;
 
             cmp(reg_work_amount, loop_step);
-            cmp(reg_work_amount, loop_step);
-            cmp(reg_work_amount, loop_step);
             b(LO, main_loop_end_label);
 
             for (size_t i = 0; i < jep.inputs_number; i++) {
@@ -250,8 +243,6 @@ void jit_uni_eltwise_generic<isa>::generate() {
     {
         const size_t loop_step = 1;
 
-        cmp(reg_work_amount, 0x0);
-        cmp(reg_work_amount, 0x0);
         cmp(reg_work_amount, 0x0);
         b(EQ, tail_loop_end_label);
 
