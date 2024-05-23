@@ -50,6 +50,7 @@
 #include "emitters/plugin/x64/jit_dnnl_emitters.hpp"
 #include "emitters/plugin/x64/jit_bf16_emitters.hpp"
 
+// TODO: debug only
 #include "openvino/util/env_util.hpp"
 
 #if defined(OPENVINO_ARCH_ARM64)
@@ -2885,7 +2886,7 @@ void Eltwise::execute(dnnl::stream strm) {
                     const size_t size = memPtrs[source_i]->getSize();
                     const size_t length = size / data_type_size(memPtrs[source_i]->getDataType());
                     const auto src_ptr = static_cast<const float*>(args_ptrs.src_ptr[source_i]);
-                    for (size_t i = 0; i < length; i++) {
+                    for (size_t i = 0; i < std::min<size_t>(length, 16); i++) {
                         std::cout << i << ": " << static_cast<float>(src_ptr[i]) << std::endl;
                     }
                     std::cout << std::endl << std::endl;
@@ -2912,18 +2913,16 @@ void Eltwise::execute(dnnl::stream strm) {
         execPtr->exec(args_ptrs, dims_out);
 
         if (print_tensors) {
-            {
-                // TODO: debug
-                std::cout << std::endl << "output:" << memPtrs.back()->getDataType() << std::endl;
-                std::cout << 0 << ": " << args_ptrs.dst_ptr << std::endl;
-                const auto size = memPtrs.back()->getSize();
-                const size_t length = size / data_type_size(memPtrs.back()->getDataType());
-                const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
-                for (size_t i = 0; i < length; i++) {
-                    std::cout << i << ": " << static_cast<float>(src_ptr[i]) << std::endl;
-                }
-                std::cout << std::endl << std::endl;
+            // TODO: debug
+            std::cout << std::endl << "output:" << memPtrs.back()->getDataType() << std::endl;
+            std::cout << 0 << ": " << args_ptrs.dst_ptr << std::endl;
+            const auto size = memPtrs.back()->getSize();
+            const size_t length = size / data_type_size(memPtrs.back()->getDataType());
+            const auto src_ptr = static_cast<const float*>(args_ptrs.dst_ptr);
+            for (size_t i = 0; i < std::min<size_t>(length, 16); i++) {
+                std::cout << i << ": " << static_cast<float>(src_ptr[i]) << std::endl;
             }
+            std::cout << std::endl << std::endl;
         }
     } else if (aclExecPtr) {
         std::vector<MemoryCPtr> srcMemory;
@@ -3206,6 +3205,8 @@ bool Eltwise::canFuseParent(const NodePtr& parentNode) const {
 }
 
 bool Eltwise::canFuse(const NodePtr& node) const {
+    return false;
+
     auto isIntegerComputeSupported = [](const Node* node) {
         if (!one_of(node->getAlgorithm(), Algorithm::EltwiseAdd,
                                           Algorithm::EltwiseMultiply,

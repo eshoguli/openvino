@@ -9,6 +9,9 @@
 #include "emitters/plugin/riscv64/jit_multiply_emitter.hpp"
 #include "emitters/plugin/riscv64/jit_subtract_emitter.hpp"
 
+// TODO: debug only
+#include "openvino/util/env_util.hpp"
+
 
 namespace ov {
 namespace intel_cpu {
@@ -41,7 +44,10 @@ jit_uni_eltwise_generic::jit_uni_eltwise_generic(const jit_eltwise_params& jep,
                                                  post_ops_(post_ops) {}
 
 void jit_uni_eltwise_generic::generate() {
-    std::cout << "debug: jit_uni_eltwise_generic::generate()" << std::endl;
+    const auto print_tensors = ov::util::getenv_bool("OV_PRINT_TENSORS");
+    if (print_tensors) {
+        std::cout << "jit_uni_eltwise_generic: generate" << std::endl;
+    }
 
     preamble();
 
@@ -67,14 +73,57 @@ void jit_uni_eltwise_generic::generate() {
     //Reg param2 = abi_param2;
     Reg param1 = Xbyak_riscv::a0;
     Reg param2 = Xbyak_riscv::a1;
+
+    Reg reg_post_op_ptrs = t0;
+    Reg start_to_offsets = reg_post_op_ptrs;
+
+    Reg reg_oc_off = t1;
+    Reg reg_const_params = param1;
+    Reg reg_indexes = param2;
+
     const int offset_count = jep.input_size - 1;
 
     //vsetvli(t0, a3, SEW::e32, LMUL::m8);
 
     // ptrs initializing
     if (jep.use_runtime_ptrs) {
-        assert(false && "unexpected");
+        if (print_tensors) {
+            std::cout << "jit_uni_eltwise_generic: runtime ptr" << std::endl;
+        }
+
+        for (size_t i = 0; i < jep.inputs_number; i++) {
+            ld(start_to_offsets, reg_const_params, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, src_offsets) + i * sizeof(size_t)));
+            ld(get_src_reg(i), reg_const_params, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, src_ptr[0]) + i * sizeof(size_t)));
+
+            Reg offset_reg = get_aux_gpr(0);
+            Reg index_reg = get_aux_gpr(1);
+            for (int j = 0; j < offset_count; j++) {
+                ld(offset_reg, start_to_offsets, static_cast<int32_t>(j * sizeof(size_t)));
+                ld(index_reg, reg_indexes, static_cast<int32_t>(j * sizeof(size_t)));
+                mul(offset_reg, offset_reg, index_reg);
+                add(get_src_reg(i), offset_reg, get_src_reg(i));
+            }
+        }
+
+        ld(start_to_offsets, reg_const_params, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, dst_offsets)));
+        ld(reg_dst, reg_const_params, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, dst_ptr)));
+        Reg offset_reg = get_aux_gpr(0);
+        Reg index_reg = get_aux_gpr(1);
+        for (int j = 0; j < offset_count; j++) {
+            ld(offset_reg, start_to_offsets, static_cast<int32_t>(j * sizeof(size_t)));
+            ld(index_reg, reg_indexes, static_cast<int32_t>(j * sizeof(size_t)));
+            mul(offset_reg, offset_reg, index_reg);
+            add(reg_dst, offset_reg, reg_dst);
+        }
+
+        // mov(reg_oc_off, 0);
+
+        ld(reg_work_amount, reg_const_params, static_cast<int32_t>(offsetof(node::jit_eltwise_call_args_ptrs, work_amount)));
     } else {
+        if (print_tensors) {
+            std::cout << "jit_uni_eltwise_generic: static ptr" << std::endl;
+        }
+
         auto init_ptrs_with_offsets = [this, offset_count, param2](Reg pointer, const std::vector<size_t>& offsets) {
             for (int j = 0; j < offset_count; j++) {
                 if (jep_.dims[j] != 1 && offsets[j] != 0) {
@@ -174,6 +223,8 @@ void jit_uni_eltwise_generic::generate() {
     }
 
     size_t min_src_size = jep.dst_size;
+    std::cout << "jep.dst_size: " << jep.dst_size << std::endl;
+
     for (size_t i = 0; i < jep.inputs_number; i++) {
         if (jep.src_size[i] != 1)
             min_src_size = std::min(min_src_size, jep.src_size[i]);
@@ -181,11 +232,80 @@ void jit_uni_eltwise_generic::generate() {
     if (jep_.oc_size > 1)
         min_src_size = std::min(min_src_size, jep_.oc_size);
 
+    std::cout << "min_src_size: " << min_src_size << std::endl;
     if (min_src_size != jep.dst_size) {
-        assert(false && "unexpected");
+        if (print_tensors) {
+            std::cout << "jit_uni_eltwise_generic: unroll" << std::endl;
+        }
+
+        bool is_valid_configuration = true;
+        if (jep.dst_size % min_src_size != 0)
+            is_valid_configuration = false;
+
+        for (size_t i = 0; i < jep.inputs_number; i++) {
+            if (jep.src_size[i] != 1 && jep.src_size[i] != min_src_size && jep.src_size[i] != jep.dst_size)
+                is_valid_configuration = false;
+        }
+
+        if (jep.oc_size > 1 && jep.oc_size != min_src_size && jep.oc_size != jep.dst_size)
+            is_valid_configuration = false;
+
+        if (!is_valid_configuration)
+            OPENVINO_THROW("Eltwise jitter has invalid configuration for Eltwise node");
+
+        L(unroll_loop_label);
+        {
+            // const size_t loop_step = min_src_size;
+            // const size_t vec_step = cpu_isa_traits<isa>::vlen / exec_prc.size();
+            const size_t vlen = 128;
+            const size_t vec_step = vlen /  exec_prc.size();
+
+            addi(t1, x0, min_src_size);
+            vsetvli(t0, t1, SEW::e32, LMUL::m8);
+
+//            cmp(reg_work_amount, loop_step);
+//            b(LO, unroll_loop_end_label);
+
+            // TODO: debug
+            std::cout << "min_src_size: " << min_src_size << std::endl;
+            std::cout << "vec_step: " << vec_step << std::endl;
+
+            for (size_t j = 0; j < min_src_size / vec_step; j++) {
+                for (size_t i = 0; i < jep.inputs_number; i++) {
+                    if (jep.src_size[i] != 1) {
+                        //load_vector(get_vmm_reg(i), get_src_reg(i), jep.src_prc[i], exec_prc, false, j * vec_step * jep.src_prc[i].size());
+
+                        const size_t offset = j * vec_step * jep.src_prc[i].size();
+                        addi(get_aux_gpr(0), get_src_reg(i), offset);
+                        vle32_v(get_vmm_reg(i * vector_length_multiplier), get_aux_gpr(0));
+                    }
+                }
+
+                compute_eltwise_op();
+
+                //apply_post_ops();
+
+                //store_vector(reg_dst, vmm_dst, exec_prc, jep.dst_prc, j * vec_step * jep.dst_prc.size());
+                const size_t offset = j * vec_step * jep.dst_prc.size();
+                addi(get_aux_gpr(0), reg_dst, offset);
+                vse32_v(v0, get_aux_gpr(0));
+            }
+
+            size_t tail_size = min_src_size % vec_step;
+            std::cout << "tail_size: " << tail_size << std::endl;
+
+            addi(t1, x0, tail_size);
+            vsetvli(t0, t1, SEW::e32, LMUL::m8);
+        }
+
+        L(unroll_loop_end_label);
     }
 
     if (min_src_size == jep.dst_size) {
+        if (print_tensors) {
+            std::cout << "jit_uni_eltwise_generic: loop" << std::endl;
+        }
+
         // addi(t0, x0, 4 * 32); // not neccessary
         addi(t1, x0, jep.work_amount);
 
@@ -205,8 +325,8 @@ void jit_uni_eltwise_generic::generate() {
                     std::cout << "input " << i << ": vector" << std::endl;
                     vle32_v(get_vmm_reg(i * vector_length_multiplier), get_src_reg(i));
 
-                    lw(t6, get_src_reg(i), 0);
-                    lw(t6, get_src_reg(i), 4);
+                    // lw(t6, get_src_reg(i), 0);
+                    // lw(t6, get_src_reg(i), 4);
 
                     add(get_src_reg(i), get_src_reg(i), t0);
                 }
@@ -219,43 +339,14 @@ void jit_uni_eltwise_generic::generate() {
 
             sub(t1, t1, t0);
 
-            // TODO: here: uncomment
             compute_eltwise_op();
 
+            // TODO: not completed
             //apply_post_ops();
 
             //store_vector(reg_dst, vmm_dst, exec_prc, jep.dst_prc);
             vse32_v(v0, reg_dst);
-
-            // TODO: debug: v0 - OK
-            // vse32_v(v8, reg_dst);
-            // lw(t6, reg_dst);
-            // lw(t6, reg_dst, 4);
-            // vse32_v(v0, reg_dst);
-            // lw(t6, reg_dst);
-            // lw(t6, reg_dst, 4);
-
-
-            // TODO: debug: v8 - OK
-            // vse32_v(v0, reg_dst);
-            // lw(t6, reg_dst);
-            // lw(t6, reg_dst, 4);
-            // vse32_v(v8, reg_dst);
-            // lw(t6, reg_dst);
-            // lw(t6, reg_dst, 4);
-
-
-            for (size_t i = 0; i < jep.inputs_number; i++) {
-                if (jep.src_size[i] != 1) {
-                    //add(get_src_reg(i), get_src_reg(i), jep.src_prc[i].size() * loop_step);
-                }
-            }
-
-            //add(reg_dst, reg_dst, jep.dst_prc.size() * loop_step);
-            //sub(reg_work_amount, reg_work_amount, loop_step);
-            if (jep_.oc_size > 1) {
-                //add(reg_oc_off, reg_oc_off, loop_step * sizeof(float));
-            }
+            add(reg_dst, reg_dst, t0);
 
             bnez(t1, main_loop_label);
         }
