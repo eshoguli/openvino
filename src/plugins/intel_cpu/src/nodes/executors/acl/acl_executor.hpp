@@ -35,9 +35,9 @@ public:
     bool update(const MemoryArgs& memory) override;
 
 protected:
-    ACLFunction ifunc = nullptr;
-    ACLMemoryArgs list_acl_tensors;
-    ACLMemoryInfoArgs list_acl_tensors_infos;
+    ACLFunction iFunction = nullptr;
+    ACLMemoryArgs aclMemoryArgs;
+    ACLMemoryInfoArgs aclMemoryInfoArgs;
     ACLTensorAttrs aclTensorAttrs;
 };
 

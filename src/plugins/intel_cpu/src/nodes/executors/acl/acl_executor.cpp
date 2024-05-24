@@ -20,7 +20,7 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
 
     for (auto& cpu_mem_ptr : memory) {
         if (acl_tensors_types_list[cpu_mem_ptr.first] == arm_compute::DataType::UNKNOWN) {
-            list_acl_tensors_infos[cpu_mem_ptr.first] = std::make_shared<arm_compute::TensorInfo>();
+            aclMemoryInfoArgs[cpu_mem_ptr.first] = std::make_shared<arm_compute::TensorInfo>();
             continue;
         }
 
@@ -30,7 +30,7 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
         if (aclTensorAttrs.enableNHWCReshape) {
             changeLayoutToNH_C({&acl_tensor_shape});
         }
-        list_acl_tensors_infos[cpu_mem_ptr.first] = std::make_shared<arm_compute::TensorInfo>(
+        aclMemoryInfoArgs[cpu_mem_ptr.first] = std::make_shared<arm_compute::TensorInfo>(
                 acl_tensor_shape, 1,
                 acl_tensors_types_list[cpu_mem_ptr.first],
                 acl_tensors_layouts_list[cpu_mem_ptr.first]);
@@ -42,9 +42,9 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
         return false;
     }
 
-    for (auto& acl_tensor_info : list_acl_tensors_infos) {
-        list_acl_tensors[acl_tensor_info.first] = std::make_shared<arm_compute::Tensor>();
-        list_acl_tensors[acl_tensor_info.first]->allocator()->init(*acl_tensor_info.second);
+    for (auto& acl_tensor_info : aclMemoryInfoArgs) {
+        aclMemoryArgs[acl_tensor_info.first] = std::make_shared<arm_compute::Tensor>();
+        aclMemoryArgs[acl_tensor_info.first]->allocator()->init(*acl_tensor_info.second);
     }
 
     configureThreadSafe([&] { this->configure_function(); });
@@ -52,11 +52,11 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
 }
 
 void ACLCommonExecutor::execute(const MemoryArgs &memory) {
-    for (auto& acl_tensor : list_acl_tensors) {
+    for (auto& acl_tensor : aclMemoryArgs) {
         acl_tensor.second->allocator()->import_memory(memory.at(acl_tensor.first)->getData());
     }
-    ifunc->run();
-    for (auto& acl_tensor : list_acl_tensors) {
+    iFunction->run();
+    for (auto& acl_tensor : aclMemoryArgs) {
         acl_tensor.second->allocator()->free();
     }
 }
