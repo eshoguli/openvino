@@ -100,12 +100,12 @@ inline arm_compute::DataType precisionToAclDataType(ov::element::Type precision)
 * @return ComputeLibrary DataLayout or UNKNOWN if MemoryDecs layout is not mapped to DataLayout
 */
 inline arm_compute::DataLayout getAclDataLayoutByMemoryDesc(MemoryDescCPtr desc) {
-    if (desc->hasLayoutType(LayoutType::nspc)) {
-        if (desc->getShape().getRank() <= 4) return arm_compute::DataLayout::NHWC;
-        if (desc->getShape().getRank() == 5) return arm_compute::DataLayout::NDHWC;
-    } else if (desc->hasLayoutType(LayoutType::ncsp)) {
+    if (desc->hasLayoutType(LayoutType::ncsp)) {
         if (desc->getShape().getRank() <= 4) return arm_compute::DataLayout::NCHW;
         if (desc->getShape().getRank() == 5) return arm_compute::DataLayout::NCDHW;
+    } else if (desc->hasLayoutType(LayoutType::nspc)) {
+        if (desc->getShape().getRank() <= 4) return arm_compute::DataLayout::NHWC;
+        if (desc->getShape().getRank() == 5) return arm_compute::DataLayout::NDHWC;
     }
     return arm_compute::DataLayout::UNKNOWN;
 }

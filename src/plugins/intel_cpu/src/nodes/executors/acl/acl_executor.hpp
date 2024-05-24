@@ -11,8 +11,8 @@
 namespace ov {
 namespace intel_cpu {
 
-using ACLMemory     = std::unordered_map<int, std::shared_ptr<arm_compute::Tensor>>;
-using ACLMemoryInfo = std::unordered_map<int, std::shared_ptr<arm_compute::TensorInfo>>;
+using ACLMemoryArgs     = std::unordered_map<int, std::shared_ptr<arm_compute::Tensor>>;
+using ACLMemoryInfoArgs = std::unordered_map<int, std::shared_ptr<arm_compute::TensorInfo>>;
 using ACLFunction   = std::unique_ptr<arm_compute::IFunction>;
 
 struct ACLTensorAttrs {
@@ -33,12 +33,11 @@ public:
     }
     void execute(const MemoryArgs& memory) override;
     bool update(const MemoryArgs& memory) override;
-    ~ACLCommonExecutor() override;
 
 protected:
     ACLFunction ifunc = nullptr;
-    ACLMemory list_acl_tensors;
-    ACLMemoryInfo list_acl_tensors_infos;
+    ACLMemoryArgs list_acl_tensors;
+    ACLMemoryInfoArgs list_acl_tensors_infos;
     ACLTensorAttrs aclTensorAttrs;
 };
 

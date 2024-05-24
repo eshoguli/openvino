@@ -56,9 +56,6 @@ void ACLCommonExecutor::execute(const MemoryArgs &memory) {
         acl_tensor.second->allocator()->import_memory(memory.at(acl_tensor.first)->getData());
     }
     ifunc->run();
-}
-
-ACLCommonExecutor::~ACLCommonExecutor() {
     for (auto& acl_tensor : list_acl_tensors) {
         acl_tensor.second->allocator()->free();
     }
