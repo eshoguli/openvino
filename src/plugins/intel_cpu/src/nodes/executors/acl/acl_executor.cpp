@@ -4,7 +4,6 @@
 
 #include "acl_executor.hpp"
 #include "acl_utils.hpp"
-#include "nodes/executors/executor.hpp"
 #include "nodes/executors/memory_arguments.hpp"
 #include "utils/debug_capabilities.h"
 
@@ -21,7 +20,7 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
 
     for (auto& cpu_mem_ptr : memory) {
         if (acl_tensors_types_list[cpu_mem_ptr.first] == arm_compute::DataType::UNKNOWN) {
-            list_acl_tensors_infos[cpu_mem_ptr.first] = arm_compute::TensorInfo();
+            list_acl_tensors_infos[cpu_mem_ptr.first] = std::make_shared<arm_compute::TensorInfo>();
             continue;
         }
 
@@ -31,32 +30,37 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
         if (aclTensorAttrs.enableNHWCReshape) {
             changeLayoutToNH_C({&acl_tensor_shape});
         }
-        list_acl_tensors_infos[cpu_mem_ptr.first] = arm_compute::TensorInfo(acl_tensor_shape, 1,
-                                                                            acl_tensors_types_list[cpu_mem_ptr.first],
-                                                                            acl_tensors_layouts_list[cpu_mem_ptr.first]);
+        list_acl_tensors_infos[cpu_mem_ptr.first] = std::make_shared<arm_compute::TensorInfo>(
+                acl_tensor_shape, 1,
+                acl_tensors_types_list[cpu_mem_ptr.first],
+                acl_tensors_layouts_list[cpu_mem_ptr.first]);
     }
 
-    auto status = prepare_tensors_info();
+    auto status = this->prepare_tensors_info();
     if (!status) {
         DEBUG_LOG("ACL operator validation was failed: ", status.error_description());
         return false;
     }
 
     for (auto& acl_tensor_info : list_acl_tensors_infos) {
-        list_acl_tensors[acl_tensor_info.first].allocator()->init(acl_tensor_info.second);
+        list_acl_tensors[acl_tensor_info.first] = std::make_shared<arm_compute::Tensor>();
+        list_acl_tensors[acl_tensor_info.first]->allocator()->init(*acl_tensor_info.second);
     }
 
-    configureThreadSafe([&] { ifunc = configure_function();});
+    configureThreadSafe([&] { this->configure_function(); });
     return true;
 }
 
 void ACLCommonExecutor::execute(const MemoryArgs &memory) {
     for (auto& acl_tensor : list_acl_tensors) {
-        acl_tensor.second.allocator()->import_memory(memory.at(acl_tensor.first)->getData());
+        acl_tensor.second->allocator()->import_memory(memory.at(acl_tensor.first)->getData());
     }
     ifunc->run();
+}
+
+ACLCommonExecutor::~ACLCommonExecutor() {
     for (auto& acl_tensor : list_acl_tensors) {
-        acl_tensor.second.allocator()->free();
+        acl_tensor.second->allocator()->free();
     }
 }
 

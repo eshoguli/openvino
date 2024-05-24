@@ -21,7 +21,7 @@ public:
 
     arm_compute::Status prepare_tensors_info() override;
 
-    std::unique_ptr<arm_compute::IFunction> configure_function() override;
+    void configure_function() override;
 
     impl_desc_type implType() const override {
         return impl_desc_type::gemm_acl;

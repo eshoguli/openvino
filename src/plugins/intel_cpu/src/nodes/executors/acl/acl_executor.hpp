@@ -11,6 +11,10 @@
 namespace ov {
 namespace intel_cpu {
 
+using ACLMemory     = std::unordered_map<int, std::shared_ptr<arm_compute::Tensor>>;
+using ACLMemoryInfo = std::unordered_map<int, std::shared_ptr<arm_compute::TensorInfo>>;
+using ACLFunction   = std::unique_ptr<arm_compute::IFunction>;
+
 struct ACLTensorAttrs {
     bool enableNHWCReshape = false;
     size_t maxDimsShape = arm_compute::MAX_DIMS;
@@ -18,18 +22,24 @@ struct ACLTensorAttrs {
 
 class ACLCommonExecutor : public Executor {
 public:
-    virtual arm_compute::Status prepare_tensors_info() = 0;
-    virtual std::unique_ptr<arm_compute::IFunction> configure_function() = 0;
-
-protected:
-    std::unique_ptr<arm_compute::IFunction> ifunc = nullptr;
-    std::unordered_map<int, arm_compute::Tensor> list_acl_tensors;
-    std::unordered_map<int, arm_compute::TensorInfo> list_acl_tensors_infos;
-    ACLTensorAttrs aclTensorAttrs;
-
-private:
+    virtual arm_compute::Status prepare_tensors_info() {
+        OPENVINO_THROW_NOT_IMPLEMENTED("This version of the 'prepare_tensors_info' method is not implemented by executor");
+    }
+    virtual void configure_function() {
+        OPENVINO_THROW_NOT_IMPLEMENTED("This version of the 'configure_function' method is not implemented by executor");
+    }
+    impl_desc_type implType() const override {
+        return impl_desc_type::acl;
+    }
     void execute(const MemoryArgs& memory) override;
     bool update(const MemoryArgs& memory) override;
+    ~ACLCommonExecutor() override;
+
+protected:
+    ACLFunction ifunc = nullptr;
+    ACLMemory list_acl_tensors;
+    ACLMemoryInfo list_acl_tensors_infos;
+    ACLTensorAttrs aclTensorAttrs;
 };
 
 using ACLCommonExecutorPtr = std::shared_ptr<ACLCommonExecutor>;

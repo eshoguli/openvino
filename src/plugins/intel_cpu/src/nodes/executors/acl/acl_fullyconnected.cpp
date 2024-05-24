@@ -53,61 +53,61 @@ bool ACLFullyConnectedExecutor::supports(const FCConfig &config) {
 }
 
 arm_compute::Status ACLFullyConnectedExecutor::prepare_tensors_info() {
-    auto wei_shape = list_acl_tensors_infos.at(ARG_WEI).tensor_shape();
+    auto wei_shape = list_acl_tensors_infos.at(ARG_WEI)->tensor_shape();
     if (wei_shape.num_dimensions() == 3) {
-        list_acl_tensors_infos.at(ARG_WEI).set_tensor_shape({wei_shape[0] * wei_shape[1], wei_shape[2]});
-        wei_shape = list_acl_tensors_infos.at(ARG_WEI).tensor_shape();
+        list_acl_tensors_infos.at(ARG_WEI)->set_tensor_shape({wei_shape[0] * wei_shape[1], wei_shape[2]});
+        wei_shape = list_acl_tensors_infos.at(ARG_WEI)->tensor_shape();
     }
 
-    auto src_shape = list_acl_tensors_infos.at(ARG_SRC).tensor_shape();
+    auto src_shape = list_acl_tensors_infos.at(ARG_SRC)->tensor_shape();
     if (one_of(src_shape.num_dimensions(), 3, 4)) {
-        list_acl_tensors_infos.at(ARG_SRC).set_tensor_shape({wei_shape[0], src_shape.total_size() / wei_shape[0]});
-        src_shape = list_acl_tensors_infos.at(ARG_SRC).tensor_shape();
+        list_acl_tensors_infos.at(ARG_SRC)->set_tensor_shape({wei_shape[0], src_shape.total_size() / wei_shape[0]});
+        src_shape = list_acl_tensors_infos.at(ARG_SRC)->tensor_shape();
     }
 
-    if (one_of(list_acl_tensors_infos.at(ARG_DST).tensor_shape().num_dimensions(), 3, 4)) {
-        list_acl_tensors_infos.at(ARG_DST).set_tensor_shape({wei_shape[1], src_shape[1]});
+    if (one_of(list_acl_tensors_infos.at(ARG_DST)->tensor_shape().num_dimensions(), 3, 4)) {
+        list_acl_tensors_infos.at(ARG_DST)->set_tensor_shape({wei_shape[1], src_shape[1]});
     }
 
     auto expected_weight_format = arm_compute::WeightFormat::ANY;
     weightsInfo = arm_compute::WeightsInfo(false, 1, 1,
-                                           list_acl_tensors_infos.at(ARG_WEI).tensor_shape().total_size(),
+                                           list_acl_tensors_infos.at(ARG_WEI)->tensor_shape().total_size(),
                                            false, expected_weight_format);
 
     auto opt_impl_status = arm_compute::NEFullyConnectedLayer::has_opt_impl(
             expected_weight_format,
-            &list_acl_tensors_infos.at(ARG_SRC),
-            &list_acl_tensors_infos.at(ARG_WEI),
-            withBias ? &list_acl_tensors_infos.at(ARG_BIAS) : nullptr,
-            &list_acl_tensors_infos.at(ARG_DST),
+            list_acl_tensors_infos.at(ARG_SRC).get(),
+            list_acl_tensors_infos.at(ARG_WEI).get(),
+            withBias ? list_acl_tensors_infos.at(ARG_BIAS).get() : nullptr,
+            list_acl_tensors_infos.at(ARG_DST).get(),
             fullyConnectedLayerInfo,
             weightsInfo);
     if (!opt_impl_status) { return opt_impl_status; }
     fullyConnectedLayerInfo.enable_fast_math = arm_compute::is_fixed_format_fast_math(expected_weight_format);
 
     if (!fullyConnectedLayerInfo.transpose_weights) {
-        arm_compute::TensorShape temp_weights_shape = list_acl_tensors_infos.at(ARG_WEI).tensor_shape();
+        arm_compute::TensorShape temp_weights_shape = list_acl_tensors_infos.at(ARG_WEI)->tensor_shape();
         std::swap(temp_weights_shape[0], temp_weights_shape[1]);
-        list_acl_tensors_infos.at(ARG_WEI).set_tensor_shape(temp_weights_shape);
+        list_acl_tensors_infos.at(ARG_WEI)->set_tensor_shape(temp_weights_shape);
     }
 
-    return arm_compute::NEFullyConnectedLayer::validate(&list_acl_tensors_infos.at(ARG_SRC),
-                                                        &list_acl_tensors_infos.at(ARG_WEI),
-                                                        withBias ? &list_acl_tensors_infos.at(ARG_BIAS) : nullptr,
-                                                        &list_acl_tensors_infos.at(ARG_DST),
+    return arm_compute::NEFullyConnectedLayer::validate(list_acl_tensors_infos.at(ARG_SRC).get(),
+                                                        list_acl_tensors_infos.at(ARG_WEI).get(),
+                                                        withBias ? list_acl_tensors_infos.at(ARG_BIAS).get() : nullptr,
+                                                        list_acl_tensors_infos.at(ARG_DST).get(),
                                                         fullyConnectedLayerInfo,
                                                         weightsInfo);
 }
 
-std::unique_ptr<arm_compute::IFunction> ACLFullyConnectedExecutor::configure_function() {
-    auto fc_func = make_unique<arm_compute::NEFullyConnectedLayer>();
-    fc_func->configure(&list_acl_tensors.at(ARG_SRC),
-                       &list_acl_tensors.at(ARG_WEI),
-                       withBias ? &list_acl_tensors.at(ARG_BIAS) : nullptr,
-                       &list_acl_tensors.at(ARG_DST),
-                       fullyConnectedLayerInfo,
-                       weightsInfo);
-    return fc_func;
+void ACLFullyConnectedExecutor::configure_function() {
+    ifunc = std::make_unique<arm_compute::NEFullyConnectedLayer>();
+    reinterpret_cast<arm_compute::NEFullyConnectedLayer*>(ifunc.get())->configure(
+            list_acl_tensors.at(ARG_SRC).get(),
+            list_acl_tensors.at(ARG_WEI).get(),
+            withBias ? list_acl_tensors.at(ARG_BIAS).get() : nullptr,
+            list_acl_tensors.at(ARG_DST).get(),
+            fullyConnectedLayerInfo,
+            weightsInfo);
 }
 
 }   // namespace intel_cpu
