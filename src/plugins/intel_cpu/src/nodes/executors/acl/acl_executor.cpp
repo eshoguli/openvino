@@ -36,6 +36,8 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
                 acl_tensors_layouts_list[cpu_mem_ptr.first]);
     }
 
+    tensorsInfoValidateStatus = arm_compute::Status(arm_compute::ErrorCode::UNSUPPORTED_EXTENSION_USE,
+                                                    "ACL tensors info validate status is not use");
     this->prepareTensorsInfo();
     if (!tensorsInfoValidateStatus) {
         DEBUG_LOG("ACL operator validation was failed: ", tensorsInfoValidateStatus.error_description());
