@@ -36,9 +36,9 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
                 acl_tensors_layouts_list[cpu_mem_ptr.first]);
     }
 
-    auto status = this->prepare_tensors_info();
-    if (!status) {
-        DEBUG_LOG("ACL operator validation was failed: ", status.error_description());
+    this->prepareTensorsInfo();
+    if (!tensorsInfoValidateStatus) {
+        DEBUG_LOG("ACL operator validation was failed: ", tensorsInfoValidateStatus.error_description());
         return false;
     }
 
@@ -47,7 +47,7 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
         aclMemoryArgs[acl_tensor_info.first]->allocator()->init(*acl_tensor_info.second);
     }
 
-    configureThreadSafe([&] { this->configure_function(); });
+    configureThreadSafe([&] { this->configureFunction(); });
     return true;
 }
 

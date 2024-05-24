@@ -19,9 +19,9 @@ public:
 
     static bool supports(const FCConfig& config);
 
-    arm_compute::Status prepare_tensors_info() override;
+    void prepareTensorsInfo() override;
 
-    void configure_function() override;
+    void configureFunction() override;
 
     impl_desc_type implType() const override {
         return impl_desc_type::gemm_acl;

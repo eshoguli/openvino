@@ -13,7 +13,7 @@ namespace intel_cpu {
 
 using ACLMemoryArgs     = std::unordered_map<int, std::shared_ptr<arm_compute::Tensor>>;
 using ACLMemoryInfoArgs = std::unordered_map<int, std::shared_ptr<arm_compute::TensorInfo>>;
-using ACLFunction   = std::unique_ptr<arm_compute::IFunction>;
+using ACLFunction       = std::unique_ptr<arm_compute::IFunction>;
 
 struct ACLTensorAttrs {
     bool enableNHWCReshape = false;
@@ -22,11 +22,11 @@ struct ACLTensorAttrs {
 
 class ACLCommonExecutor : public Executor {
 public:
-    virtual arm_compute::Status prepare_tensors_info() {
-        OPENVINO_THROW_NOT_IMPLEMENTED("This version of the 'prepare_tensors_info' method is not implemented by executor");
+    virtual void prepareTensorsInfo() {
+        OPENVINO_THROW_NOT_IMPLEMENTED("This version of the 'prepareTensorsInfo' method is not implemented by executor");
     }
-    virtual void configure_function() {
-        OPENVINO_THROW_NOT_IMPLEMENTED("This version of the 'configure_function' method is not implemented by executor");
+    virtual void configureFunction() {
+        OPENVINO_THROW_NOT_IMPLEMENTED("This version of the 'configureFunction' method is not implemented by executor");
     }
     impl_desc_type implType() const override {
         return impl_desc_type::acl;
@@ -35,6 +35,7 @@ public:
     bool update(const MemoryArgs& memory) override;
 
 protected:
+    arm_compute::Status tensorsInfoValidateStatus;
     ACLFunction iFunction = nullptr;
     ACLMemoryArgs aclMemoryArgs;
     ACLMemoryInfoArgs aclMemoryInfoArgs;

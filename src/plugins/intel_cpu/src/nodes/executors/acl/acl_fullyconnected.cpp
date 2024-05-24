@@ -52,7 +52,7 @@ bool ACLFullyConnectedExecutor::supports(const FCConfig &config) {
     return true;
 }
 
-arm_compute::Status ACLFullyConnectedExecutor::prepare_tensors_info() {
+void ACLFullyConnectedExecutor::prepareTensorsInfo() {
     auto wei_shape = aclMemoryInfoArgs.at(ARG_WEI)->tensor_shape();
     if (wei_shape.num_dimensions() == 3) {
         aclMemoryInfoArgs.at(ARG_WEI)->set_tensor_shape({wei_shape[0] * wei_shape[1], wei_shape[2]});
@@ -74,7 +74,7 @@ arm_compute::Status ACLFullyConnectedExecutor::prepare_tensors_info() {
                                            aclMemoryInfoArgs.at(ARG_WEI)->tensor_shape().total_size(),
                                            false, expected_weight_format);
 
-    auto opt_impl_status = arm_compute::NEFullyConnectedLayer::has_opt_impl(
+    tensorsInfoValidateStatus = arm_compute::NEFullyConnectedLayer::has_opt_impl(
             expected_weight_format,
             aclMemoryInfoArgs.at(ARG_SRC).get(),
             aclMemoryInfoArgs.at(ARG_WEI).get(),
@@ -82,7 +82,7 @@ arm_compute::Status ACLFullyConnectedExecutor::prepare_tensors_info() {
             aclMemoryInfoArgs.at(ARG_DST).get(),
             fullyConnectedLayerInfo,
             weightsInfo);
-    if (!opt_impl_status) { return opt_impl_status; }
+    if (!tensorsInfoValidateStatus) { return; }
     fullyConnectedLayerInfo.enable_fast_math = arm_compute::is_fixed_format_fast_math(expected_weight_format);
 
     if (!fullyConnectedLayerInfo.transpose_weights) {
@@ -91,15 +91,16 @@ arm_compute::Status ACLFullyConnectedExecutor::prepare_tensors_info() {
         aclMemoryInfoArgs.at(ARG_WEI)->set_tensor_shape(temp_weights_shape);
     }
 
-    return arm_compute::NEFullyConnectedLayer::validate(aclMemoryInfoArgs.at(ARG_SRC).get(),
-                                                        aclMemoryInfoArgs.at(ARG_WEI).get(),
-                                                        withBias ? aclMemoryInfoArgs.at(ARG_BIAS).get() : nullptr,
-                                                        aclMemoryInfoArgs.at(ARG_DST).get(),
-                                                        fullyConnectedLayerInfo,
-                                                        weightsInfo);
+    tensorsInfoValidateStatus = arm_compute::NEFullyConnectedLayer::validate(
+            aclMemoryInfoArgs.at(ARG_SRC).get(),
+            aclMemoryInfoArgs.at(ARG_WEI).get(),
+            withBias ? aclMemoryInfoArgs.at(ARG_BIAS).get() : nullptr,
+            aclMemoryInfoArgs.at(ARG_DST).get(),
+            fullyConnectedLayerInfo,
+            weightsInfo);
 }
 
-void ACLFullyConnectedExecutor::configure_function() {
+void ACLFullyConnectedExecutor::configureFunction() {
     iFunction = std::make_unique<arm_compute::NEFullyConnectedLayer>();
     reinterpret_cast<arm_compute::NEFullyConnectedLayer*>(iFunction.get())->configure(
             aclMemoryArgs.at(ARG_SRC).get(),
