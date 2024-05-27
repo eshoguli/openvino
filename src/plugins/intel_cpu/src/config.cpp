@@ -279,8 +279,7 @@ void Config::readProperties(const ov::AnyMap& prop, const ModelType modelType) {
             }
         } else if (key == ov::hint::inference_precision.name()) {
             try {
-                //auto const prec = val.as<ov::element::Type>();
-                auto const prec = ov::element::f16;
+                auto const prec = val.as<ov::element::Type>();
                 inferencePrecisionSetExplicitly = true;
                 if (prec == ov::element::bf16) {
                     if (hasHardwareSupport(ov::element::bf16)) {

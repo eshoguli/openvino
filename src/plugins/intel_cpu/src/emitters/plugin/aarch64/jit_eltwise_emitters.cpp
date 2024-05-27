@@ -1067,22 +1067,18 @@ void jit_power_static_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, 
             }
 
             if (exec_prc_ == ov::element::f32) {
-                // TODO: not completed
-                //h->mov(s0, src()[i]);
                 Xbyak_aarch64::VReg4S src2(get_from_dst ? out_vec_idxs[0] : in_vec_idxs[0]);
                 h->mov(s0, src2[i]);
                 h->ldr(s1, table_val("power"));
             } else if (exec_prc_ == ov::element::f16) {
-                Xbyak_aarch64::HReg h0_16_scalar(0);
-                Xbyak_aarch64::HReg h1_16_scalar(1);
-
-                // TODO: not completed: fp32 is commented
                 Xbyak_aarch64::VReg8H src2(get_from_dst ? out_vec_idxs[0] : in_vec_idxs[0]);
-                h->mov(h0_16_scalar, src2[i]);
-                h->fcvt(s0, h0_16_scalar);
+                Xbyak_aarch64::HReg h0(0);
+                h->mov(h0, src2[i]);
+                h->fcvt(s0, h0);
 
-                h->ldr(h1_16_scalar, table_val("power"));
-                h->fcvt(s1, h1_16_scalar);
+                Xbyak_aarch64::HReg h1(1);
+                h->ldr(h1, table_val("power"));
+                h->fcvt(s1, h1);
             }
 
             h->str(Xbyak_aarch64::QReg(dst.getIdx()), pre_ptr(h->sp, -16));
