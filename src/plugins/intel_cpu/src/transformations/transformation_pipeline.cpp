@@ -272,6 +272,7 @@ void Transformations::UpToLpt() {
     };
 
     const bool useLpt = enableLpt &&
+        //false &&
         LowPrecision::isFunctionQuantized(model, supported_fq_levels) &&
         CPU_DEBUG_CAP_IS_TRANSFORMATION_ENABLED(config.debugCaps, Lpt);
 
@@ -279,8 +280,12 @@ void Transformations::UpToLpt() {
 
     PreLpt(defaultPrecisions);
 
-    if (useLpt)
+    ov::pass::Serialize("report/graphs/cpu.pre_lpt.xml", "report/graphs/cpu.pre_lpt.bin").run_on_model(model);
+
+    if (useLpt) {
         Lpt(defaultPrecisions);
+        ov::pass::Serialize("report/graphs/cpu.lpt.xml", "report/graphs/cpu.lpt.bin").run_on_model(model);
+    }
 }
 
 void Transformations::SetSubStreamNum(int SubStreams) {
@@ -800,6 +805,7 @@ void Transformations::PostLpt() {
 }
 
 void Transformations::MainSnippets(void) {
+    //return;
     auto is_supported_isa = [](){
 #if defined(OPENVINO_ARCH_X86_64)
         return dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx2);

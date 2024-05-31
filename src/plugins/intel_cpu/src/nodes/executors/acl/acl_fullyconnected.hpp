@@ -26,6 +26,8 @@ public:
     impl_desc_type implType() const override {
         return impl_desc_type::gemm_acl;
     }
+
+    bool update(const MemoryArgs& memory) override;
 private:
     arm_compute::FullyConnectedLayerInfo fullyConnectedLayerInfo;
     arm_compute::WeightsInfo weightsInfo;

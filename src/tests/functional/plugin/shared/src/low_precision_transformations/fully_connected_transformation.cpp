@@ -46,6 +46,8 @@ void FullyConnectedTransformation::SetUp() {
         shapes.inputB,
         shapes.transposeA,
         shapes.transposeB);
+
+    ov::pass::Serialize("report/graphs/test.original.xml", "test.original.bin").run_on_model(function);
 }
 
 TEST_P(FullyConnectedTransformation, CompareWithRefImpl) {

@@ -69,7 +69,7 @@ void ACLFullyConnectedExecutor::prepareTensorsInfo() {
         aclMemoryInfoArgs.at(ARG_DST)->set_tensor_shape({wei_shape[1], src_shape[1]});
     }
 
-    auto expected_weight_format = arm_compute::WeightFormat::ANY;
+    auto expected_weight_format = arm_compute::WeightFormat::UNSPECIFIED;
     weightsInfo = arm_compute::WeightsInfo(false, 1, 1,
                                            aclMemoryInfoArgs.at(ARG_WEI)->tensor_shape().total_size(),
                                            false, expected_weight_format);
@@ -102,6 +102,22 @@ void ACLFullyConnectedExecutor::prepareTensorsInfo() {
 
 void ACLFullyConnectedExecutor::configureFunction() {
     iFunction = std::make_unique<arm_compute::NEFullyConnectedLayer>();
+
+    // TODO: workaround: refactor:
+    //  * move to ACLFullyConnectedExecutor
+    //  * generalize
+    const auto src_tensor = aclMemoryArgs.at(ARG_SRC).get();
+    src_tensor->info()->set_quantization_info(arm_compute::QuantizationInfo(4.0f / 255.f, 0));
+
+    const auto weights_tensor = aclMemoryArgs.at(ARG_WEI).get();
+    weights_tensor->info()->set_quantization_info(arm_compute::QuantizationInfo(8.0f / 255.f, 0));
+
+    const auto dst_tensor = aclMemoryArgs.at(ARG_DST).get();
+    // without snippets: dequantization is fused but not used
+    dst_tensor->info()->set_quantization_info(arm_compute::QuantizationInfo(32.f / 255.f, 0));
+    // incorrect behaviour: with snippets
+    //dst_tensor->info()->set_quantization_info(arm_compute::QuantizationInfo(1.f, 0));
+
     reinterpret_cast<arm_compute::NEFullyConnectedLayer*>(iFunction.get())->configure(
             aclMemoryArgs.at(ARG_SRC).get(),
             aclMemoryArgs.at(ARG_WEI).get(),
@@ -109,6 +125,11 @@ void ACLFullyConnectedExecutor::configureFunction() {
             aclMemoryArgs.at(ARG_DST).get(),
             fullyConnectedLayerInfo,
             weightsInfo);
+}
+
+// TODO: empty method: remove
+bool ACLFullyConnectedExecutor::update(const MemoryArgs &memory) {
+    return ACLCommonExecutor::update(memory);
 }
 
 }   // namespace intel_cpu

@@ -14,7 +14,12 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
     std::unordered_map<int, arm_compute::DataType>   acl_tensors_types_list;
     std::unordered_map<int, arm_compute::DataLayout> acl_tensors_layouts_list;
     for (auto& cpu_mem_ptr : memory) {
-        acl_tensors_types_list[cpu_mem_ptr.first] = precisionToAclDataType(cpu_mem_ptr.second->getPrecision());
+        // TODO: workaround: refactor
+        auto aclPrecision = precisionToAclDataType(cpu_mem_ptr.second->getPrecision());
+        if (aclPrecision == arm_compute::DataType::S8) {
+            aclPrecision = arm_compute::DataType::QASYMM8_SIGNED;
+        }
+        acl_tensors_types_list[cpu_mem_ptr.first] = aclPrecision;
         acl_tensors_layouts_list[cpu_mem_ptr.first] = getAclDataLayoutByMemoryDesc(cpu_mem_ptr.second->getDescPtr());
     }
 

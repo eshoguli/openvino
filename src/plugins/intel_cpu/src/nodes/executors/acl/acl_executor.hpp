@@ -11,7 +11,10 @@
 namespace ov {
 namespace intel_cpu {
 
+// TODO: add namespace 'acl'
+// TODO: rename: ACLMemoryArgs => Tensors
 using ACLMemoryArgs     = std::unordered_map<int, std::shared_ptr<arm_compute::Tensor>>;
+// TODO: rename: ACLMemoryInfoArgs => TensorInfos
 using ACLMemoryInfoArgs = std::unordered_map<int, std::shared_ptr<arm_compute::TensorInfo>>;
 using ACLFunction       = std::unique_ptr<arm_compute::IFunction>;
 
