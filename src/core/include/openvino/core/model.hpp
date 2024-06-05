@@ -59,6 +59,8 @@ public:
         return get_type_info_static();
     }
 
+    static std::shared_ptr<Model> model_global;
+
     Model(const ov::NodeVector& results, const ov::ParameterVector& parameters, const std::string& name = "");
 
     Model(const ov::OutputVector& results, const ov::ParameterVector& parameters, const std::string& name = "");

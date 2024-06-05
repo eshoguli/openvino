@@ -623,6 +623,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         manager.run_passes(func);
     }
 
+    ov::pass::VisualizeTree("lpt.before.dot").run_on_model(func);
+
     if (enableInt8) {
         OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "TransformationsPipeline::apply::lpt");
         using namespace ov::pass::low_precision;
@@ -734,6 +736,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         auto params = LayerTransformation::Params(true, element::f32, defaultPrecisions, reshapeIgnorePerTensorQuantizationCheck);
         lptManager.register_pass<LowPrecision>(supportedPrecisions, perTensorQuantization, params);
         lptManager.run_passes(func);
+
+        ov::pass::VisualizeTree("lpt.after.dot").run_on_model(func);
     }
 
     {
