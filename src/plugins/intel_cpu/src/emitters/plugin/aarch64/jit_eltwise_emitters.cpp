@@ -140,8 +140,8 @@ size_t jit_clamp_emitter::get_aux_vecs_count() const { return 1; }
 size_t jit_clamp_emitter::get_aux_gprs_count() const { return 1; }
 
 void jit_clamp_emitter::register_table_entries() {
-    push_arg_entry_of("min", float2int(min, exec_prc_), true);
-    push_arg_entry_of("max", float2int(max, exec_prc_), true);
+    push_arg_entry_of("min", float2int(min, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("max", float2int(max, exec_prc_), true, exec_prc_);
 }
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
@@ -234,7 +234,7 @@ void jit_equal_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
 }
 
 void jit_equal_emitter::register_table_entries() {
-    push_arg_entry_of("one", float2int(1.f, exec_prc_), true);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
 }
 
 /// ELU ///
@@ -303,8 +303,8 @@ void jit_elu_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
 }
 
 void jit_elu_emitter::register_table_entries() {
-    push_arg_entry_of("one", float2int(1.f, exec_prc_), true);
-    push_arg_entry_of("alpha", float2int(alpha, exec_prc_), true);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("alpha", float2int(alpha, exec_prc_), true, exec_prc_);
 }
 
 void jit_elu_emitter::emit_data() const {
@@ -332,13 +332,20 @@ jit_exp_emitter::jit_exp_emitter(dnnl::impl::cpu::aarch64::jit_generator* host,
 
 size_t jit_exp_emitter::get_inputs_count() const { return 1; }
 
-size_t jit_exp_emitter::get_aux_vecs_count() const { return 4; }
+size_t jit_exp_emitter::get_aux_vecs_count() const { return 5; }
 
 size_t jit_exp_emitter::get_aux_gprs_count() const { return 1; }
 
 template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
 void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
     OV_CPU_JIT_EMITTER_ASSERT_FP16_FP32(exec_prc_)
+
+    const auto min = std::numeric_limits<float16>::min();
+    const auto max = std::numeric_limits<float16>::max();
+
+    { // NOLINT
+    auto exec_prc = sizeof(type) == 4 ? ov::element::f32 : ov::element::f16;
+    //convert(ov::element::f32, ov::element::f16, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
 
     using TReg = typename cpu_isa_vector_traits<isa, type>::TReg;
     using BReg = typename cpu_isa_vector_traits<isa, type>::BReg;
@@ -347,15 +354,14 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     const TReg vmm_aux1(aux_vec_idxs[0]);
     const TReg vmm_aux2(aux_vec_idxs[1]);
     const TReg vmm_aux0(aux_vec_idxs[2]);
-
     const TReg vmm_mask(aux_vec_idxs[3]);
 
     // source and destination registers can be the same:
     // use vmm_aux2 to store destination before get mask
-    h->ld1r(vmm_aux0, table_val2("exp_ln_flt_max_f"));
+    h->ld1r(vmm_aux0, table_val2("exp_ln_flt_max_f", exec_prc));
     h->fmin(vmm_aux2, vmm_src, vmm_aux0);
 
-    h->ld1r(vmm_aux0, table_val2("exp_ln_flt_min_f"));
+    h->ld1r(vmm_aux0, table_val2("exp_ln_flt_min_f", exec_prc));
     // get mask of values lower than log(FLT_MIN) to zero them in the output
     h->fcmgt(vmm_mask, vmm_src, vmm_aux0);
     h->fmax(vmm_dst, vmm_aux2, vmm_aux0);
@@ -364,8 +370,8 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
 
     // calculate exp(x)
     // fx = x * log2ef + 0.5
-    h->ld1r(vmm_aux0, table_val2("exp_log2ef"));
-    h->ld1r(vmm_aux2, table_val2("half"));
+    h->ld1r(vmm_aux0, table_val2("exp_log2ef", exec_prc));
+    h->ld1r(vmm_aux2, table_val2("half", exec_prc));
     h->fmla(vmm_aux2, vmm_dst, vmm_aux0);
 
     // tmp = floorf(fx)
@@ -375,7 +381,7 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     h->mov(BReg(vmm_dst.getIdx()), BReg(vmm_aux2.getIdx()));
 
     // x = x - fx * ln2
-    h->ld1r(vmm_aux0, table_val2("ln2f"));
+    h->ld1r(vmm_aux0, table_val2("ln2f", exec_prc));
     h->fmls(vmm_aux1, vmm_aux2, vmm_aux0);
 
     // We do not count 2^n here, because n can reach 128 and 2^128 is not
@@ -384,56 +390,130 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     // and 2 are numbers representable in fp32.
 
     // compute 2^(n-1)
-    h->ld1r(vmm_aux0, table_val2("one"));
+    h->ld1r(vmm_aux0, table_val2("one", exec_prc));
     h->fsub(vmm_dst, vmm_dst, vmm_aux0);
-    h->fcvtzs(vmm_aux2, vmm_dst);
 
-    h->ld1r(vmm_aux0, table_val2("exponent_bias"));
-    h->add(vmm_aux2, vmm_aux2, vmm_aux0);
+    //convert(ov::element::f16, ov::element::f32, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
+    }
 
-    const int n_mantissa_bits = exec_prc_ == ov::element::f16 ? 10 : 23;
-    h->sqshl(vmm_aux2, vmm_aux2, n_mantissa_bits);
+    if (exec_prc_ == ov::element::f16) {
+        auto exec_prc = ov::element::f32;
+
+        //convert(ov::element::f32, ov::element::f16, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
+
+        using TReg = typename cpu_isa_vector_traits<isa, float>::TReg;
+        using BReg = typename cpu_isa_vector_traits<isa, float>::BReg;
+        const TReg vmm_dst(out_vec_idxs[0]);
+        const TReg vmm_aux2(aux_vec_idxs[1]);
+        const TReg vmm_aux0(aux_vec_idxs[2]);
+        const TReg vmm_aux3(aux_vec_idxs[4]);
+
+        typedef Xbyak_aarch64::VReg VReg;
+        h->fcvtl(VReg(vmm_aux0.getIdx()).s4, VReg(vmm_dst.getIdx()).h4);
+        h->fcvtzs(vmm_aux2, vmm_aux0); // <= this should be in fp32
+
+        h->ld1r(vmm_aux0, table_val2("exponent_bias", exec_prc));
+        h->add(vmm_aux2, vmm_aux2, vmm_aux0);
+
+        const int n_mantissa_bits = exec_prc == ov::element::f16 ? 10 : 23;
+        h->sqshl(vmm_aux2, vmm_aux2, n_mantissa_bits); // <= this should be in fp32
+        h->fcvtn(VReg(vmm_aux2.getIdx()).h4, VReg(vmm_aux2.getIdx()).s4);
+
+
+
+        h->fcvtl2(VReg(vmm_aux0.getIdx()).s4, VReg(vmm_dst.getIdx()).h8);
+        h->fcvtzs(vmm_aux3, vmm_aux0); // <= this should be in fp32
+
+        h->ld1r(vmm_aux0, table_val2("exponent_bias", exec_prc));
+        h->add(vmm_aux3, vmm_aux3, vmm_aux0);
+
+        h->sqshl(vmm_aux3, vmm_aux3, n_mantissa_bits); // <= this should be in fp32
+        h->fcvtn2(VReg(vmm_aux2.getIdx()).h8, VReg(vmm_aux3.getIdx()).s4);
+    } else {
+        auto exec_prc = ov::element::f32;
+
+        using TReg = typename cpu_isa_vector_traits<isa, type>::TReg;
+        using BReg = typename cpu_isa_vector_traits<isa, type>::BReg;
+        const TReg vmm_src(in_vec_idxs[0]);
+        const TReg vmm_dst(out_vec_idxs[0]);
+        const TReg vmm_aux1(aux_vec_idxs[0]);
+        const TReg vmm_aux2(aux_vec_idxs[1]);
+        const TReg vmm_aux0(aux_vec_idxs[2]);
+        const TReg vmm_mask(aux_vec_idxs[3]);
+
+        h->fcvtzs(vmm_aux2, vmm_dst); // <= this should be in fp32
+
+        h->ld1r(vmm_aux0, table_val2("exponent_bias", exec_prc));
+        h->add(vmm_aux2, vmm_aux2, vmm_aux0);
+
+        const int n_mantissa_bits = exec_prc == ov::element::f16 ? 10 : 23;
+        h->sqshl(vmm_aux2, vmm_aux2, n_mantissa_bits); // <= this should be in fp32
+    }
+
+    {
+    auto exec_prc = sizeof(type) == 4 ? ov::element::f32 : ov::element::f16;
+    //convert(ov::element::f32, ov::element::f16, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
+
+    using TReg = typename cpu_isa_vector_traits<isa, type>::TReg;
+    using BReg = typename cpu_isa_vector_traits<isa, type>::BReg;
+    const TReg vmm_src(in_vec_idxs[0]);
+    const TReg vmm_dst(out_vec_idxs[0]);
+    const TReg vmm_aux1(aux_vec_idxs[0]);
+    const TReg vmm_aux2(aux_vec_idxs[1]);
+    const TReg vmm_aux0(aux_vec_idxs[2]);
+    const TReg vmm_mask(aux_vec_idxs[3]);
 
     // set zeroes at those points which were < log(FLT_MIN)
     h->and_(BReg(vmm_aux2.getIdx()), BReg(vmm_mask.getIdx()), BReg(vmm_aux2.getIdx()));
 
     // compute polynomial
-    h->ld1r(vmm_aux0, table_val2("exp_pol5"));
-    h->ld1r(vmm_dst, table_val2("exp_pol4"));
+    h->ld1r(vmm_aux0, table_val2("exp_pol5", exec_prc));
+    h->ld1r(vmm_dst, table_val2("exp_pol4", exec_prc));
     h->fmla(vmm_dst, vmm_aux1, vmm_aux0);
 
-    h->ld1r(vmm_aux0, table_val2("exp_pol3"));
+    h->ld1r(vmm_aux0, table_val2("exp_pol3", exec_prc));
     h->fmla(vmm_aux0, vmm_dst, vmm_aux1);
 
-    h->ld1r(vmm_dst, table_val2("exp_pol2"));
+    h->ld1r(vmm_dst, table_val2("exp_pol2", exec_prc));
     h->fmla(vmm_dst, vmm_aux0, vmm_aux1);
 
-    h->ld1r(vmm_aux0, table_val2("exp_pol1"));
+    h->ld1r(vmm_aux0, table_val2("exp_pol1", exec_prc));
     h->fmla(vmm_aux0, vmm_dst, vmm_aux1);
 
-    h->ld1r(vmm_dst, table_val2("one"));
+    h->ld1r(vmm_dst, table_val2("one", exec_prc));
     h->fmla(vmm_dst, vmm_aux0, vmm_aux1);
 
     // y = y * 2^n
     h->fmul(vmm_dst, vmm_dst, vmm_aux2);
-    h->ld1r(vmm_aux0, table_val2("two"));
+    h->ld1r(vmm_aux0, table_val2("two", exec_prc));
     h->fmul(vmm_dst, vmm_dst, vmm_aux0);
+
+    //convert(ov::element::f16, ov::element::f32, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
+    }
 }
 
 void jit_exp_emitter::register_table_entries() {
-    push_arg_entry_of("exp_ln_flt_max_f", float2int(std::log(FLT_MAX), exec_prc_), true);
-    push_arg_entry_of("exp_ln_flt_min_f", float2int(std::log(FLT_MIN), exec_prc_), true);
-    push_arg_entry_of("exp_log2ef", float2int(1.44269502, exec_prc_), true);
-    push_arg_entry_of("one", float2int(1.f, exec_prc_), true);
-    push_arg_entry_of("two", float2int(2.f, exec_prc_), true);
-    push_arg_entry_of("half", float2int(0.5f, exec_prc_), true);
-    push_arg_entry_of("ln2f", float2int(std::log(2.f), exec_prc_), true);
-    push_arg_entry_of("exponent_bias", exec_prc_ == ov::element::f32 ? 0x0000007f : 0x000F, true);
-    push_arg_entry_of("exp_pol1", float2int(0.999999701f, exec_prc_), true);
-    push_arg_entry_of("exp_pol2", float2int(0.499991506f, exec_prc_), true);
-    push_arg_entry_of("exp_pol3", float2int(0.166676521f, exec_prc_), true);
-    push_arg_entry_of("exp_pol4", float2int(0.0418978221f, exec_prc_), true);
-    push_arg_entry_of("exp_pol5", float2int(0.00828929059f, exec_prc_), true);
+    const auto exec_prc = ov::element::f16;
+
+    const auto push_args_entry_of = [&](const ov::element::Type& exec_prc) {
+        const auto exec_prc_str = "_" + exec_prc.to_string();
+        push_arg_entry_of("exp_ln_flt_max_f" + exec_prc_str, float2int(std::log(FLT_MAX), exec_prc), true, exec_prc);
+        push_arg_entry_of("exp_ln_flt_min_f" + exec_prc_str, float2int(std::log(FLT_MIN), exec_prc), true, exec_prc);
+        push_arg_entry_of("exp_log2ef" + exec_prc_str, float2int(1.44269502, exec_prc), true, exec_prc);
+        push_arg_entry_of("one" + exec_prc_str, float2int(1.f, exec_prc), true, exec_prc);
+        push_arg_entry_of("two" + exec_prc_str, float2int(2.f, exec_prc), true, exec_prc);
+        push_arg_entry_of("half" + exec_prc_str, float2int(0.5f, exec_prc), true, exec_prc);
+        push_arg_entry_of("ln2f" + exec_prc_str, float2int(std::log(2.f), exec_prc), true, exec_prc);
+        push_arg_entry_of("exponent_bias" + exec_prc_str, exec_prc == ov::element::f32 ? 0x0000007f : 0x000F, true, exec_prc);
+        push_arg_entry_of("exp_pol1" + exec_prc_str, float2int(0.999999701f, exec_prc), true, exec_prc);
+        push_arg_entry_of("exp_pol2" + exec_prc_str, float2int(0.499991506f, exec_prc), true, exec_prc);
+        push_arg_entry_of("exp_pol3" + exec_prc_str, float2int(0.166676521f, exec_prc), true, exec_prc);
+        push_arg_entry_of("exp_pol4" + exec_prc_str, float2int(0.0418978221f, exec_prc), true, exec_prc);
+        push_arg_entry_of("exp_pol5" + exec_prc_str, float2int(0.00828929059f, exec_prc), true, exec_prc);
+    };
+
+    push_args_entry_of(ov::element::f16);
+    push_args_entry_of(ov::element::f32);
 }
 
 std::set<std::vector<element::Type>> jit_exp_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
@@ -454,26 +534,18 @@ jit_floor_emitter::jit_floor_emitter(dnnl::impl::cpu::aarch64::jit_generator* ho
 
 size_t jit_floor_emitter::get_inputs_count() const { return 1; }
 
-void jit_floor_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
-        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
-    } else {
-        OV_CPU_JIT_EMITTER_THROW("Can't create jit eltwise kernel");
-    }
-}
-
-template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
 void jit_floor_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    OV_CPU_JIT_EMITTER_ASSERT(exec_prc_ == ov::element::f32, "unsupported precision: " + exec_prc_.to_string());
+    OV_CPU_JIT_EMITTER_ASSERT_FP16_FP32(exec_prc_);
 
-    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    using TReg = typename cpu_isa_vector_traits<isa, type>::TReg;
     TReg src = TReg(in_vec_idxs[0]);
     TReg dst = TReg(out_vec_idxs[0]);
-    h->frintm(dst.s, src.s);
+    h->frintm(dst, src);
 }
 
 std::set<std::vector<element::Type>> jit_floor_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32}};
+    return {{element::f16}, {element::f32}};
 }
 
 /// GELU_ERF ///
@@ -580,19 +652,19 @@ void jit_gelu_erf_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, cons
 }
 
 void jit_gelu_erf_emitter::register_table_entries() {
-    push_arg_entry_of("one", float2int(1.f, exec_prc_), true);
-    push_arg_entry_of("half", float2int(0.5f, exec_prc_), true);
-    push_arg_entry_of("sign_mask", exec_prc_ == ov::element::f32 ? 0x80000000 : 0x8000, true);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("half", float2int(0.5f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("sign_mask", exec_prc_ == ov::element::f32 ? 0x80000000 : 0x8000, true, exec_prc_);
 
-    push_arg_entry_of("gelu_erf_approx_const", float2int(0.327591091, exec_prc_), true);
-    push_arg_entry_of("gelu_erf_one_over_sqrt_two", float2int(0.707106769, exec_prc_), true);
-    push_arg_entry_of("gelu_erf_one_over_sqrt_pi", float2int(0.564189553, exec_prc_), true);
+    push_arg_entry_of("gelu_erf_approx_const", float2int(0.327591091, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("gelu_erf_one_over_sqrt_two", float2int(0.707106769, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("gelu_erf_one_over_sqrt_pi", float2int(0.564189553, exec_prc_), true, exec_prc_);
 
-    push_arg_entry_of("erf_pol1", float2int(0.254829592f, exec_prc_), true);  // p1
-    push_arg_entry_of("erf_pol2", float2int(-0.284496736f, exec_prc_), true); // p2
-    push_arg_entry_of("erf_pol3", float2int(1.421413741f, exec_prc_), true);  // p3
-    push_arg_entry_of("erf_pol4", float2int(-1.453152027f, exec_prc_), true); // p4
-    push_arg_entry_of("erf_pol5", float2int(1.061405429f, exec_prc_), true);  // p5
+    push_arg_entry_of("erf_pol1", float2int(0.254829592f, exec_prc_), true, exec_prc_);  // p1
+    push_arg_entry_of("erf_pol2", float2int(-0.284496736f, exec_prc_), true, exec_prc_); // p2
+    push_arg_entry_of("erf_pol3", float2int(1.421413741f, exec_prc_), true, exec_prc_);  // p3
+    push_arg_entry_of("erf_pol4", float2int(-1.453152027f, exec_prc_), true, exec_prc_); // p4
+    push_arg_entry_of("erf_pol5", float2int(1.061405429f, exec_prc_), true, exec_prc_);  // p5
 }
 
 void jit_gelu_erf_emitter::emit_data() const {
@@ -630,19 +702,12 @@ size_t jit_gelu_tanh_emitter::get_aux_gprs_count() const {
     return tanh_emitter->get_aux_gprs_count() + 1;
 }
 
-void jit_gelu_tanh_emitter::emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
-        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
-    } else {
-        OV_CPU_JIT_EMITTER_THROW("Can't create jit eltwise kernel");
-    }
-}
-
-template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
 void jit_gelu_tanh_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    OV_CPU_JIT_EMITTER_ASSERT(exec_prc_ == ov::element::f32, "unsupported precision: " + exec_prc_.to_string());
+    OV_CPU_JIT_EMITTER_ASSERT_FP16_FP32(exec_prc_)
 
-    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    using TReg = typename cpu_isa_vector_traits<isa, type>::TReg;
+    using BReg = typename cpu_isa_vector_traits<isa, type>::BReg;
     const TReg vmm_src(in_vec_idxs[0]);
     const TReg vmm_dst(out_vec_idxs[0]);
 
@@ -651,17 +716,17 @@ void jit_gelu_tanh_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, con
     const TReg vmm_aux2(aux_vec_idxs[std::max<size_t>(tanh_emitter->get_aux_vecs_count() + 1, 2)]);
 
     // compute G(x) = sqrt_root_two_over_pi * x * (1 + fitting_const * x * x)
-    h->fmul(vmm_aux0.s, vmm_src.s, vmm_src.s);
-    h->ld1r(vmm_aux1.s, table_val2("gelu_tanh_fitting_const"));
-    h->ld1r(vmm_aux2.s, table_val2("one"));
-    h->fmla(vmm_aux2.s, vmm_aux1.s, vmm_aux0.s);
-    h->fmul(vmm_aux2.s, vmm_src.s, vmm_aux2.s);
-    h->ld1r(vmm_aux1.s, table_val2("gelu_tanh_sqrt_two_over_pi"));
-    h->fmul(vmm_aux0.s, vmm_aux1.s, vmm_aux2.s);
+    h->fmul(vmm_aux0, vmm_src, vmm_src);
+    h->ld1r(vmm_aux1, table_val2("gelu_tanh_fitting_const"));
+    h->ld1r(vmm_aux2, table_val2("one"));
+    h->fmla(vmm_aux2, vmm_aux1, vmm_aux0);
+    h->fmul(vmm_aux2, vmm_src, vmm_aux2);
+    h->ld1r(vmm_aux1, table_val2("gelu_tanh_sqrt_two_over_pi"));
+    h->fmul(vmm_aux0, vmm_aux1, vmm_aux2);
 
     const bool store_src = vmm_src.getIdx() == vmm_dst.getIdx();
     if (store_src) {
-        h->mov(vmm_aux2.b16, vmm_src.b16);
+        h->mov(BReg(vmm_aux2.getIdx()), BReg(vmm_src.getIdx()));
     }
 
     tanh_emitter->emit_code(
@@ -671,19 +736,19 @@ void jit_gelu_tanh_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, con
             aux_gpr_idxs);
 
     // compute 0.5 * x * (1 + tanh(G(x)))
-    h->ld1r(vmm_aux1.s, table_val2("one"));
-    h->fadd(vmm_dst.s, vmm_aux1.s, vmm_dst.s);
-    h->ld1r(vmm_aux1.s, table_val2("half"));
-    h->fmul(vmm_dst.s, vmm_aux1.s, vmm_dst.s);
-    h->fmul(vmm_dst.s, store_src ? vmm_aux2.s : vmm_src.s, vmm_dst.s);
+    h->ld1r(vmm_aux1, table_val2("one"));
+    h->fadd(vmm_dst, vmm_aux1, vmm_dst);
+    h->ld1r(vmm_aux1, table_val2("half"));
+    h->fmul(vmm_dst, vmm_aux1, vmm_dst);
+    h->fmul(vmm_dst, store_src ? vmm_aux2 : vmm_src, vmm_dst);
 }
 
 void jit_gelu_tanh_emitter::register_table_entries() {
-    push_arg_entry_of("one", 0x3f800000, true);
-    push_arg_entry_of("half", 0x3f000000, true);
-    push_arg_entry_of("gelu_tanh_fitting_const", 0x3d372713, true);
-    push_arg_entry_of("gelu_tanh_fitting_const_times_three", 0x3e095d4f, true);
-    push_arg_entry_of("gelu_tanh_sqrt_two_over_pi", 0x3f4c422a, true);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("half", float2int(0.5f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("gelu_tanh_fitting_const", float2int(0.0447149985, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("gelu_tanh_fitting_const_times_three", float2int(0.134145007, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("gelu_tanh_sqrt_two_over_pi", float2int(0.797884583, exec_prc_), true, exec_prc_);
 }
 
 void jit_gelu_tanh_emitter::emit_data() const {
@@ -692,7 +757,7 @@ void jit_gelu_tanh_emitter::emit_data() const {
 }
 
 std::set<std::vector<element::Type>> jit_gelu_tanh_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32}};
+    return {{element::f16}, {element::f32}};
 }
 
 /// HARD_SWISH ///
@@ -738,10 +803,10 @@ void jit_hswish_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const 
 }
 
 void jit_hswish_emitter::register_table_entries() {
-    push_arg_entry_of("zero", float2int(0.f, exec_prc_), true);
-    push_arg_entry_of("three", float2int(3.f, exec_prc_), true);
-    push_arg_entry_of("six", float2int(6.f, exec_prc_), true);
-    push_arg_entry_of("one_sixth", float2int(1.f/6.f, exec_prc_), true);
+    push_arg_entry_of("zero", float2int(0.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("three", float2int(3.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("six", float2int(6.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("one_sixth", float2int(1.f/6.f, exec_prc_), true, exec_prc_);
 }
 
 std::set<std::vector<element::Type>> jit_hswish_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
@@ -842,9 +907,9 @@ void jit_is_inf_emitter::emit_isa(const std::vector<size_t>& in_vec_idxs,
 
 void jit_is_inf_emitter::register_table_entries() {
     // Registers constant values that comply with the IEEE 754 standard.
-    push_arg_entry_of("one", 0x3F800000, true);
-    push_arg_entry_of("inf", 0x7F800000, true);
-    push_arg_entry_of("inf_neg", 0xFF800000, true);
+    push_arg_entry_of("one", 0x3F800000, true, exec_prc_);
+    push_arg_entry_of("inf", 0x7F800000, true, exec_prc_);
+    push_arg_entry_of("inf_neg", 0xFF800000, true, exec_prc_);
 }
 
 /// MAX ///
@@ -981,8 +1046,7 @@ void jit_mish_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
 }
 
 void jit_mish_emitter::register_table_entries() {
-    push_arg_entry_of("fwd_mish_max_x_for_equation_f", float2int(44.3614159, exec_prc_), true);
-    push_arg_entry_of("bwd_mish_max_x_for_equation_f", float2int(22.1807079, exec_prc_), true);
+    push_arg_entry_of("fwd_mish_max_x_for_equation_f", float2int(44.3614159, exec_prc_), true, exec_prc_);
 }
 
 void jit_mish_emitter::emit_data() const {
@@ -991,7 +1055,7 @@ void jit_mish_emitter::emit_data() const {
 }
 
 std::set<std::vector<element::Type>> jit_mish_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f16}, {element::f32}};
+    return {{element::f32}};
 }
 
 /// MOD ///
@@ -1143,9 +1207,9 @@ size_t jit_power_static_emitter::get_aux_vecs_count() const { return 1; }
 size_t jit_power_static_emitter::get_aux_gprs_count() const { return 2; }
 
 void jit_power_static_emitter::register_table_entries() {
-    push_arg_entry_of("power", float2int(power, exec_prc_), true);
-    push_arg_entry_of("scale", float2int(scale, exec_prc_), true);
-    push_arg_entry_of("shift", float2int(shift, exec_prc_), true);
+    push_arg_entry_of("power", float2int(power, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("scale", float2int(scale, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("shift", float2int(shift, exec_prc_), true, exec_prc_);
 }
 
 std::set<std::vector<element::Type>> jit_power_static_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
@@ -1456,8 +1520,8 @@ void jit_sigmoid_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const
 }
 
 void jit_sigmoid_emitter::register_table_entries() {
-    push_arg_entry_of("one", float2int(1.f, exec_prc_), true);
-    push_arg_entry_of("sign_mask", exec_prc_ == ov::element::f32 ? 0x80000000 : 0x8000, true);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("sign_mask", exec_prc_ == ov::element::f32 ? 0x80000000 : 0x8000, true, exec_prc_);
 }
 
 void jit_sigmoid_emitter::emit_data() const {
@@ -1556,7 +1620,7 @@ void jit_swish_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const s
 }
 
 void jit_swish_emitter::register_table_entries() {
-    push_arg_entry_of("beta", float2int(beta, exec_prc_), true);
+    push_arg_entry_of("beta", float2int(beta, exec_prc_), true, exec_prc_);
 }
 
 void jit_swish_emitter::emit_data() const {
@@ -1621,8 +1685,8 @@ void jit_tanh_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const st
 }
 
 void jit_tanh_emitter::register_table_entries() {
-    push_arg_entry_of("one", float2int(1.f, exec_prc_), true);
-    push_arg_entry_of("two", float2int(2.f, exec_prc_), true);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("two", float2int(2.f, exec_prc_), true, exec_prc_);
 }
 
 void jit_tanh_emitter::emit_data() const {
