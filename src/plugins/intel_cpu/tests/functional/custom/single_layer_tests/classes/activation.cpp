@@ -198,9 +198,9 @@ std::string ActivationLayerCPUTest::getPrimitiveType(const utils::ActivationType
         ((activation_type == utils::ActivationTypes::Elu) ||
         (activation_type == utils::ActivationTypes::Exp) ||
         (activation_type == utils::ActivationTypes::GeluErf) ||
+        (activation_type == utils::ActivationTypes::GeluTanh) ||
         (activation_type == utils::ActivationTypes::HSwish) ||
         (activation_type == utils::ActivationTypes::Mish) ||
-        (activation_type == utils::ActivationTypes::PReLu) ||
         (activation_type == utils::ActivationTypes::Relu) ||
         (activation_type == utils::ActivationTypes::Sigmoid) ||
         (activation_type == utils::ActivationTypes::Swish) ||
@@ -261,9 +261,10 @@ const std::map<utils::ActivationTypes, std::vector<std::vector<float>>>& activat
         {Elu,         {{0.1f}}},
         {Exp,         {{}}},
         {GeluErf,     {{}}},
+        {GeluTanh,    {{}}},
         {HSwish,      {{}}},
         {Mish,        {{}}},
-        {PReLu,       {{-0.f}}},
+        {PReLu,       {{-0.01f}}},
         {Relu,        {{}}},
         {Sigmoid,     {{}}},
         {Swish,       {{0.1f}}},

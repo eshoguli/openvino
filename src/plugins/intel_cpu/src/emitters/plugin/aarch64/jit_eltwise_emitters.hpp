@@ -57,7 +57,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -78,7 +78,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -110,7 +110,7 @@ private:
     float min;
     float max;
 
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -131,7 +131,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -157,7 +157,7 @@ public:
             const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -186,7 +186,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -240,9 +240,9 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    void emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const override;
+    EMIT_IMPL()
 
-    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 };
 
@@ -304,9 +304,9 @@ public:
 private:
     std::unique_ptr<jit_tanh_emitter> tanh_emitter;
 
-    void emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const override;
+    EMIT_IMPL()
 
-    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 };
 
@@ -331,7 +331,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename  type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -352,7 +352,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -373,7 +373,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename  type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -481,7 +481,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -502,7 +502,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -537,7 +537,7 @@ private:
     float scale;
     float shift;
 
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -560,7 +560,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -583,7 +583,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -638,7 +638,7 @@ public:
 private:
     std::unique_ptr<jit_exp_emitter> exp_emitter;
 
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -659,7 +659,7 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -692,7 +692,7 @@ private:
     std::unique_ptr<jit_sigmoid_emitter> sigmoid_emitter;
 
     float beta;
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
@@ -723,7 +723,7 @@ public:
 private:
     std::unique_ptr<jit_sigmoid_emitter> sigmoid_emitter;
 
-    EMIT_IMPL();
+    EMIT_IMPL()
 
     template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;

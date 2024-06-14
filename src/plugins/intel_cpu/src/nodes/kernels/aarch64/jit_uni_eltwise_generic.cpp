@@ -601,6 +601,7 @@ struct EltwiseEmitterContext {
 template<typename T>
 struct EltwiseEmitter {
     void operator()(EltwiseEmitterContext& ctx) {
+        std::cout << "emitter: " << ctx.exec_prc << " : " << typeid(T).name() << std::endl;
         ctx.emitter = std::make_shared<T>(ctx.host, ctx.host_isa, ctx.exec_prc);
     }
 };
@@ -608,6 +609,7 @@ struct EltwiseEmitter {
 template<>
 struct EltwiseEmitter<jit_swish_emitter> {
     void operator()(EltwiseEmitterContext& ctx) {
+        std::cout << "emitter: " << ctx.exec_prc << " : " << typeid(jit_swish_emitter).name() << std::endl;
         ctx.emitter = std::make_shared<jit_swish_emitter>(ctx.host,
                                                           ctx.host_isa,
                                                           ctx.opData.alpha,
@@ -618,6 +620,7 @@ struct EltwiseEmitter<jit_swish_emitter> {
 template<>
 struct EltwiseEmitter<jit_elu_emitter> {
     void operator()(EltwiseEmitterContext& ctx) {
+        std::cout << "emitter: " << ctx.exec_prc << " : " << typeid(jit_elu_emitter).name() << std::endl;
         ctx.emitter = std::make_shared<jit_elu_emitter>(ctx.host,
                                                           ctx.host_isa,
                                                           ctx.opData.alpha,
@@ -628,6 +631,7 @@ struct EltwiseEmitter<jit_elu_emitter> {
 template<>
 struct EltwiseEmitter<jit_clamp_emitter> {
     void operator()(EltwiseEmitterContext& ctx) {
+        std::cout << "emitter: " << ctx.exec_prc << " : " << typeid(jit_clamp_emitter).name() << std::endl;
         ctx.emitter = std::make_shared<jit_clamp_emitter>(ctx.host,
                                                           ctx.host_isa,
                                                           ctx.opData.alpha,
@@ -639,6 +643,7 @@ struct EltwiseEmitter<jit_clamp_emitter> {
 template<>
 struct EltwiseEmitter<jit_power_static_emitter> {
     void operator()(EltwiseEmitterContext& ctx) {
+        std::cout << "emitter: " << ctx.exec_prc << " : " << typeid(jit_power_static_emitter).name() << std::endl;
         ctx.emitter = std::make_shared<jit_power_static_emitter>(ctx.host,
                                                                  ctx.host_isa,
                                                                  ctx.opData.alpha,
