@@ -563,6 +563,14 @@ void compare(const ov::Tensor& expected,
     for (size_t i = 0; i < shape_size_cnt; ++i) {
         double expected_value = expected_data[i];
         double actual_value = actual_data[i];
+
+        if (i < 32) {
+            std::cout << i <<
+                      ": act: " << actual_value <<
+                      ", exp: " << expected_value <<
+                      ", diff: " << (expected_value != 0.0 ? std::to_string(abs((expected_value - actual_value) / expected_value)) : "n/a") << std::endl;
+        }
+
         if (!tensor_comparation::is_value_suitable_for_comparation<ExpectedT, ActualT>(expected_value, actual_value)) {
             continue;
         }

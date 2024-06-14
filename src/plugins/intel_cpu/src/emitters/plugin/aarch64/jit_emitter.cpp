@@ -200,6 +200,38 @@ void jit_emitter::emitter_postamble() const {
     aux_gpr_idxs.clear();
 }
 
+void jit_emitter::convert(
+        const ov::element::Type& source_type,
+        const ov::element::Type& target_type,
+        const std::vector<size_t> &in_vec_idxs,
+        const std::vector<size_t> &out_vec_idxs,
+        const std::vector<size_t> &aux_vec_idxs) const {
+    OPENVINO_ASSERT(
+            ((source_type == ov::element::f32) && (target_type == ov::element::f16)) ||
+            ((source_type == ov::element::f16) && (target_type == ov::element::f32)));
+
+    typedef Xbyak_aarch64::VReg TReg;
+//    const std::function<void(const size_t idx)> fcvt = ((source_type == ov::element::f32) && (target_type == ov::element::f16)) ?
+//            ([&](const size_t idx) { h->fcvtn(TReg(idx).h4, TReg(idx).s4); }) :
+//            ([&](const size_t idx) { h->fcvtl(TReg(idx).s4, TReg(idx).h4); });
+
+    std::function<void(const size_t idx)> fcvt;
+    if ((source_type == ov::element::f32) && (target_type == ov::element::f16)) {
+        fcvt = [&](const size_t idx) { h->fcvtn(TReg(idx).h4, TReg(idx).s4); };
+    } else if ((source_type == ov::element::f16) && (target_type == ov::element::f32)) {
+        fcvt = [&](const size_t idx) { h->fcvtl(TReg(idx).s4, TReg(idx).h4); };
+    } else {
+        OPENVINO_ASSERT(false, "not supported precisions");
+    }
+
+    std::set<size_t> idxs(in_vec_idxs.begin(), in_vec_idxs.end());
+    idxs.insert(out_vec_idxs.begin(), out_vec_idxs.end());
+    idxs.insert(aux_vec_idxs.begin(), aux_vec_idxs.end());
+    for (const auto idx : idxs) {
+        fcvt(idx);
+    }
+}
+
 void jit_emitter::store_context(const std::unordered_set<size_t>& ignore_registers) const {
     store_context(store_gpr_regs, vec_regs, ignore_registers);
 }

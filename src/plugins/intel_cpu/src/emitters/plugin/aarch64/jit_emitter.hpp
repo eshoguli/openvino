@@ -127,6 +127,12 @@ protected:
         return Xbyak_aarch64::ptr(h->X_DEFAULT_ADDR);
     }
 
+    Xbyak_aarch64::AdrNoOfs table_val2(const std::string& key, const ov::element::Type& exec_prc) const {
+        const int32_t off = table_off(key + "_" + exec_prc.to_string(), 0);
+        h->add_imm(h->X_DEFAULT_ADDR, p_table, off, h->X_TMP_0);
+        return Xbyak_aarch64::ptr(h->X_DEFAULT_ADDR);
+    }
+
     void push_arg_entry_of(const std::string key, const table_entry_val_t val, const bool broadcast) {
         mapped_table_entry_t te {0, val, broadcast};
         entry_map_.insert(std::make_pair(key, te));
@@ -139,6 +145,13 @@ protected:
             push_arg_entry_of(key, te.val, te.bcast);
         }
     }
+
+    void convert(
+            const ov::element::Type& source_type,
+            const ov::element::Type& target_type,
+            const std::vector<size_t> &in_vec_idxs,
+            const std::vector<size_t> &out_vec_idxs,
+            const std::vector<size_t> &aux_vec_idxs) const;
 
 private:
     mutable std::vector<size_t> preserved_vec_idxs;
