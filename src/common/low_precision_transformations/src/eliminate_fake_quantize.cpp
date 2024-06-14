@@ -43,6 +43,8 @@ bool EliminateFakeQuantizeTransformation::transform(TransformationContext& conte
         return false;
     }
 
+    std::cout << "EliminateFakeQuantizeTransformation::transform" << root->get_friendly_name() << std::endl;
+
     return replace_output_update_name(root->output(0), root->input_value(0));
 }
 
