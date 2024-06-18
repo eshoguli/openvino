@@ -344,16 +344,16 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     const auto max = std::numeric_limits<float16>::max();
 
     { // NOLINT
-    const auto exec_prc = ov::element::f32;
+    auto exec_prc = ov::element::f16;
+    convert(ov::element::f32, ov::element::f16, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
 
-    using TReg = typename cpu_isa_vector_traits<isa, float>::TReg;
-    using BReg = typename cpu_isa_vector_traits<isa, float>::BReg;
+    using TReg = typename cpu_isa_vector_traits<isa, float16>::TReg;
+    using BReg = typename cpu_isa_vector_traits<isa, float16>::BReg;
     const TReg vmm_src(in_vec_idxs[0]);
     const TReg vmm_dst(out_vec_idxs[0]);
     const TReg vmm_aux1(aux_vec_idxs[0]);
     const TReg vmm_aux2(aux_vec_idxs[1]);
     const TReg vmm_aux0(aux_vec_idxs[2]);
-
     const TReg vmm_mask(aux_vec_idxs[3]);
 
     // source and destination registers can be the same:
@@ -392,21 +392,33 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     // compute 2^(n-1)
     h->ld1r(vmm_aux0, table_val2("one", exec_prc));
     h->fsub(vmm_dst, vmm_dst, vmm_aux0);
-    h->fcvtzs(vmm_aux2, vmm_dst);
+
+    convert(ov::element::f16, ov::element::f32, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
+    }
+
+    {
+    auto exec_prc = ov::element::f32;
+
+    using TReg = typename cpu_isa_vector_traits<isa, float>::TReg;
+    using BReg = typename cpu_isa_vector_traits<isa, float>::BReg;
+    const TReg vmm_src(in_vec_idxs[0]);
+    const TReg vmm_dst(out_vec_idxs[0]);
+    const TReg vmm_aux1(aux_vec_idxs[0]);
+    const TReg vmm_aux2(aux_vec_idxs[1]);
+    const TReg vmm_aux0(aux_vec_idxs[2]);
+    const TReg vmm_mask(aux_vec_idxs[3]);
+
+    h->fcvtzs(vmm_aux2, vmm_dst); // <= this should be in fp32
 
     h->ld1r(vmm_aux0, table_val2("exponent_bias", exec_prc));
     h->add(vmm_aux2, vmm_aux2, vmm_aux0);
 
     const int n_mantissa_bits = exec_prc == ov::element::f16 ? 10 : 23;
-    h->sqshl(vmm_aux2, vmm_aux2, n_mantissa_bits);
-
-    // set zeroes at those points which were < log(FLT_MIN)
-    h->and_(BReg(vmm_aux2.getIdx()), BReg(vmm_mask.getIdx()), BReg(vmm_aux2.getIdx()));
+    h->sqshl(vmm_aux2, vmm_aux2, n_mantissa_bits); // <= this should be in fp32
     }
 
     {
     auto exec_prc = ov::element::f16;
-
     convert(ov::element::f32, ov::element::f16, in_vec_idxs, out_vec_idxs, aux_vec_idxs);
 
     using TReg = typename cpu_isa_vector_traits<isa, float16>::TReg;
@@ -416,8 +428,10 @@ void jit_exp_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std
     const TReg vmm_aux1(aux_vec_idxs[0]);
     const TReg vmm_aux2(aux_vec_idxs[1]);
     const TReg vmm_aux0(aux_vec_idxs[2]);
-
     const TReg vmm_mask(aux_vec_idxs[3]);
+
+    // set zeroes at those points which were < log(FLT_MIN)
+    h->and_(BReg(vmm_aux2.getIdx()), BReg(vmm_mask.getIdx()), BReg(vmm_aux2.getIdx()));
 
     // compute polynomial
     h->ld1r(vmm_aux0, table_val2("exp_pol5", exec_prc));
@@ -470,7 +484,7 @@ void jit_exp_emitter::register_table_entries() {
 }
 
 std::set<std::vector<element::Type>> jit_exp_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f16}, {element::f32}};
+    return {{element::f32}};
 }
 
 /// Floor ///

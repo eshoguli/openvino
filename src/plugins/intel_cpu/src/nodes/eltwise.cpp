@@ -2837,21 +2837,21 @@ void Eltwise::execute(dnnl::stream strm) {
             args_ptrs.dst_offsets = execParams.outOffsets.data();
         }
 
-        {
-            // TODO: debug
-            if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
-                std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << ", "
-                          << this->getAlgorithm() << std::endl;
-            } else if (
-                    (std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
-                    (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
-                std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << ", "
-                          << this->getAlgorithm() << std::endl;
-            } else {
-                std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << ", "
-                          << this->getAlgorithm() << std::endl;
-            }
-        }
+        // {
+        //     // TODO: debug
+        //     if (std::dynamic_pointer_cast<EltwiseJitExecutor>(execPtr) != nullptr) {
+        //         std::cout << "JIT is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+        //                   << this->getAlgorithm() << std::endl;
+        //     } else if (
+        //             (std::dynamic_pointer_cast<EltwiseRefExecutor<dnnl::impl::float16_t>>(execPtr) != nullptr) ||
+        //             (std::dynamic_pointer_cast<EltwiseRefExecutor<float>>(execPtr) != nullptr)) {
+        //         std::cout << "REFERENCE is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+        //                   << this->getAlgorithm() << std::endl;
+        //     } else {
+        //         std::cout << "UNKNOWN is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+        //                   << this->getAlgorithm() << std::endl;
+        //     }
+        // }
 
         execPtr->exec(args_ptrs, dims_out);
     } else if (aclExecPtr) {
@@ -2862,8 +2862,8 @@ void Eltwise::execute(dnnl::stream strm) {
         std::vector<MemoryPtr> dstMemory;
         dstMemory.push_back(getDstMemoryAtPort(0));
 
-        std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << ", "
-                  << this->getAlgorithm() << std::endl;
+        // std::cout << "ACL is used: " << this->getTypeStr() << ":" << this->getName() << ", "
+        //           << this->getAlgorithm() << std::endl;
 
         aclExecPtr->exec(srcMemory, dstMemory, fqDataPtrs.data());
     } else {
