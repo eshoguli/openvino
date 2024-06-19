@@ -93,6 +93,7 @@ protected:
         table_entry_offset_t off;
         table_entry_val_t val;
         table_entry_bcast_t bcast;
+        ov::element::Type type;
     };
 
     mutable Xbyak_aarch64::XReg p_table;
@@ -133,18 +134,19 @@ protected:
         return Xbyak_aarch64::ptr(h->X_DEFAULT_ADDR);
     }
 
-    void push_arg_entry_of(const std::string key, const table_entry_val_t val, const bool broadcast) {
-        mapped_table_entry_t te {0, val, broadcast};
+    // TODO: debug only: fp16
+    void push_arg_entry_of(const std::string key, const table_entry_val_t val, const bool broadcast, const ov::element::Type type) {
+        mapped_table_entry_t te {0, val, broadcast, type};
         entry_map_.insert(std::make_pair(key, te));
     }
 
-    void push_entries_of(const table_t &t) {
-        for (auto it = t.begin(); it != t.end(); it++) {
-            auto key = (*it).first;
-            auto te = (*it).second; // copy values from table
-            push_arg_entry_of(key, te.val, te.bcast);
-        }
-    }
+//    void push_entries_of(const table_t &t) {
+//        for (auto it = t.begin(); it != t.end(); it++) {
+//            auto key = (*it).first;
+//            auto te = (*it).second; // copy values from table
+//            push_arg_entry_of(key, te.val, te.bcast);
+//        }
+//    }
 
     void convert(
             const ov::element::Type& source_type,

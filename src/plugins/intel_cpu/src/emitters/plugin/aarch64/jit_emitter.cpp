@@ -55,7 +55,7 @@ void jit_emitter::emit_data() const {
         const auto &te = (*it).second; // get map entry for a given key
         const auto len = te.bcast ? get_vec_length() : sizeof(table_entry_val_t);
 
-        if (this->exec_prc_ == ov::element::f16) {
+        if (te.type == ov::element::f16) {
             for (size_t d = 0; d < len; d += sizeof(uint32_t)) {
                 uint32_t value;
                 auto *t_ptr = reinterpret_cast<uint8_t *>(&value);

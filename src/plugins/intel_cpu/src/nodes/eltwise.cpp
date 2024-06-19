@@ -3138,7 +3138,6 @@ bool Eltwise::canFuseParent(const NodePtr& parentNode) const {
 }
 
 bool Eltwise::canFuse(const NodePtr& node) const {
-    return false;
     auto isIntegerComputeSupported = [](const Node* node) {
         if (!one_of(node->getAlgorithm(), Algorithm::EltwiseAdd,
                                           Algorithm::EltwiseMultiply,
