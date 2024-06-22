@@ -43,7 +43,7 @@ inline void ConvertToCPUSpecificOpset(std::shared_ptr<ov::Model> &nGraphFunc, in
     CPU_REGISTER_PASS_COMMON(manager, ConvertToPowerStatic);
     CPU_REGISTER_PASS_COMMON(manager, ConvertToLeakyRelu);
     CPU_REGISTER_PASS_COMMON(manager, ConvertToSwishCPU);
-    CPU_REGISTER_PASS_COMMON(manager, OptimizeSequenceTransposes);
+    //CPU_REGISTER_PASS_COMMON(manager, OptimizeSequenceTransposes);
     // after transformation "MoveEltwiseUpThroughDataMov" there can be reshaped sequences that should be eliminated or fused
     CPU_REGISTER_PASS_COMMON(manager, ov::pass::ReshapeSequenceFusion);
     CPU_REGISTER_PASS_COMMON(manager, ov::pass::ConstantFolding);
@@ -56,7 +56,11 @@ inline void ConvertToCPUSpecificOpset(std::shared_ptr<ov::Model> &nGraphFunc, in
     CPU_REGISTER_PASS_COMMON(manager, ov::pass::Validate);
     CPU_REGISTER_PASS_COMMON(manager, ov::pass::EliminateConvert); // Need to clean up after the ConvertPrecision.
 
+    ov::pass::Serialize("cpu.opset.before.xml", "cpu.opset.before.bin").run_on_model(nGraphFunc);
+
     manager.run_passes(nGraphFunc);
+
+    ov::pass::Serialize("cpu.opset.after.xml", "cpu.opset.after.bin").run_on_model(nGraphFunc);
 }
 
 }   // namespace intel_cpu

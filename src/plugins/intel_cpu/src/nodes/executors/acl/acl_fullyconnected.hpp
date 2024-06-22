@@ -30,8 +30,10 @@ public:
     bool update(const MemoryArgs& memory) override;
 private:
     arm_compute::FullyConnectedLayerInfo fullyConnectedLayerInfo;
+    arm_compute::GEMMInfo gemmInfo;
     arm_compute::WeightsInfo weightsInfo;
     bool withBias;
+    bool lowPrecision = true;
 };
 
 using ACLFullyConnectedExecutorPtr = std::shared_ptr<ACLFullyConnectedExecutor>;
