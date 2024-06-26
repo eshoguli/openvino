@@ -3,15 +3,17 @@
 //
 
 #include "acl_executor.hpp"
-#include "acl_utils.hpp"
 #include "nodes/executors/memory_arguments.hpp"
 #include "utils/debug_capabilities.h"
 
 namespace ov {
 namespace intel_cpu {
 
-ACLMemoryInfo ACLCommonExecutor::initTensorInfo(const MemoryPtr& memoryPtr, ACLTensorAttrs attrs) {
-    auto acl_tensor_type   = precisionToAclDataType(memoryPtr->getPrecision());
+ACLMemoryInfo ACLCommonExecutor::initTensorInfo(
+        const MemoryPtr& memoryPtr,
+        const ACLTensorAttrs attrs,
+        const QuantizedDataType quantized) {
+    auto acl_tensor_type = precisionToAclDataType(memoryPtr->getPrecision(), quantized);
     auto acl_tensor_layout = getAclDataLayoutByMemoryDesc(memoryPtr->getDescPtr());
 
     ACLMemoryInfo aclMemoryInfo = nullptr;
@@ -40,8 +42,25 @@ ACLMemory ACLCommonExecutor::initTensor(const ACLMemoryInfo& aclMemoryInfo) {
 
 bool ACLCommonExecutor::update(const MemoryArgs &memory) {
     for (auto& cpu_mem_ptr : memory) {
+        auto aclPrecision = precisionToAclDataType(cpu_mem_ptr.second->getPrecision());
+        QuantizedDataType quantized;
+        switch (aclPrecision) {
+            case arm_compute::DataType::S8: {
+                quantized = QuantizedDataType::QASYMM;
+                break;
+            }
+            case arm_compute::DataType::U8: {
+                quantized = QuantizedDataType::QSYMM;
+                break;
+            }
+            default: {
+                quantized = QuantizedDataType::NONE;
+                break;
+            }
+        }
+
         // Initialize arm_compute::TensorInfo object
-        auto aclTensorInfo = initTensorInfo(cpu_mem_ptr.second, aclTensorAttrs);
+        auto aclTensorInfo = initTensorInfo(cpu_mem_ptr.second, aclTensorAttrs, quantized);
         // Initialize arm_compute::Tensor object
         aclMemoryMap[cpu_mem_ptr.first] = initTensor(aclTensorInfo);
     }

@@ -27,7 +27,8 @@ public:
         const ov::PartialShape inputShape1,
         const ov::PartialShape inputShape2,
         const bool transpose1,
-        const bool transpose2);
+        const bool transpose2,
+        const bool signedOnWeights = false);
 
     static std::shared_ptr<ov::Model> getOriginal(
         const ov::element::Type precision,

@@ -54,12 +54,17 @@ std::shared_ptr<ov::Model> MatMulFunction::getOriginal(
     const ov::PartialShape inputShape1,
     const ov::PartialShape inputShape2,
     const bool transpose1,
-    const bool transpose2) {
+    const bool transpose2,
+    const bool signedOnWeights) {
     const auto paramNode = std::make_shared<ov::opset1::Parameter>(precision, inputShape1);
     const std::vector<size_t> constShapes(inputShape1.rank().get_length(), 1ul);
-    const auto fakeQuantizeOnAcitvations = ov::test::utils::make_fake_quantize(
-        paramNode, precision, 256ul, constShapes,
-        { 0.f }, { 255.f / 4.f }, { 0.f }, { 255.f / 4.f });
+    const auto fakeQuantizeOnAcitvations = signedOnWeights ?
+            ov::test::utils::make_fake_quantize(
+                paramNode, precision, 256ul, constShapes,
+                { -128.f / 4.f }, { 127.f / 4.f }, { -128.f / 4.f }, { 127.f / 4.f }) :
+            ov::test::utils::make_fake_quantize(
+                paramNode, precision, 256ul, constShapes,
+                { 0.f }, { 255.f / 4.f }, { 0.f }, { 255.f / 4.f });
     fakeQuantizeOnAcitvations->set_friendly_name("fakeQuantizeOnAcitvations");
 
     auto weightsConst = std::make_shared<ov::op::v0::Constant>(
