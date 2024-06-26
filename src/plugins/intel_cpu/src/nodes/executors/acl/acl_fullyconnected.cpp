@@ -35,7 +35,15 @@ ACLFullyConnectedExecutor::ACLFullyConnectedExecutor(const FCAttrs &attrs, const
 }
 
 bool ACLFullyConnectedExecutor::supports(const FCConfig &config) {
-    VERIFY(one_of(srcType(config), ov::element::f16, ov::element::f32), UNSUPPORTED_SRC_PRECISIONS);
+    const auto attrs = static_cast<FCAttrs>(config.attrs);
+    if (std::any_of(
+            attrs.dequantizationScales.begin(),
+            attrs.dequantizationScales.end(),
+            [](float value) { return value != 1.f;})) {
+        return false;
+    }
+
+    VERIFY(one_of(srcType(config), ov::element::f16, ov::element::f32, ov::element::i8), UNSUPPORTED_SRC_PRECISIONS);
     VERIFY(postOpsNumbers(config) < 2,          UNSUPPORTED_NUMBER_OF_POSTOPS);
     VERIFY(one_of(srcRank(config), 2U, 3U, 4U), UNSUPPORTED_SRC_RANK);
     VERIFY(one_of(weiRank(config), 2U, 3U),     UNSUPPORTED_SRC_RANK);

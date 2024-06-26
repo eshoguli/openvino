@@ -96,15 +96,50 @@ inline int axisCast(const std::size_t axis, const std::size_t shapeSize, ACLAxis
     }
 }
 
+enum class QuantizedDataType {
+    NONE,   // not quantized
+    QSYMM,  // quantized, symmetric
+    QASYMM  // quantized, asymmetric
+};
+
 /**
 * @brief Return ComputeLibrary DataType that corresponds to the given precision
 * @param precision precision to be converted
 * @return ComputeLibrary DataType or UNKNOWN if precision is not mapped to DataType
 */
-inline arm_compute::DataType precisionToAclDataType(ov::element::Type precision) {
+inline arm_compute::DataType precisionToAclDataType(
+        const ov::element::Type& precision,
+        const QuantizedDataType quantized = QuantizedDataType::NONE) {
     switch (precision) {
-        case ov::element::i8:    return arm_compute::DataType::S8;
-        case ov::element::u8:    return arm_compute::DataType::U8;
+        case ov::element::i8: {
+            switch (quantized) {
+                case QuantizedDataType::QASYMM: {
+                    return arm_compute::DataType::QASYMM8_SIGNED;
+                }
+                case QuantizedDataType::NONE: {
+                    return arm_compute::DataType::S8;
+                }
+                default: {
+                    return arm_compute::DataType::UNKNOWN;
+                }
+            }
+        }
+        case ov::element::u8: {
+            switch (quantized) {
+                case QuantizedDataType::QSYMM: {
+                    return arm_compute::DataType::QSYMM8;
+                }
+                case QuantizedDataType::QASYMM: {
+                    return arm_compute::DataType::QASYMM8;
+                }
+                case QuantizedDataType::NONE: {
+                    return arm_compute::DataType::U8;
+                }
+                default: {
+                    return arm_compute::DataType::UNKNOWN;
+                }
+            }
+        }
         case ov::element::i16:   return arm_compute::DataType::S16;
         case ov::element::u16:   return arm_compute::DataType::U16;
         case ov::element::i32:   return arm_compute::DataType::S32;

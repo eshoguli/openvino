@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "acl_utils.hpp"
 #include "cpu_memory.h"
 #include "nodes/executors/executor.hpp"
 #include "arm_compute/runtime/NEON/NEFunctions.h"
@@ -42,7 +43,10 @@ protected:
 private:
     ACLMemoryMap aclMemoryMap;
     ACLFunction iFunction = nullptr;
-    static ACLMemoryInfo initTensorInfo(const MemoryPtr& memoryPtr, ACLTensorAttrs attrs);
+    static ACLMemoryInfo initTensorInfo(
+            const MemoryPtr& memoryPtr,
+            const ACLTensorAttrs attrs,
+            const QuantizedDataType quantized);
     static ACLMemory initTensor(const ACLMemoryInfo& aclMemoryInfo);
 };
 
