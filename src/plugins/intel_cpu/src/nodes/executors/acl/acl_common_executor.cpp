@@ -38,9 +38,9 @@ static void initACLTensorParams(const MemoryPtr& memoryPtr,
     }
 }
 
-static ACLInfo initTensorInfo(const arm_compute::TensorShape& tensorShape,
-                              const arm_compute::DataType& dataType,
-                              const arm_compute::DataLayout& dataLayout) {
+ACLInfo ACLCommonExecutor::initTensorInfo(const arm_compute::TensorShape& tensorShape,
+                                          const arm_compute::DataType& dataType,
+                                          const arm_compute::DataLayout& dataLayout) {
     ACLInfo aclMemoryInfo = nullptr;
     if (dataType != arm_compute::DataType::UNKNOWN) {
         aclMemoryInfo = std::make_shared<arm_compute::TensorInfo>(

@@ -19,6 +19,9 @@ ACLFullyConnectedExecutor::ACLFullyConnectedExecutor(const FCAttrs &attrs, const
     aclTensorAttrs.hasLayoutTypeNHWC = memory.at(ARG_SRC)->getDescPtr()->hasLayoutType(LayoutType::nspc);
     fullyConnectedLayerInfo.weights_trained_layout = getAclDataLayoutByMemoryDesc(memory.at(ARG_WEI)->getDescPtr());
     fullyConnectedLayerInfo.transpose_weights = !attrs.weightsNonTransposed;
+    if (!attrs.dequantizationScales.empty()) {
+        dequantizationScale = attrs.dequantizationScales[0];
+    }
 
     // Add postops
     if (!postOps.empty() && postOps.size() == 1) {
@@ -32,10 +35,20 @@ ACLFullyConnectedExecutor::ACLFullyConnectedExecutor(const FCAttrs &attrs, const
 }
 
 bool ACLFullyConnectedExecutor::supports(const FCConfig &config) {
-    VERIFY(one_of(srcType(config), ov::element::f16, ov::element::f32), UNSUPPORTED_SRC_PRECISIONS);
+    // issue #<create and put number here>
+    const auto attrs = static_cast<FCAttrs>(config.attrs);
+    if (std::any_of(
+            attrs.dequantizationScales.begin(),
+            attrs.dequantizationScales.end(),
+            [](float value) { return value != 1.f;})) {
+        return false;
+    }
+
+    VERIFY(one_of(srcType(config), ov::element::f16, ov::element::f32, ov::element::i8), UNSUPPORTED_SRC_PRECISIONS);
     VERIFY(postOpsNumbers(config) < 2,          UNSUPPORTED_NUMBER_OF_POSTOPS);
     VERIFY(one_of(srcRank(config), 2U, 3U, 4U), UNSUPPORTED_SRC_RANK);
     VERIFY(one_of(weiRank(config), 2U, 3U),     UNSUPPORTED_WEI_RANK);
+    VERIFY(static_cast<FCAttrs>(config.attrs).dequantizationScales.size() <= 1, UNSUPPORTED_PER_CHANNEL_QUANTIZATION);
     return true;
 }
 
@@ -74,15 +87,42 @@ arm_compute::Status ACLFullyConnectedExecutor::validateTensorsInfo(const ACLMemo
 }
 
 ACLFunction ACLFullyConnectedExecutor::configureFunction(const ACLMemoryTensors & aclMemoryTensors) {
+    const auto dstTensor = aclMemoryTensors.at(ACLArgs::ACL_DST).get();
+    if (dequantizationScale != 1.0) {
+        dstTensor->info()->set_quantization_info(arm_compute::QuantizationInfo(dequantizationScale, 0));
+    }
+
     auto neFC = std::make_unique<arm_compute::NEFullyConnectedLayer>();
     neFC->configure(
             aclMemoryTensors[ACLArgs::ACL_SRC_0].get(),
             aclMemoryTensors[ACLArgs::ACL_WEI].get(),
             aclMemoryTensors[ACLArgs::ACL_BIAS].get(),
-            aclMemoryTensors[ACLArgs::ACL_DST].get(),
+            dstTensor,
             fullyConnectedLayerInfo,
             weightsInfo);
     return neFC;
+}
+
+ACLInfo ACLFullyConnectedExecutor::initTensorInfo(const arm_compute::TensorShape& tensorShape,
+                                                  const arm_compute::DataType& dataType,
+                                                  const arm_compute::DataLayout& dataLayout) {
+    arm_compute::DataType fcDataType;
+    switch (dataType) {
+        case arm_compute::DataType::S8: {
+            fcDataType = arm_compute::DataType::QASYMM8_SIGNED;
+            break;
+        }
+        case arm_compute::DataType::U8: {
+            fcDataType = arm_compute::DataType::QASYMM8;
+            break;
+        }
+        default: {
+            fcDataType = dataType;
+            break;
+        }
+    }
+
+    return ACLCommonExecutor::initTensorInfo(tensorShape, fcDataType, dataLayout);
 }
 
 }   // namespace intel_cpu

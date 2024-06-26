@@ -39,11 +39,25 @@ const std::vector<ov::pass::low_precision::LayerTransformation::Params> trasform
     LayerTestsUtils::LayerTransformationParamsNGraphFactory::createParams()
 };
 
-INSTANTIATE_TEST_SUITE_P(smoke_LPT, FullyConnectedTransformation,
+INSTANTIATE_TEST_SUITE_P(smoke_LPT_ref, FullyConnectedTransformation,
     ::testing::Combine(
-        ::testing::ValuesIn(netPrecisions),
-        ::testing::ValuesIn(shapes),
-        ::testing::Values(ov::test::utils::DEVICE_CPU),
-        ::testing::ValuesIn(trasformationParamValues)),
+            ::testing::ValuesIn(netPrecisions),
+            ::testing::ValuesIn(shapes),
+            ::testing::Values(ov::test::utils::DEVICE_CPU),
+            ::testing::ValuesIn(trasformationParamValues),
+            ::testing::ValuesIn({ov::element::i8}),
+            ::testing::Values(false),
+            ::testing::Values("gemm_ref_i8")),
     FullyConnectedTransformation::getTestCaseName);
+
+INSTANTIATE_TEST_SUITE_P(smoke_LPT_acl, FullyConnectedTransformation,
+     ::testing::Combine(
+             ::testing::ValuesIn(netPrecisions),
+             ::testing::ValuesIn(shapes),
+             ::testing::Values(ov::test::utils::DEVICE_CPU),
+             ::testing::ValuesIn(trasformationParamValues),
+             ::testing::ValuesIn({ov::element::i8}),
+             ::testing::Values(true),
+             ::testing::Values("gemm_acl_i8")),
+     FullyConnectedTransformation::getTestCaseName);
 }  // namespace
