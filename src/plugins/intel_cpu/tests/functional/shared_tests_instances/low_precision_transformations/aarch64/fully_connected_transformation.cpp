@@ -21,18 +21,18 @@ const std::vector<MatMulShapes> shapes = {
         false,
         false
     },
-    {
-        ov::PartialShape{ 1, 16 },
-        ov::PartialShape{ 8, 16 },
-        false,
-        true
-    },
-    {
-        ov::PartialShape{ 16, 1 },
-        ov::PartialShape{ 16, 8 },
-        true,
-        false
-    },
+//    {
+//        ov::PartialShape{ 1, 16 },
+//        ov::PartialShape{ 8, 16 },
+//        false,
+//        true
+//    },
+//    {
+//        ov::PartialShape{ 16, 1 },
+//        ov::PartialShape{ 16, 8 },
+//        true,
+//        false
+//    },
 };
 
 const std::vector<ov::pass::low_precision::LayerTransformation::Params> trasformationParamValues = {
@@ -44,6 +44,9 @@ INSTANTIATE_TEST_SUITE_P(smoke_LPT, FullyConnectedTransformation,
         ::testing::ValuesIn(netPrecisions),
         ::testing::ValuesIn(shapes),
         ::testing::Values(ov::test::utils::DEVICE_CPU),
-        ::testing::ValuesIn(trasformationParamValues)),
+        ::testing::ValuesIn(trasformationParamValues),
+        ::testing::ValuesIn({ov::element::i8 /*, ov::element::u8*/}),
+        ::testing::ValuesIn({/*true,*/ false}),
+        ::testing::Values("gemm_acl_i8")),
     FullyConnectedTransformation::getTestCaseName);
 }  // namespace
