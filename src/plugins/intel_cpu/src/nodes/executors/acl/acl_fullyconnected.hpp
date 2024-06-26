@@ -28,6 +28,12 @@ public:
     impl_desc_type implType() const override {
         return impl_desc_type::gemm_acl;
     }
+
+protected:
+    ACLInfo initTensorInfo(const arm_compute::TensorShape& tensorShape,
+                           const arm_compute::DataType& dataType,
+                           const arm_compute::DataLayout& dataLayout) override;
+
 private:
     arm_compute::FullyConnectedLayerInfo fullyConnectedLayerInfo;
     arm_compute::WeightsInfo weightsInfo;
