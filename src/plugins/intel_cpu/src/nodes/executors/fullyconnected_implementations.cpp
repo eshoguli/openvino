@@ -52,24 +52,24 @@ struct Require {
 
 // clang-format off
 static const TypeMapping dnnlFCTypeMapping {
-    // {src, wei, bia, dst}                                   pt<src, wei, bias, dst>
-    {{_bf16, _bf16 | _f32, _any, _bf16 | _f32},               pt(bypass(), bypass(), use<3>(), bypass())},
-    {{_f16, _f16, _any, _f16 | _f32},                         pt(bypass(), bypass(), use<3>(), bypass())},
-    // integer precision outputs are not supported for float precision inputs
-    {{_f32 | _bf16 | _f16, _any, _any, _i8 | _u8},            pt(bypass(), bypass(), use<0>(), use<0>())},
-    // compresses float weights which do not match input data precision
-    {{_f32, _half_float, _any, _any | _any},                  pt(bypass(), bypass(), use<0>(), use<0>())},
-    {{_bf16, _f16, _any, _any | _any},                        pt(bypass(), bypass(), use<0>(), use<0>())},
-    {{_f16, _bf16, _any, _any | _any},                        pt(bypass(), bypass(), use<0>(), use<0>())},
-    // quantization configuration
-    // int8 inner_product does not support f16 output and bias
-    {{_u8 | _i8, _i8, _u8 | _i8 | _i32 | _bf16 | _f32 | _undefined, _u8 | _i8 | _i32 | _bf16 | _f32}, pt(bypass(), bypass(), bypass(),  bypass())},
-    {{_u8 | _i8, _i8, _any, _any}, pt(bypass(), bypass(), just<f32>(), just<f32>())},
-    // compresses int weights (@todo more strict requrements for output precision?)
-    {{_bf16, _u8 | _i8 | _nf4 | _u4 | _i4, _any, _any},       pt(bypass(), bypass(), use<0>(), use<0>()),
-     Require<dnnl::impl::cpu::x64::avx512_core_bf16>()}, // Ticket 122347
-    {{_bf16, _u8 | _i8 | _nf4 | _u4 | _i4, _any, _any},       pt(just<f32>(), bypass(), just<f32>(), just<f32>())},
-    {{_f32,  _u8 | _i8 | _nf4 | _u4 | _i4, _any, _any},       pt(bypass(), bypass(), use<0>(), use<0>())},
+//    // {src, wei, bia, dst}                                   pt<src, wei, bias, dst>
+//    {{_bf16, _bf16 | _f32, _any, _bf16 | _f32},               pt(bypass(), bypass(), use<3>(), bypass())},
+//    {{_f16, _f16, _any, _f16 | _f32},                         pt(bypass(), bypass(), use<3>(), bypass())},
+//    // integer precision outputs are not supported for float precision inputs
+//    {{_f32 | _bf16 | _f16, _any, _any, _i8 | _u8},            pt(bypass(), bypass(), use<0>(), use<0>())},
+//    // compresses float weights which do not match input data precision
+//    {{_f32, _half_float, _any, _any | _any},                  pt(bypass(), bypass(), use<0>(), use<0>())},
+//    {{_bf16, _f16, _any, _any | _any},                        pt(bypass(), bypass(), use<0>(), use<0>())},
+//    {{_f16, _bf16, _any, _any | _any},                        pt(bypass(), bypass(), use<0>(), use<0>())},
+//    // quantization configuration
+//    // int8 inner_product does not support f16 output and bias
+//    {{_u8 | _i8, _i8, _u8 | _i8 | _i32 | _bf16 | _f32 | _undefined, _u8 | _i8 | _i32 | _bf16 | _f32}, pt(bypass(), bypass(), bypass(),  bypass())},
+//    {{_u8 | _i8, _i8, _any, _any}, pt(bypass(), bypass(), just<f32>(), just<f32>())},
+//    // compresses int weights (@todo more strict requrements for output precision?)
+//    {{_bf16, _u8 | _i8 | _nf4 | _u4 | _i4, _any, _any},       pt(bypass(), bypass(), use<0>(), use<0>()),
+//     Require<dnnl::impl::cpu::x64::avx512_core_bf16>()}, // Ticket 122347
+//    {{_bf16, _u8 | _i8 | _nf4 | _u4 | _i4, _any, _any},       pt(just<f32>(), bypass(), just<f32>(), just<f32>())},
+//    {{_f32,  _u8 | _i8 | _nf4 | _u4 | _i4, _any, _any},       pt(bypass(), bypass(), use<0>(), use<0>())},
     // @todo should we fallback to FPXX instead of _f32?
     {{_any, _any, _any, _any},                                pt(just<f32>(), just<f32>(), just<f32>(), just<f32>())},
     // @todo explicitly cover configuration limitations for oneDNN on ARM
@@ -77,7 +77,7 @@ static const TypeMapping dnnlFCTypeMapping {
 
 static const TypeMapping aclFCTypeMapping {
     // {src, wei, bia, dst}              pt<src, wei, bias, dst>
-    {{_f32 | _f16, _any, _any, _any}, pt(bypass(), use<0>(), use<0>(), use<0>())},
+    //{{_f32 | _f16, _any, _any, _any}, pt(bypass(), use<0>(), use<0>(), use<0>())},
     {{_i8, _i8, _any, _any},          pt(just<i8>(), just<i8>(), bypass(), just<i32>())},
     {{_any, _any, _any, _any},        pt(just<f32>(), just<f32>(), just<f32>(), just<f32>())}
 };

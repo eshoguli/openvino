@@ -55,7 +55,8 @@ std::shared_ptr<ov::Model> MatMulFunction::getOriginal(
     const ov::PartialShape inputShape2,
     const bool transpose1,
     const bool transpose2,
-    const bool signedOnWeights) {
+    const bool signedOnWeights,
+    const bool biases) {
     const auto paramNode = std::make_shared<ov::opset1::Parameter>(precision, inputShape1);
     const std::vector<size_t> constShapes(inputShape1.rank().get_length(), 1ul);
     const auto fakeQuantizeOnAcitvations = signedOnWeights ?
@@ -76,14 +77,24 @@ std::shared_ptr<ov::Model> MatMulFunction::getOriginal(
         { -128.f / 8.f }, { 127.f / 8.f }, { -128.f / 8.f }, { 127.f / 8.f });
     fakeQuantizeOnWeights->set_friendly_name("fakeQuantizeOnWeights");
 
-    const std::shared_ptr<ov::opset1::MatMul> fullyConnected = std::make_shared<ov::opset1::MatMul>(
+    std::shared_ptr<Node> parent = std::make_shared<ov::opset1::MatMul>(
         fakeQuantizeOnAcitvations->output(0),
         fakeQuantizeOnWeights->output(0),
         transpose1,
         transpose2);
-    fullyConnected->set_friendly_name("fullyConnected");
+    parent->set_friendly_name("fullyConnected");
 
-    ov::ResultVector results{ std::make_shared<ov::opset1::Result>(fullyConnected) };
+    if (biases) {
+        parent = std::make_shared<ov::opset1::Add>(
+                parent,
+                std::make_shared<ov::opset1::Constant>(
+                        parent->get_output_element_type(0),
+                        parent->get_output_shape(0),
+                        std::vector<float>(ov::shape_size(parent->get_output_shape(0)), 1.f)));
+        parent->set_friendly_name("biases");
+    }
+
+    ov::ResultVector results{ std::make_shared<ov::opset1::Result>(parent) };
     std::shared_ptr<ov::Model> function = std::make_shared<ov::Model>(
         results,
         ov::ParameterVector{ paramNode },

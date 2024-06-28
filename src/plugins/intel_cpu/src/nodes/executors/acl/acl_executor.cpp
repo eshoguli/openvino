@@ -61,9 +61,20 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
 
         // Initialize arm_compute::TensorInfo object
         auto aclTensorInfo = initTensorInfo(cpu_mem_ptr.second, aclTensorAttrs, quantized);
+
+        //TODO: debugging only
+        if (aclTensorInfo->data_type() == arm_compute::DataType::F32) {
+            aclTensorInfo->set_data_type(arm_compute::DataType::S32);
+        }
+
         // Initialize arm_compute::Tensor object
         aclMemoryMap[cpu_mem_ptr.first] = initTensor(aclTensorInfo);
     }
+
+    const auto src1 = aclMemoryMap.at(ARG_SRC)->info();
+    const auto src2 = aclMemoryMap.at(ARG_WEI)->info();
+    const auto src3 = aclMemoryMap.at(ARG_BIAS) ? aclMemoryMap.at(ARG_BIAS)->info() : nullptr;
+    const auto dst = aclMemoryMap.at(ARG_DST)->info();
 
     // Update arm_compute::TensorInfo objects for specific ACL function
     auto tensorsInfoValidateStatus = updateTensorsInfo(aclMemoryMap);

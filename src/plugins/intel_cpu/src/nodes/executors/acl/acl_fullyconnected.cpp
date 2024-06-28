@@ -36,12 +36,12 @@ ACLFullyConnectedExecutor::ACLFullyConnectedExecutor(const FCAttrs &attrs, const
 
 bool ACLFullyConnectedExecutor::supports(const FCConfig &config) {
     const auto attrs = static_cast<FCAttrs>(config.attrs);
-    if (std::any_of(
-            attrs.dequantizationScales.begin(),
-            attrs.dequantizationScales.end(),
-            [](float value) { return value != 1.f;})) {
-        return false;
-    }
+//    if (std::any_of(
+//            attrs.dequantizationScales.begin(),
+//            attrs.dequantizationScales.end(),
+//            [](float value) { return value != 1.f;})) {
+//        return false;
+//    }
 
     VERIFY(one_of(srcType(config), ov::element::f16, ov::element::f32, ov::element::i8), UNSUPPORTED_SRC_PRECISIONS);
     VERIFY(postOpsNumbers(config) < 2,          UNSUPPORTED_NUMBER_OF_POSTOPS);
@@ -74,6 +74,11 @@ arm_compute::Status ACLFullyConnectedExecutor::updateTensorsInfo(const ACLMemory
         std::swap(temp_weights_shape[0], temp_weights_shape[1]);
         acl_memory.at(ARG_WEI)->info()->set_tensor_shape(temp_weights_shape);
     }
+
+    const auto src1 = acl_memory.at(ARG_SRC)->info();
+    const auto src2 = acl_memory.at(ARG_WEI)->info();
+    const auto src3 = acl_memory.at(ARG_BIAS) ? acl_memory.at(ARG_BIAS)->info() : nullptr;
+    const auto dst = acl_memory.at(ARG_DST)->info();
 
     return arm_compute::NEFullyConnectedLayer::validate(
             acl_memory.at(ARG_SRC)->info(),

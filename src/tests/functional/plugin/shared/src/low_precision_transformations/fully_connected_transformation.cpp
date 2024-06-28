@@ -21,7 +21,8 @@ std::string FullyConnectedTransformation::getTestCaseName(const testing::TestPar
     std::string targetDevice;
     ov::pass::low_precision::LayerTransformation::Params params;
     ov::element::Type weightsType;
-    std::tie(precision, shapes, targetDevice, params, weightsType) = obj.param;
+    bool biases;
+    std::tie(precision, shapes, targetDevice, params, weightsType, biases) = obj.param;
 
     std::ostringstream result;
     result <<
@@ -29,7 +30,8 @@ std::string FullyConnectedTransformation::getTestCaseName(const testing::TestPar
         shapes.inputB << "_" <<
         shapes.transposeA << "_" <<
         shapes.transposeB << "_" <<
-        weightsType;
+        weightsType << "_" <<
+        biases;
 
     return result.str();
 }
@@ -39,7 +41,8 @@ void FullyConnectedTransformation::SetUp() {
     MatMulShapes shapes;
     ov::pass::low_precision::LayerTransformation::Params params;
     ov::element::Type weightsType;
-    std::tie(precision, shapes, targetDevice, params, weightsType) = this->GetParam();
+    bool biases;
+    std::tie(precision, shapes, targetDevice, params, weightsType, biases) = this->GetParam();
 
     init_input_shapes({ shapes.inputA, shapes.inputB });
 
@@ -49,7 +52,12 @@ void FullyConnectedTransformation::SetUp() {
         shapes.inputB,
         shapes.transposeA,
         shapes.transposeB,
-        weightsType == ov::element::i8);
+        weightsType == ov::element::i8,
+        biases);
+
+    ov::pass::Serialize(
+            "/Users/eshoguli/projects/openvino/report/graphs/test.original.xml",
+            "/Users/eshoguli/projects/openvino/report/graphs/test.original.bin").run_on_model(function);
 }
 
 TEST_P(FullyConnectedTransformation, CompareWithRefImpl) {
