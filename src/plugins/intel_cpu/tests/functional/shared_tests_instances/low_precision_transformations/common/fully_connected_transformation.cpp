@@ -45,6 +45,7 @@ INSTANTIATE_TEST_SUITE_P(smoke_LPT, FullyConnectedTransformation,
         ::testing::ValuesIn(shapes),
         ::testing::Values(ov::test::utils::DEVICE_CPU),
         ::testing::ValuesIn(trasformationParamValues),
-        ::testing::ValuesIn({ov::element::i8, ov::element::u8})),
+        ::testing::ValuesIn({ov::element::i8, ov::element::u8}),
+        ::testing::ValuesIn({true, false})),
     FullyConnectedTransformation::getTestCaseName);
 }  // namespace

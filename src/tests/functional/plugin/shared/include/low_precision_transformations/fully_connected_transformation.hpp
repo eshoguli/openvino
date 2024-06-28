@@ -21,7 +21,8 @@ typedef std::tuple<
     MatMulShapes,
     std::string,
     ov::pass::low_precision::LayerTransformation::Params,
-    ov::element::Type> FullyConnectedTransformationParams;
+    ov::element::Type,
+    bool> FullyConnectedTransformationParams;
 
 namespace LayerTestsDefinitions {
 
