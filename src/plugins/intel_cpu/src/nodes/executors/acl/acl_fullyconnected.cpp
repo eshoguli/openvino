@@ -86,11 +86,22 @@ arm_compute::Status ACLFullyConnectedExecutor::updateTensorsInfo(const ACLMemory
 
 ACLFunction ACLFullyConnectedExecutor::configureFunction(const ACLMemoryMap& acl_memory) {
     auto neFC = std::make_unique<arm_compute::NEFullyConnectedLayer>();
+
+    // TODO: debug only
+    const auto src_tensor = acl_memory.at(ARG_SRC).get();
+    src_tensor->info()->set_quantization_info(arm_compute::QuantizationInfo(4.f, 0));
+
+    const auto weights_tensor = acl_memory.at(ARG_WEI).get();
+    weights_tensor->info()->set_quantization_info(arm_compute::QuantizationInfo(8.f, 0));
+
+    const auto dst_tensor = acl_memory.at(ARG_DST).get();
+    dst_tensor->info()->set_quantization_info(arm_compute::QuantizationInfo(1.f, 0));
+
     neFC->configure(
-            acl_memory.at(ARG_SRC).get(),
-            acl_memory.at(ARG_WEI).get(),
+            src_tensor,
+            weights_tensor,
             acl_memory.at(ARG_BIAS).get(),
-            acl_memory.at(ARG_DST).get(),
+            dst_tensor,
             fullyConnectedLayerInfo,
             weightsInfo);
     return neFC;
