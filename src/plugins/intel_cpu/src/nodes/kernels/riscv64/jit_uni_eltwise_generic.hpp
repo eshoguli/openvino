@@ -69,6 +69,8 @@ public:
 
     jit_uni_eltwise_generic() {}
 
+    DECLARE_CPU_JIT_AUX_FUNCTIONS(jit_uni_eltwise_generic)
+
     void create_ker() override {
         jit_generator::create_kernel();
         ker_ = (decltype(ker_))jit_ker();

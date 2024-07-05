@@ -4,7 +4,7 @@
 
 #pragma once
 
-#ifndef OPENVINO_ARCH_ARM64
+#if !defined(OPENVINO_ARCH_ARM64) && !defined(OPENVINO_ARCH_RISCV64)
 #include "cpu/x64/jit_generator.hpp"
 #include "dnnl_types.h"
 #endif
