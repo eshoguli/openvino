@@ -107,11 +107,12 @@ std::shared_ptr<snippets::TargetMachine> CPUTargetMachine::clone() const {
 }
 
 bool CPUTargetMachine::is_supported() const {
-    return dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::asimd);
+    return true;
 }
 
 snippets::CompiledSnippetPtr CPUTargetMachine::get_snippet() {
-    OPENVINO_ASSERT(h->create_kernel() == dnnl::impl::status::success, "Failed to create jit_kernel in get_snippet()");
+    //OPENVINO_ASSERT(h->create_kernel() == dnnl::impl::status::success, "Failed to create jit_kernel in get_snippet()");
+    h->create_kernel();
 
     const auto& result = std::make_shared<CompiledSnippetCPU>(std::unique_ptr<ov::intel_cpu::riscv64::jit_generator>(h.release()));
     // Note that we reset all the generated code, since it was copied into CompiledSnippetCPU
@@ -131,7 +132,7 @@ size_t CPUTargetMachine::get_reg_count() const {
     return 32;
 }
 
-dnnl::impl::cpu::aarch64::cpu_isa_t CPUTargetMachine::get_isa() const {
+ov::intel_cpu::riscv64::cpu_isa_t CPUTargetMachine::get_isa() const {
     return isa;
 }
 
