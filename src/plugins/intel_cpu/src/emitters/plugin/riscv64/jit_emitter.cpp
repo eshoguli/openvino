@@ -16,6 +16,7 @@ const std::vector<size_t> jit_emitter::store_gpr_regs = {};
 static const std::vector<size_t> vec_regs = {};
 
 jit_emitter::jit_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                         ov::intel_cpu::riscv64::cpu_isa_t isa,
                          ov::element::Type exec_prc,
                          emitter_in_out_map in_out_type) :
                          Emitter(),
@@ -27,6 +28,7 @@ jit_emitter::jit_emitter(ov::intel_cpu::riscv64::jit_generator* host,
 }
 
 jit_emitter::jit_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                         ov::intel_cpu::riscv64::cpu_isa_t isa,
                          const std::shared_ptr<ov::Node>& n,
                          ov::element::Type exec_prc,
                          emitter_in_out_map in_out_type)

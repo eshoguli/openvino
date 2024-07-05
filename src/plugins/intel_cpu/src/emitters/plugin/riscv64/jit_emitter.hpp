@@ -27,10 +27,12 @@ enum emitter_in_out_map {
 class jit_emitter : public ov::snippets::Emitter {
 public:
     jit_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                ov::intel_cpu::riscv64::cpu_isa_t isa,
                 ov::element::Type exec_prc = ov::element::f32,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec);
 
     jit_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                ov::intel_cpu::riscv64::cpu_isa_t isa,
                 const std::shared_ptr<ov::Node>& n,
                 ov::element::Type exec_prc = ov::element::f32,
                 emitter_in_out_map in_out_type = emitter_in_out_map::vec_to_vec);
@@ -62,6 +64,7 @@ protected:
     mutable std::vector<size_t> aux_gpr_idxs;
 
     ov::intel_cpu::riscv64::jit_generator* h;
+    ov::intel_cpu::riscv64::cpu_isa_t host_isa_;
     ov::element::Type exec_prc_;
 
     emitter_in_out_map in_out_type_;
@@ -140,6 +143,8 @@ private:
         const auto scale = te.bcast ? get_vec_length() : sizeof(table_entry_val_t);
         return te.off + key_off_val_shift * scale;
     }
+
+    virtual void validate_arguments(const std::vector<size_t>&, const std::vector<size_t>&) const {}
 
     void store_context(const std::vector<size_t>& gpr_regs,
                        const std::vector<size_t>& vec_regs,

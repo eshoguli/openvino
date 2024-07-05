@@ -13,9 +13,11 @@ namespace riscv64 {
 class jit_subtract_emitter : public jit_emitter {
 public:
     jit_subtract_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                         ov::intel_cpu::riscv64::cpu_isa_t isa,
                          const ov::element::Type exec_prc = ov::element::f32);
 
     jit_subtract_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                         ov::intel_cpu::riscv64::cpu_isa_t isa,
                          const std::shared_ptr<ov::Node>& node);
 
     size_t get_inputs_count() const override;

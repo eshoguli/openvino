@@ -15,6 +15,47 @@ namespace riscv64 {
 
 using namespace Xbyak_riscv;
 
+enum cpu_isa_bit_t : unsigned {
+    asimd_bit = 1u << 0,
+    sve_128_bit = 1u << 1,
+    sve_256_bit = 1u << 2,
+    sve_384_bit = 1u << 3,
+    sve_512_bit = 1u << 4,
+};
+
+enum cpu_isa_t : unsigned {
+    isa_undef = 0u,
+    asimd = asimd_bit,
+    sve_128 = sve_128_bit | asimd,
+    sve_256 = sve_256_bit | sve_128,
+    sve_384 = sve_384_bit | sve_256,
+    sve_512 = sve_512_bit | sve_384,
+    isa_all = ~0u,
+};
+
+template <cpu_isa_t>
+struct cpu_isa_traits {}; /* ::vlen -> 32 (for avx2) */
+
+template <>
+struct cpu_isa_traits<isa_all> {
+    static constexpr dnnl_cpu_isa_t user_option_val = dnnl_cpu_isa_default;
+    static constexpr const char *user_option_env = "default";
+};
+
+template <>
+struct cpu_isa_traits<asimd> {
+    typedef Xbyak_riscv::VReg TReg;
+//    typedef Xbyak_aarch64::VReg16B TRegB;
+//    typedef Xbyak_aarch64::VReg8H TRegH;
+//    typedef Xbyak_aarch64::VReg4S TRegS;
+//    typedef Xbyak_aarch64::VReg2D TRegD;
+    static constexpr int vlen_shift = 4;
+    static constexpr int vlen = 16;
+    static constexpr int n_vregs = 32;
+    //static constexpr dnnl_cpu_isa_t user_option_val = static_cast<dnnl_cpu_isa_t>(dnnl_cpu_isa_asimd);
+    static constexpr const char *user_option_env = "advanced_simd";
+};
+
 class jit_generator : public Xbyak_riscv::CodeGenerator {
 public:
     const uint8_t *jit_ker() const {

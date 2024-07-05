@@ -15,12 +15,14 @@ namespace riscv64 {
 using namespace Xbyak_riscv;
 
 jit_divide_emitter::jit_divide_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                                       ov::intel_cpu::riscv64::cpu_isa_t isa,
                                        const std::shared_ptr<ov::Node>& node)
-                                       : jit_emitter(host, node, get_input_precision(node)) {
+                                       : jit_emitter(host, isa, node, get_input_precision(node)) {
 }
 
 jit_divide_emitter::jit_divide_emitter(ov::intel_cpu::riscv64::jit_generator* host,
-                                       const ov::element::Type exec_prc) : jit_emitter(host, exec_prc) {
+                                       ov::intel_cpu::riscv64::cpu_isa_t isa,
+                                       const ov::element::Type exec_prc) : jit_emitter(host, isa, exec_prc) {
 }
 
 size_t jit_divide_emitter::get_inputs_count() const { return 2; }

@@ -15,8 +15,9 @@ namespace riscv64 {
 using namespace Xbyak_riscv;
 
 jit_power_static_emitter::jit_power_static_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                                                   ov::intel_cpu::riscv64::cpu_isa_t isa,
                                                    const std::shared_ptr<ov::Node>& node)
-                                                   : jit_emitter(host, node, get_input_precision(node)) {
+                                                   : jit_emitter(host, isa, node, get_input_precision(node)) {
     auto powerStaticNode = ov::as_type_ptr<ov::snippets::op::PowerStatic>(node);
     if (powerStaticNode == nullptr) {
         OV_CPU_JIT_EMITTER_THROW("Can't cast to snippets::op::PowerStatic");
@@ -28,11 +29,12 @@ jit_power_static_emitter::jit_power_static_emitter(ov::intel_cpu::riscv64::jit_g
 }
 
 jit_power_static_emitter::jit_power_static_emitter(ov::intel_cpu::riscv64::jit_generator* host,
+                                                   ov::intel_cpu::riscv64::cpu_isa_t isa,
                                                    const float power,
                                                    const float scale,
                                                    const float shift,
                                                    const ov::element::Type exec_prc)
-                                                   : jit_emitter(host, exec_prc),
+                                                   : jit_emitter(host, isa, exec_prc),
                                                      power(power),
                                                      scale(scale),
                                                      shift(shift) {

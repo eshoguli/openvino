@@ -272,6 +272,7 @@ void jit_uni_eltwise_generic::generate() {
 struct EltwiseEmitterContext {
     std::shared_ptr<jit_emitter> emitter;
     ov::intel_cpu::riscv64::jit_generator *host;
+    ov::intel_cpu::riscv64::cpu_isa_t isa;
     const EltwiseData& opData;
     ov::element::Type exec_prc;
 };
@@ -279,7 +280,7 @@ struct EltwiseEmitterContext {
 template<typename T>
 struct EltwiseEmitter {
     void operator()(EltwiseEmitterContext& ctx) {
-        ctx.emitter = std::make_shared<T>(ctx.host, ctx.exec_prc);
+        ctx.emitter = std::make_shared<T>(ctx.host, ctx.isa, ctx.exec_prc);
     }
 };
 
@@ -287,6 +288,7 @@ template<>
 struct EltwiseEmitter<jit_power_static_emitter> {
     void operator()(EltwiseEmitterContext& ctx) {
         ctx.emitter = std::make_shared<jit_power_static_emitter>(ctx.host,
+                                                                 ctx.isa,
                                                                  ctx.opData.alpha,
                                                                  ctx.opData.beta,
                                                                  ctx.opData.gamma,
@@ -298,6 +300,7 @@ std::shared_ptr<jit_emitter> jit_uni_eltwise_generic::create_eltwise_emitter(con
     EltwiseEmitterContext ctx = {
         nullptr,
         this,
+        ov::intel_cpu::riscv64::asimd,
         data,
         exec_prec
     };
