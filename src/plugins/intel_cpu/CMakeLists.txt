@@ -154,7 +154,9 @@ if(NOT AARCH64)
 endif()
 
 if(NOT RISCV64)
-    list(APPEND EXCLUDE_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/src/emitters/plugin/riscv64/*
+    list(APPEND EXCLUDE_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/src/transformations/snippets/riscv64/*
+                              ${CMAKE_CURRENT_SOURCE_DIR}/src/emitters/snippets/riscv64/*
+                              ${CMAKE_CURRENT_SOURCE_DIR}/src/emitters/plugin/riscv64/*
                               ${CMAKE_CURRENT_SOURCE_DIR}/src/nodes/executors/riscv64/*
                               ${CMAKE_CURRENT_SOURCE_DIR}/src/nodes/kernels/riscv64/*)
 endif()
