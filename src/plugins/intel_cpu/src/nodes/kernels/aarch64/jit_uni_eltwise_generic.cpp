@@ -542,82 +542,66 @@ void jit_uni_eltwise_generic<isa>::store_vector(const XReg& ptr,
                                                 const ov::element::Type& src_prc,
                                                 const ov::element::Type& dst_prc,
                                                 const int32_t ptr_offset) {
-    if (src_prc != dst_prc) {
-        switch (src_prc) {
-            case ov::element::f32: {
-                switch (dst_prc) {
-                    case ov::element::f16: {
-                        fcvtn(data.h4, data.s4);
-                        break;
-                    }
-                    case ov::element::i32: {
-                        fcvtns(data.s, data.s);
-                        break;
-                    }
-                    case ov::element::i8: {
-                        fcvtms(data.s, data.s);
-                        xtn(data.h4, data.s4);
-                        xtn(data.b8, data.h8);
-                        break;
-                    }
-                    case ov::element::u8: {
-                        fcvtmu(data.s, data.s);
-                        xtn(data.h4, data.s4);
-                        xtn(data.b8, data.h8);
-                        break;
-                    }
-                    default: {
-                        OPENVINO_THROW("dst_prc " + dst_prc.to_string() + " is not supported, src_prc is " + src_prc.to_string());
-                    }
-                }
-                break;
-            }
-            case ov::element::f16: {
-                switch (dst_prc) {
-                    case ov::element::i8: {
-                        fcvtms(data.h, data.h);
-                        xtn(data.b8, data.h8);
-                        break;
-                    }
-                    case ov::element::u8: {
-                        fcvtmu(data.h, data.h);
-                        xtn(data.b8, data.h8);
-                        break;
-                    }
-                    default: {
-                        OPENVINO_THROW("dst_prc " + dst_prc.to_string() + " is not supported, src_prc is " + src_prc.to_string());
-                    }
-                }
-                break;
-            }
-            default: {
-                OPENVINO_THROW("src_prc " + src_prc.to_string() + " is not supported, dst_prc is " + dst_prc.to_string());
-            }
-        }
-    }
-
     if (src_prc == dst_prc) {
         str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
         return;
     }
 
-    switch (dst_prc) {
+    switch (src_prc) {
+        case ov::element::f32: {
+            switch (dst_prc) {
+                case ov::element::f16: {
+                    fcvtn(data.h4, data.s4);
+                    str(Xbyak_aarch64::DReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+                    break;
+                }
+                case ov::element::i32: {
+                    fcvtns(data.s, data.s);
+                    str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+                    break;
+                }
+                case ov::element::i8: {
+                    fcvtms(data.s, data.s);
+                    xtn(data.h4, data.s4);
+                    xtn(data.b8, data.h8);
+                    str(Xbyak_aarch64::SReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+                    break;
+                }
+                case ov::element::u8: {
+                    fcvtmu(data.s, data.s);
+                    xtn(data.h4, data.s4);
+                    xtn(data.b8, data.h8);
+                    str(Xbyak_aarch64::SReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+                    break;
+                }
+                default: {
+                    OPENVINO_THROW("dst_prc " + dst_prc.to_string() + " is not supported, src_prc is " + src_prc.to_string());
+                }
+            }
+            break;
+        }
         case ov::element::f16: {
-            str(Xbyak_aarch64::DReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
-            break;
-        }
-        case ov::element::f32:
-        case ov::element::i32: {
-            str(Xbyak_aarch64::QReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
-            break;
-        }
-        case ov::element::i8:
-        case ov::element::u8: {
-            str(Xbyak_aarch64::SReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+            switch (dst_prc) {
+                case ov::element::i8: {
+                    fcvtms(data.h, data.h);
+                    xtn(data.b8, data.h8);
+                    str(Xbyak_aarch64::DReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+                    break;
+                }
+                case ov::element::u8: {
+                    fcvtmu(data.h, data.h);
+                    xtn(data.b8, data.h8);
+                    str(Xbyak_aarch64::DReg(data.getIdx()), Xbyak_aarch64::ptr(ptr, ptr_offset));
+                    break;
+                }
+                default: {
+                    OPENVINO_THROW("dst_prc " + dst_prc.to_string() + " is not supported, src_prc is " + src_prc.to_string());
+                }
+            }
             break;
         }
         default: {
-            OPENVINO_THROW("dst_prc " + dst_prc.to_string() + " is not supported, src_ptr is " + src_prc.to_string());
+            OPENVINO_THROW("src_prc " + src_prc.to_string() + " is not supported, dst_prc is " + dst_prc.to_string());
         }
     }
 }
