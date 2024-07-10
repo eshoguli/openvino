@@ -49,6 +49,23 @@ uint32_t float2int(const float value, const ov::element::Type& type = ov::elemen
         OV_CPU_JIT_EMITTER_ASSERT(false, "unsupported precision: " + type.to_string());
     }
 }
+
+uint32_t infinity2int(const ov::element::Type& type, const bool negative) {
+    if (type == ov::element::f16) {
+        float16 value;
+        if (negative) {
+            value = -std::numeric_limits<float16>::infinity();
+        } else {
+            value = std::numeric_limits<float16>::infinity();
+        }
+        return dnnl::impl::utils::bit_cast<int16_t, float16>(value);
+    } else if (type == ov::element::f32) {
+        const float value = negative ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
+        return dnnl::impl::utils::bit_cast<uint32_t, float>(value);
+    } else {
+        OV_CPU_JIT_EMITTER_ASSERT(false, "unsupported precision: " + type.to_string());
+    }
+}
 } // namespace
 
 /// ABS ///
@@ -826,24 +843,16 @@ size_t jit_is_inf_emitter::get_aux_gprs_count() const {
 
 std::set<std::vector<element::Type>> jit_is_inf_emitter::get_supported_precisions(
     const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32}};
+    return {{element::f16}, {element::f32}};
 }
 
-void jit_is_inf_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs,
-                                   const std::vector<size_t>& out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
-        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
-    } else {
-        OV_CPU_JIT_EMITTER_THROW("Can't create jit eltwise kernel");
-    }
-}
-
-template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
 void jit_is_inf_emitter::emit_isa(const std::vector<size_t>& in_vec_idxs,
                                   const std::vector<size_t>& out_vec_idxs) const {
-    OV_CPU_JIT_EMITTER_ASSERT(exec_prc_ == ov::element::f32, "unsupported precision: " + exec_prc_.to_string());
+    OV_CPU_JIT_EMITTER_ASSERT_FP16_FP32(exec_prc_);
 
-    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    using TReg = typename cpu_isa_vector_traits<isa, type>::TReg;
+    using BReg = typename cpu_isa_vector_traits<isa, type>::BReg;
     const TReg src = TReg(in_vec_idxs[0]);
     const TReg dst = TReg(out_vec_idxs[0]);
     const TReg aux = TReg(aux_vec_idxs[0]);
@@ -853,32 +862,31 @@ void jit_is_inf_emitter::emit_isa(const std::vector<size_t>& in_vec_idxs,
             if (detect_negative) {
                 // If both positive and negative infinity detection is requested
                 // calculate the absolute value of 'src'.
-                h->fabs(src.s, src.s);
+                h->fabs(src, src);
             }
             // Load 'aux' with positive infinity.
-            h->ld1r(aux.s, table_val2("inf"));
+            h->ld1r(aux, table_val2("inf"));
         } else if (detect_negative) {
             // Load 'aux' with negative infinity.
-            h->ld1r(aux.s, table_val2("inf_neg"));
+            h->ld1r(aux, table_val2("inf_neg"));
         }
         // Compare elements of 'src' with 'aux'.
-        h->fcmeq(dst.s, src.s, aux.s);
+        h->fcmeq(dst, src, aux);
         // Sets elements in 'dst' to 1.0 where the comparison was true.
-        h->ld1r(aux.s, table_val2("one"));
-        h->and_(dst.b16, dst.b16, aux.b16);
+        h->ld1r(aux, table_val2("one"));
+        h->and_(BReg(dst.getIdx()), BReg(dst.getIdx()), BReg(aux.getIdx()));
 
     } else {
         // If neither positive nor negative infinity detection is enabled,
         // set 'dst' with zeros (a eor a is 0)
-        h->eor(dst.b16, dst.b16, dst.b16);
+        h->eor(BReg(dst.getIdx()), BReg(dst.getIdx()), BReg(dst.getIdx()));
     }
 }
 
 void jit_is_inf_emitter::register_table_entries() {
-    // Registers constant values that comply with the IEEE 754 standard.
-    push_arg_entry_of("one", 0x3F800000, true, exec_prc_);
-    push_arg_entry_of("inf", 0x7F800000, true, exec_prc_);
-    push_arg_entry_of("inf_neg", 0xFF800000, true, exec_prc_);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("inf", infinity2int(exec_prc_, false), true, exec_prc_);
+    push_arg_entry_of("inf_neg", infinity2int(exec_prc_, true), true, exec_prc_);
 }
 
 /// IS_NAN ///
@@ -908,40 +916,32 @@ size_t jit_is_nan_emitter::get_aux_vecs_count() const { return 1; }
 size_t jit_is_nan_emitter::get_aux_gprs_count() const { return 1; }
 
 std::set<std::vector<element::Type>> jit_is_nan_emitter::get_supported_precisions(const std::shared_ptr<ov::Node>& node) {
-    return {{element::f32}};
+    return {{element::f16}, {element::f32}};
 }
 
-void jit_is_nan_emitter::emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const {
-    if (host_isa_ == dnnl::impl::cpu::aarch64::asimd) {
-        emit_isa<dnnl::impl::cpu::aarch64::asimd>(in_vec_idxs, out_vec_idxs);
-    } else {
-        OV_CPU_JIT_EMITTER_THROW("Can't create jit eltwise kernel");
-    }
-}
-
-template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
 void jit_is_nan_emitter::emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const {
-    OV_CPU_JIT_EMITTER_ASSERT(exec_prc_ == ov::element::f32, "unsupported precision: " + exec_prc_.to_string());
+    OV_CPU_JIT_EMITTER_ASSERT_FP16_FP32(exec_prc_);
 
-    using TReg = typename dnnl::impl::cpu::aarch64::cpu_isa_traits<isa>::TReg;
+    using TReg = typename cpu_isa_vector_traits<isa, type>::TReg;
+    using BReg = typename cpu_isa_vector_traits<isa, type>::BReg;
 
     TReg src = TReg(in_vec_idxs[0]);
     TReg dst = TReg(out_vec_idxs[0]);
     TReg aux = TReg(aux_vec_idxs[0]);
 
     // According to the IEEE standard, NaN values have the odd property that comparisons involving them are always false.
-    h->fcmeq(dst.s, src.s, src.s);
-    h->ld1r(aux.s, table_val2("zero"));
-    h->fcmeq(dst.s, dst.s, aux.s);
+    h->fcmeq(dst, src, src);
+    h->not_(BReg(dst.getIdx()), BReg(dst.getIdx()));
     // Sets elements in 'dst' to 1.0 where the comparison was true.
-    h->ld1r(aux.s, table_val2("one"));
-    h->and_(dst.b16, dst.b16, aux.b16);
+    h->ld1r(aux, table_val2("one"));
+    h->and_(BReg(dst.getIdx()), BReg(dst.getIdx()), BReg(aux.getIdx()));
 }
 
 void jit_is_nan_emitter::register_table_entries() {
     // Registers constant values that comply with the IEEE 754 standard.
-    push_arg_entry_of("one", 0x3f800000, true, exec_prc_);
-    push_arg_entry_of("zero", 0x00000000, true, exec_prc_);
+    push_arg_entry_of("one", float2int(1.f, exec_prc_), true, exec_prc_);
+    push_arg_entry_of("zero", float2int(0.f, exec_prc_), true, exec_prc_);
 }
 
 /// MAX ///

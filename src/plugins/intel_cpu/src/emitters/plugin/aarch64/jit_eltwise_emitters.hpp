@@ -356,9 +356,9 @@ public:
     static std::set<std::vector<element::Type>> get_supported_precisions(const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    void emit_impl(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const override;
+    EMIT_IMPL()
 
-    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t> &in_vec_idxs, const std::vector<size_t> &out_vec_idxs) const;
 
     void register_table_entries() override;
@@ -459,9 +459,9 @@ public:
         const std::shared_ptr<ov::Node>& node = nullptr);
 
 private:
-    void emit_impl(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const override;
+    EMIT_IMPL()
 
-    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa>
+    template <dnnl::impl::cpu::aarch64::cpu_isa_t isa, typename type>
     void emit_isa(const std::vector<size_t>& in_vec_idxs, const std::vector<size_t>& out_vec_idxs) const;
 
     void register_table_entries() override;
