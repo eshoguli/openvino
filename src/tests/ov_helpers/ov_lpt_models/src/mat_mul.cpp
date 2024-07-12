@@ -106,21 +106,30 @@ std::shared_ptr<ov::Model> MatMulFunction::getOriginal(
     const ov::Shape& inputShape1,
     const FakeQuantizeOnData& fqOnData1,
     const ov::Shape& inputShape2,
-    const FakeQuantizeOnData& fqOnData2) {
+    const FakeQuantizeOnData& fqOnData2,
+    const bool requantization) {
     const std::shared_ptr<ov::opset1::Parameter> input1 = std::make_shared<ov::opset1::Parameter>(precision, inputShape1);
     input1->set_friendly_name("input1");
 
     const std::shared_ptr<ov::opset1::Parameter> input2 = std::make_shared<ov::opset1::Parameter>(precision, inputShape2);
     input2->set_friendly_name("input2");
 
-    const std::shared_ptr<ov::opset1::MatMul> matMul = std::make_shared<ov::opset1::MatMul>(
+    std::shared_ptr<Node> parent = std::make_shared<ov::opset1::MatMul>(
         makeFakeQuantize(input1, precision, fqOnData1),
         makeFakeQuantize(input2, precision, fqOnData2),
         false,
         false);
-    matMul->set_friendly_name("matMul");
+    parent->set_friendly_name("matMul");
 
-    std::shared_ptr<ov::opset1::Result> result = std::make_shared<ov::opset1::Result>(matMul);
+    if (requantization) {
+        parent = makeFakeQuantize(parent, precision, fqOnData1);
+        parent = std::make_shared<ov::opset1::PRelu>(
+                parent,
+                std::make_shared<ov::opset1::Constant>(ov::element::f32, Shape{1}, std::vector<float>{0.f}));
+        parent->set_friendly_name("prelu");
+    }
+
+    std::shared_ptr<ov::opset1::Result> result = std::make_shared<ov::opset1::Result>(parent);
 
     std::shared_ptr<ov::Model> function = std::make_shared<ov::Model>(
         ov::ResultVector{ result },

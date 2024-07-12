@@ -36,7 +36,8 @@ public:
         const ov::Shape& inputShape1,
         const FakeQuantizeOnData& fqOnData1,
         const ov::Shape& inputShape2,
-        const FakeQuantizeOnData& fqOnData2);
+        const FakeQuantizeOnData& fqOnData2,
+        const bool requantization = false);
 
     static std::shared_ptr<ov::Model> getOriginal(const ov::element::Type netPrecision,
                                                   const ov::PartialShape& inputShape1,

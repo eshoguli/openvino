@@ -72,48 +72,6 @@ bool isFullyConnected(const std::shared_ptr<const ov::Node>& node) {
            ov::op::util::is_on_constant_path(out_weights);
 }
 
-// TODO: move to base type
-bool canBePerformedAsScaleShift(const std::shared_ptr<const Node> &node, const int channelAxis) {
-    size_t fusingPort = 0;
-    size_t numNonConstInputs = 0;
-    ov::PartialShape dataShape;
-    for (size_t i = 0; i < node->get_input_size(); i++) {
-        const auto parent = node->get_input_node_shared_ptr(i);
-        if (!ov::is_type<ov::op::v0::Constant>(parent)) {
-            fusingPort = i;
-            dataShape = node->get_input_partial_shape(i);
-            // only one non-const parent is allowed
-            if (++numNonConstInputs != 1)
-                return false;
-        } else {
-            // every const parent must have exactly one child
-            const auto out = parent->outputs();
-            const bool has_only_child = (out.size() == 1) && (out[0].get_target_inputs().size() == 1);
-            if (!has_only_child)
-                return false;
-        }
-    }
-
-    const auto isBroadcastableToDataInput = [&]() {
-        for (size_t i = 0; i < node->get_input_size(); i++) {
-            if (i == fusingPort)
-                continue;
-            const ov::PartialShape weightShape = node->get_input_partial_shape(i);
-            if (!isPerTensorOrPerChannelBroadcastable(dataShape.get_max_shape(), weightShape.get_max_shape(), channelAxis, true))
-                return false;
-        }
-        return true;
-    };
-
-    // Prelu and MulAdd are still ignored
-    // isConvertablePowerStatic() is ignored
-    return (ov::is_type<ov::opset1::Add>(node) ||
-            ov::is_type<ov::opset1::Multiply>(node) ||
-            ov::is_type<ov::opset1::Subtract>(node) ||
-            ov::is_type<ov::opset1::Divide>(node)) &&
-           isBroadcastableToDataInput();
-}
-
 bool SupportsFusingWithConvolution_Simple(const std::shared_ptr<const Node> &node, const int channelAxis = DEFAULT_AXIS) {
     // Note: some other operations support this fusing (SoftPlus, Sqrt).
     // Skip them here, when they are supported by Snippets ARM. Ticket: 141170.
@@ -122,8 +80,7 @@ bool SupportsFusingWithConvolution_Simple(const std::shared_ptr<const Node> &nod
            ov::is_type<ov::op::v0::Elu>(node) ||
            ov::is_type<ov::op::v0::Relu>(node) ||
            ov::is_type<ov::op::v0::Sigmoid>(node) ||
-           ov::is_type<ov::op::v0::Tanh>(node) ||
-           canBePerformedAsScaleShift(node, channelAxis);
+           ov::is_type<ov::op::v0::Tanh>(node);
 }
 // Convolution is a special case, since it supports peculiar fusings
 bool isSuitableConvolutionParent(const std::shared_ptr<const Node> &node) {

@@ -77,27 +77,23 @@ void ACLFullyConnectedExecutor::updateTensorsShapes(ACLMemoryShapes& aclMemorySh
 }
 
 arm_compute::Status ACLFullyConnectedExecutor::validateTensorsInfo(const ACLMemoryInfo & aclMemoryInfos) {
-    return arm_compute::NEFullyConnectedLayer::validate(
+    const auto res =  arm_compute::NEFullyConnectedLayer::validate(
             aclMemoryInfos[ACLArgs::ACL_SRC_0].get(),
             aclMemoryInfos[ACLArgs::ACL_WEI].get(),
             aclMemoryInfos[ACLArgs::ACL_BIAS].get(),
             aclMemoryInfos[ACLArgs::ACL_DST].get(),
             fullyConnectedLayerInfo,
             weightsInfo);
+    return res;
 }
 
 ACLFunction ACLFullyConnectedExecutor::configureFunction(const ACLMemoryTensors & aclMemoryTensors) {
-    const auto dstTensor = aclMemoryTensors.at(ACLArgs::ACL_DST).get();
-    if (dequantizationScale != 1.0) {
-        dstTensor->info()->set_quantization_info(arm_compute::QuantizationInfo(dequantizationScale, 0));
-    }
-
     auto neFC = std::make_unique<arm_compute::NEFullyConnectedLayer>();
     neFC->configure(
             aclMemoryTensors[ACLArgs::ACL_SRC_0].get(),
             aclMemoryTensors[ACLArgs::ACL_WEI].get(),
             aclMemoryTensors[ACLArgs::ACL_BIAS].get(),
-            dstTensor,
+            aclMemoryTensors[ACLArgs::ACL_DST].get(),
             fullyConnectedLayerInfo,
             weightsInfo);
     return neFC;
