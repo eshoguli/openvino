@@ -42,6 +42,7 @@ static const MappingNotation dnnlFCMappingNotation{ARG_SRC, ARG_WEI, ARG_BIAS, A
 using LayoutConfig = std::vector<LayoutType>;
 static const LayoutConfig dnnlFCLayoutConfig{LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp};
 static const LayoutConfig aclFCLayoutConfig{LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp};
+static const LayoutConfig aclMatMulLayoutConfig{LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp, LayoutType::ncsp};
 
 template<dnnl::impl::cpu::x64::cpu_isa_t ISA>
 struct Require {
@@ -81,11 +82,22 @@ static const TypeMapping aclFCTypeMapping {
     {{_any, _any, _any, _any},        pt(just<f32>(), just<f32>(), just<f32>(), just<f32>())}
 };
 
+static const TypeMapping aclMatMulTypeMapping {
+    // {src, wei, bia, dst}              pt<src, wei, bias, dst>
+    {{_i8, _i8, _any, _any},          pt(just<i8>(), just<i8>(), just<i32>(), just<i32>())},
+    {{_u8, _u8, _any, _any},          pt(just<u8>(), just<u8>(), just<i32>(), just<i32>())},
+    {{_any, _any, _any, _any},        pt(just<f32>(), just<f32>(), just<f32>(), just<f32>())}
+};
+
 static const MappingNotation dnnlConvolutionMappingNotation {
     ARG_SRC, ARG_WEI, ARG_BIAS, ARG_DST
 };
 
 static const MappingNotation aclFullyConnectedMappingNotation {
+    ARG_SRC, ARG_WEI, ARG_BIAS, ARG_DST
+};
+
+static const MappingNotation aclMatMulMappingNotation {
     ARG_SRC, ARG_WEI, ARG_BIAS, ARG_DST
 };
 
@@ -315,6 +327,36 @@ const std::vector<ExecutorImplementation<FCAttrs>>& getImplementations() {
                     memory,
                     context,
                     false);
+            })
+        OV_CPU_INSTANCE_ACL(
+            "fullyconnected_acl",
+            ExecutorType::Acl,
+            OperationType::MatMul,
+            ShapeTolerance::Agnostic,
+            // supports
+            [](const FCConfig& config) -> bool {
+                VERIFY(noSparseDecompression(config), UNSUPPORTED_SPARSE_WEIGHTS);
+                VERIFY(noWeightsDecompression(config), UNSUPPORTED_WEIGHTS_DECOMPRESSION);
+                return ACLFullyConnectedExecutor::supports(config);
+            },
+            // requiresFallback
+            [](const FCConfig& config) -> ov::optional<executor::Config<FCAttrs>> {
+                return requiresFallbackCommon(config,
+                                              aclMatMulTypeMapping,
+                                              aclMatMulLayoutConfig,
+                                              aclMatMulMappingNotation);
+            },
+            // acceptsShapes
+            [](const MemoryArgs& memory) -> bool {
+                // @todo create syntactic sugar (functor) for shape agnostic lambda
+                return true;
+            },
+            // create
+            [](const FCAttrs& attrs,
+               const PostOps& postOps,
+               const MemoryArgs& memory,
+               const ExecutorContext::CPtr context) {
+                return std::make_shared<ACLFullyConnectedExecutor>(attrs, postOps, memory, context);
             })
         OV_CPU_INSTANCE_ACL(
             "fullyconnected_acl",
