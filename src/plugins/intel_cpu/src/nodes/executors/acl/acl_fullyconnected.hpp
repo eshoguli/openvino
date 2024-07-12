@@ -36,6 +36,7 @@ protected:
 
 private:
     arm_compute::FullyConnectedLayerInfo fullyConnectedLayerInfo;
+    arm_compute::GEMMInfo gemmInfo;
     arm_compute::WeightsInfo weightsInfo;
     float dequantizationScale = 1.f;
 };

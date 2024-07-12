@@ -17,7 +17,8 @@ struct FCAttrs {
     // @todo probably we don't want with bias flag, since this information is already
     // a part of src memory descs
     bool withBias = false;
-    bool weightsNonTransposed = false;
+    // TODO: why default is false???
+    bool weightsNonTransposed = true;
     bool sparseWeights = false;
     // @todo only memory descriptors should be a part of attributes
     // actual memory should be passed into "execute" or "prepareMemory" calls

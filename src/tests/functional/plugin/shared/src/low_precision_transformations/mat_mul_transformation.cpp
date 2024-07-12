@@ -52,6 +52,8 @@ void MatMulTransformation::SetUp() {
         testValues.fqOnData2);
 
     ov::pass::InitNodeInfo().run_on_model(function);
+
+    ov::pass::Serialize("/Users/eshoguli/projects/openvino/test.original.xml", "/Users/eshoguli/projects/openvino/test.original.bin").run_on_model(function);
 }
 
 void MatMulTransformation::run() {
