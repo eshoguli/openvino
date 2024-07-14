@@ -37,7 +37,7 @@ enum cpu_isa_t : unsigned {
     const char *name() const override { return STRINGIFY(gen_name); } \
     const char *source_file() const override { return __FILE__; }     \
     static const char *jit_name() { \
-        static constexpr char ret[] = "/oneDNN:" STRINGIFY(gen_name); \
+        static constexpr char ret[] = "/OpenVINO:" STRINGIFY(gen_name); \
         return ret; \
     }
 

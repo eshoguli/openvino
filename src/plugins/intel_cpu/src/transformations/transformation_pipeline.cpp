@@ -112,6 +112,10 @@
 #include "transformations/cpu_opset/convert_to_cpu_specific_opset.hpp"
 #if defined(OPENVINO_ARCH_ARM64)
 #include "transformations/snippets/aarch64/pass/snippets_mark_skipped.hpp"
+#elif defined(OPENVINO_ARCH_RISCV64)
+#include "transformations/snippets/riscv64/pass/snippets_mark_skipped.hpp"
+//#include "src/plugins/intel_cpu/src/emitters/plugin/riscv64/jit_generator.hpp"
+#include "emitters/plugin/riscv64/jit_generator.hpp"
 #else
 #include "transformations/snippets/x64/pass/snippets_mark_skipped.hpp"
 #endif
@@ -833,6 +837,9 @@ void Transformations::MainSnippets(void) {
         return dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx2);
 #elif defined(OPENVINO_ARCH_ARM64)
         return dnnl::impl::cpu::aarch64::mayiuse(dnnl::impl::cpu::aarch64::asimd);
+#elif defined(OPENVINO_ARCH_RISCV64)
+        //return ov::intel_cpu::riscv64::mayiuse(ov::intel_cpu::riscv64::asimd);
+        return true;
 #endif
         return false;
     };
