@@ -634,6 +634,9 @@ public:
         return keepOriginalPrecision;
     }
 
+    std::vector<Shape> inputShapes;
+    std::vector<Shape> outputShapes;
+
 protected:
     bool canFuseSimpleOperation(const NodePtr& node) const;
 
@@ -651,9 +654,6 @@ protected:
     typedef std::function<DnnlMemoryDescPtr (dnnl::primitive_desc& primitive_desc_it, size_t idx)>
             GetPrimitiveMemoryFormatFunc;
     std::vector<GetPrimitiveMemoryFormatFunc> internalBlobDesc;
-
-    std::vector<Shape> inputShapes;
-    std::vector<Shape> outputShapes;
 
     std::vector <NodePtr> fusedWith;
     std::vector <NodePtr> mergedWith;

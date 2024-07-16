@@ -59,6 +59,29 @@ namespace intel_cpu {
 typedef std::unordered_set<EdgePtr> edge_cluster_t;
 typedef std::vector<edge_cluster_t> edge_clusters_t;
 
+void logNode(const NodePtr& node) {
+    std::cout << NameFromType(node->getType()) << ":" << node->getName() << std::endl;
+        for (auto i = 0; i < node->inputShapes.size(); ++i) {
+        const auto& shape = node->inputShapes[i];
+        const auto& type = node->getOriginalInputPrecisionAtPort(i);
+        std::cout << "input " << i << ": " << type << " " << shape << std::endl;
+    }
+    for (auto i = 0; i < node->outputShapes.size(); ++i) {
+        const auto& shape = node->outputShapes[i];
+        const auto& type = node->getOriginalOutputPrecisionAtPort(i);
+        std::cout << "output " << i << ": " << type << " " << shape << std::endl;
+    }
+}
+
+void logNodes(const std::vector<NodePtr>& nodes) {
+    std::cout << "nodes:" << std::endl;
+    for (auto &node : nodes) {
+        logNode(node);
+        std::cout << std::endl;
+    }
+    std::cout << std::endl << std::endl;
+}
+
 Graph::~Graph() {
     CPU_DEBUG_CAP_ENABLE(summary_perf(*this));
 }
@@ -322,13 +345,16 @@ static std::tuple<std::vector<NodePtr>, std::vector<size_t>> ExtractExecutableNo
 
 void Graph::InitGraph(bool optimize) {
     DEBUG_LOG("Initializing graph with name: ",  GetName());
-
     GraphOptimizer optimizer;
 
     SortTopologically();
     InitNodes();
 
+    logNodes(graphNodes);
+
     optimizer.ApplyCommonGraphOptimizations(*this);
+
+    logNodes(graphNodes);
 
     SortTopologically();
 
@@ -338,6 +364,7 @@ void Graph::InitGraph(bool optimize) {
 
     InitOptimalPrimitiveDescriptors();
 
+    // TODO: we add Reorders here
     ResolveEdgeConflicts();
 
     optimizer.ShareReorders(*this);
@@ -356,7 +383,11 @@ void Graph::InitGraph(bool optimize) {
 
     Allocate(syncNodesInds);
 
+    //logNodes(graphNodes);
+
     CreatePrimitivesAndExecConstants();
+
+    //logNodes(graphNodes);
 
 #ifndef CPU_DEBUG_CAPS
     for (auto &graphNode : graphNodes) {

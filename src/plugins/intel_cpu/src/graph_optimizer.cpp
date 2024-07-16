@@ -8,6 +8,7 @@
 #include "nodes/bin_conv.h"
 #include "nodes/common/cpu_convert.h"
 #include "nodes/conv.h"
+#include "nodes/convert.h"
 #include "nodes/deconv.h"
 #include "nodes/eltwise.h"
 #include "nodes/fake_quantize.h"
@@ -63,8 +64,13 @@ void GraphOptimizer::ApplyCommonGraphOptimizations(Graph &graph) {
     FuseConvolutionAndZeroPoints(graph);
     graph.RemoveDroppedNodes();
 
+#ifdef OPENVINO_ARCH_ARM64
+    OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "DecomposeMatMul");
+    DecomposeMatMul(graph);
+#else
     OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "FuseConvMatmulFCDeconvAndDQScales");
     FuseConvMatmulFCDeconvAndDQScales(graph);
+#endif
     graph.RemoveDroppedNodes();
 
     OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "FuseFCAndWeightsDecompression");
@@ -79,6 +85,7 @@ void GraphOptimizer::ApplyCommonGraphOptimizations(Graph &graph) {
     FuseMultiplyAndAdd(graph);
     graph.RemoveDroppedNodes();
 
+    // TODO: we remove Convert here
     OV_ITT_SCOPE_NEXT(FIRST_INFERENCE, taskChain, "MergeConvertAndScaleShift");
     MergeConvertAndScaleShift(graph);
     graph.RemoveDroppedNodes();
@@ -285,6 +292,61 @@ void GraphOptimizer::FuseConvMatmulFCDeconvAndDQScales(Graph &graph) {
             graph.RemoveEdge(p_edge);
             graph.DropNode(mul);
         }
+    }
+}
+
+void GraphOptimizer::DecomposeMatMul(Graph &graph) {
+    auto& graphNodes = graph.GetNodes();
+
+    auto isQuantized = [](const NodePtr node) {
+        const auto& inputPrecisions = node->getOriginalInputPrecisions();
+        if ((inputPrecisions.size() != 2) && (inputPrecisions.size() != 3)) {
+            return false;
+        }
+
+        const auto& outputPrecisions = node->getOriginalOutputPrecisions();
+        if (outputPrecisions.size() != 1) {
+            return false;
+        }
+
+        return ((inputPrecisions[0] == element::i8) || (inputPrecisions[0] == element::u8)) &&
+               (inputPrecisions[1] == element::i8) &&
+               (outputPrecisions[0] == element::f32);
+    };
+
+    for (size_t i = 0; i < graphNodes.size(); i++) {
+        const auto node = graphNodes[i];
+        //std::cout << NameFromType(node->getType()) << std::endl;
+        if (node->getType() != Type::MatMul) {
+            continue;
+        }
+
+        if (!isQuantized(node)) {
+            continue;
+        }
+
+        CPU_GRAPH_OPTIMIZER_SCOPE(DecomposeMatMul);
+        DEBUG_LOG("GraphOptimizer##DecomposeMatMul: Node ##", node->getName());
+
+        const auto& shape =  node->getOutputShapeAtPort(0);
+        std::string convertName = node->getName() + "_i32_f32";
+        auto convertNode = std::make_shared<node::Convert>(
+                shape,
+                element::i32,
+                element::f32,
+                convertName,
+                graph.getGraphContext());
+
+        const auto& child = node->getChildEdgeAt(0)->getChild();
+
+        const auto& parentOutputEdge = node->getChildEdgeAt(0);
+        const auto& childInputEdge = child->getParentEdgeAt(0);
+        graph.RemoveEdge(parentOutputEdge);
+        graph.RemoveEdge(childInputEdge);
+
+        graph.InsertNode(node, child, convertNode, 0, 0);
+
+        node->setOriginalOutputPrecisionAtPort(0, ov::element::i32);
     }
 }
 
