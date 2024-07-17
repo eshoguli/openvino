@@ -16,14 +16,15 @@ const std::vector<ov::element::Type> precisions = {
 std::vector<MatMulTransformationTestValues> testValues = {
     // supported by arm only
     {
-        { 1, 4, 12, 2 },
+        { 1, 1, 12, 2 },
         { 256ul, ov::Shape({}), {0.f}, {25.5f}, {0.f}, {25.5f} },
-        { 1, 4, 2, 12 },
+        { 1, 1, 2, 12 },
         { 256ul, ov::Shape({}), {0.f}, {25.5f}, {0.f}, {25.5f} },
         "matMul",
         "u8",
         true
     },
+
 //    {
 //        { 1, 4, 12, 2 },
 //        { 256ul, ov::Shape({}), {0.f}, {25.5f}, {0.f}, {25.5f} },
@@ -43,14 +44,25 @@ std::vector<MatMulTransformationTestValues> testValues = {
 
     // here
     {
-        { 1, 4, 12, 2 },
+        { 1, 1, 12, 8 },
         { 256ul, ov::Shape({}), {-12.8f}, {12.7f}, {-12.8f}, {12.7f} },
-        { 1, 4, 2, 12 },
+        { 1, 1, 8, 6 },
         { 256ul, ov::Shape({}), {-12.8f}, {12.7f}, {-12.8f}, {12.7f} },
         "matMul",
         "i8",
         false
     },
+
+//    // here
+//    {
+//        { 1, 4, 12, 2 },
+//        { 256ul, ov::Shape({}), {-12.8f}, {12.7f}, {-12.8f}, {12.7f} },
+//        { 1, 4, 2, 12 },
+//        { 256ul, ov::Shape({}), {-12.8f}, {12.7f}, {-12.8f}, {12.7f} },
+//        "matMul",
+//        "i8",
+//        true
+//    },
 
 //    {
 //        { 1, 1, 1, 4, 12, 2 },

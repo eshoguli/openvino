@@ -68,7 +68,16 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
     ACLMemoryTypes   aclDataType{};
     ACLMemoryLayouts aclDataLayout{};
     for (auto& cpu_mem_ptr : memory) {
+        // TODO: don't init empty tensor
+        if (cpu_mem_ptr.second->getSize() == 0) {
+            continue;
+        }
         const ACLArgs index = argConvert.at(cpu_mem_ptr.first);
+
+        if (index == ACLArgs::ACL_DST) {
+            std::cout << std::endl;
+        }
+
         initACLTensorParams(cpu_mem_ptr.second, aclTensorAttrs,
                             aclMemoryShapes[index],
                             aclDataType[index],
@@ -81,8 +90,17 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
     // Initialize arm_compute::TensorInfo objects
     ACLMemoryInfo aclMemoryInfos;
     for (int i = 0; i < ACLArgs::COUNT_OF_ARGS; i++) {
+        if (i == ACLArgs::ACL_DST) {
+            std::cout << std::endl;
+        }
         aclMemoryInfos[i] = initTensorInfo(aclMemoryShapes[i], aclDataType[i], aclDataLayout[i]);
     }
+
+    // TOSO: debug only
+    const auto& src1 = aclMemoryInfos[ACLArgs::ACL_SRC_0];
+    const auto& weights = aclMemoryInfos[ACLArgs::ACL_WEI];
+    const auto& dst = aclMemoryInfos[ACLArgs::ACL_DST];
+
 
     // Validate arm_compute::TensorInfo objects for specific ACL function
     auto tensorsInfoValidateStatus = validateTensorsInfo(aclMemoryInfos);
@@ -103,6 +121,35 @@ bool ACLCommonExecutor::update(const MemoryArgs &memory) {
     return true;
 }
 
+namespace {
+std::ostream& operator<<(std::ostream& os, const arm_compute::ITensorInfo* tensor_info) {
+    const auto data_type = tensor_info->data_type();
+    switch (data_type) {
+        case arm_compute::DataType::S8: {
+            return os << "S8";
+        }
+        case arm_compute::DataType::QSYMM8: {
+            return os << "QSYMM8";
+        }
+        case arm_compute::DataType::QASYMM8: {
+            return os << "QASYMM8";
+        }
+        case arm_compute::DataType::QASYMM8_SIGNED: {
+            return os << "QASYMM8_SIGNED";
+        }
+        case arm_compute::DataType::S32: {
+            return os << "S32";
+        }
+        case arm_compute::DataType::F32: {
+            return os << "F32";
+        }
+        default: {
+            return os << "[UNKNOWN]";
+        }
+    }
+}
+} // namespace
+
 void ACLCommonExecutor::execute(const MemoryArgs &memory) {
     for (auto& cpu_mem_ptr : memory) {
         const ACLArgs index = argConvert.at(cpu_mem_ptr.first);
@@ -110,25 +157,28 @@ void ACLCommonExecutor::execute(const MemoryArgs &memory) {
             aclMemoryTensors[index]->allocator()->import_memory(memory.at(cpu_mem_ptr.first)->getData());
         }
     }
+
+    const auto& src1 = aclMemoryTensors[ACLArgs::ACL_SRC_0];
+    const auto& weights = aclMemoryTensors[ACLArgs::ACL_WEI];
+    const auto& src2 = aclMemoryTensors[ACLArgs::ACL_SRC_1];
+    const auto& biases = aclMemoryTensors[ACLArgs::ACL_BIAS];
+    const auto& dst = aclMemoryTensors[ACLArgs::ACL_DST];
+
+    for (const auto& tensor : aclMemoryTensors) {
+        if (tensor == nullptr) {
+            continue;
+        }
+        std::cout << tensor->info() << ":" << std::endl;
+        tensor->print(std::cout);
+    }
+
     iFunction->run();
 
-    // TODO: move to FullyConnected executor
-//    arm_compute::NEGEMMLowpOutputStage gemmlowp_output_stage;
-//    int output_multiplier;
-//    int output_shift;
-//    float multiplier = (src1_qinfo.uniform().scale * src2_qinfo.uniform().scale) / dst0_qinfo.uniform().scale;
-//    arm_compute::quantization::calculate_quantized_multiplier_less_than_one(multiplier, &output_multiplier, &output_shift);
-//    std::cout << "(q_multiplier, q_shift) = (" << output_multiplier << ", " << output_shift << ")\n\n";
-//
-//    arm_compute::GEMMLowpOutputStageInfo info;
-//    info.type = arm_compute::GEMMLowpOutputStageType::QUANTIZE_DOWN_FIXEDPOINT;
-//    info.gemmlowp_multiplier = output_multiplier;
-//    info.gemmlowp_shift = output_shift;
-//    info.gemmlowp_offset = dst0_qinfo.uniform().offset;
-//    info.output_data_type = arm_compute::DataType::QASYMM8;
-//    q_res_output.info()->set_data_type(arm_compute::DataType::QASYMM8);
-//    q_res_output.info()->set_num_channels(1);
-//    gemmlowp_output_stage.configure(&q_res, nullptr, &q_res_output, info);
+    {
+        const auto& tensor = aclMemoryTensors[ACLArgs::ACL_DST];
+        std::cout << tensor->info() << ":" << std::endl;
+        tensor->print(std::cout);
+    }
 }
 
 ACLCommonExecutor::~ACLCommonExecutor() {

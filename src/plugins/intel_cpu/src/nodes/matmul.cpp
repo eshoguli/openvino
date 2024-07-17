@@ -480,6 +480,7 @@ void MatMul::initSupportedPrimitiveDescriptors() {
     //attrs.sparseWeights = useSparseWeightsDecompression(getParentEdgeAt(WEIGHTS_ID)->getParent(),
     //                                                    getOriginalInputPrecisionAtPort(DATA_ID),
     //                                                    context->getConfig().fcSparseWeiDecompressionRate);
+    attrs.sparseWeights = false;
     attrs.dynamicQuantizationGroupSize = context->getConfig().fcDynamicQuantizationGroupSize;
     attrs.modelType = context->getConfig().modelType;
 
@@ -571,7 +572,11 @@ void MatMul::initSupportedPrimitiveDescriptors() {
 void MatMul::createPrimitive() {
     memory[ARG_SRC] = getSrcMemoryAtPort(DATA_ID);
     memory[ARG_WEI] = getSrcMemoryAtPort(WEIGHTS_ID);
+    // TODO: we don't need allocate empty memory
     memory[ARG_BIAS] = attrs.withBias ? getSrcMemoryAtPort(BIAS_ID) : MemoryDescUtils::makeEmptyMemory(context);
+//    if (attrs.withBias) {
+//        memory[ARG_BIAS] = getSrcMemoryAtPort(BIAS_ID);
+//    }
     memory[ARG_DST] = getDstMemoryAtPort(0);
     // @todo should we preconfigure only for dynamic shapes?
     // Since for static shapes primitive is created in scope of compile_model() anyway

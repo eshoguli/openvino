@@ -68,28 +68,49 @@ void ACLFullyConnectedExecutor::updateTensorsShapes(ACLMemoryShapes& aclMemorySh
     const auto src1_dims = aclMemoryShapes[ACLArgs::ACL_SRC_0];
     const auto src2_dims = aclMemoryShapes[ACLArgs::ACL_WEI];
 
-    if (aclMemoryShapes[ACLArgs::ACL_WEI].num_dimensions() == 3U) {
-        aclMemoryShapes[ACLArgs::ACL_WEI] = arm_compute::TensorShape(
-                {aclMemoryShapes[ACLArgs::ACL_WEI][0] * aclMemoryShapes[ACLArgs::ACL_WEI][1],
-                 aclMemoryShapes[ACLArgs::ACL_WEI][2]});
-    }
+    // TODO: uncomment for FullyConnected
+//    if (aclMemoryShapes[ACLArgs::ACL_WEI].num_dimensions() == 3U) {
+//        aclMemoryShapes[ACLArgs::ACL_WEI] = arm_compute::TensorShape(
+//                {aclMemoryShapes[ACLArgs::ACL_WEI][0] * aclMemoryShapes[ACLArgs::ACL_WEI][1],
+//                 aclMemoryShapes[ACLArgs::ACL_WEI][2]});
+//    }
+//
+//    if (one_of(aclMemoryShapes[ACLArgs::ACL_SRC_0].num_dimensions(), 3U, 4U)) {
+//        aclMemoryShapes[ACLArgs::ACL_SRC_0] = arm_compute::TensorShape({
+//            aclMemoryShapes[ACLArgs::ACL_WEI][0],
+//            aclMemoryShapes[ACLArgs::ACL_SRC_0].total_size() / aclMemoryShapes[ACLArgs::ACL_WEI][0]});
+//    }
+//
+//    if (one_of(aclMemoryShapes[ACLArgs::ACL_DST].num_dimensions(), 3U, 4U)) {
+//        aclMemoryShapes[ACLArgs::ACL_DST] = arm_compute::TensorShape({
+//            aclMemoryShapes[ACLArgs::ACL_WEI][1],
+//            aclMemoryShapes[ACLArgs::ACL_SRC_0][1]});
+//    }
+//
+//    if (!fullyConnectedLayerInfo.transpose_weights) {
+//        std::swap(aclMemoryShapes[ACLArgs::ACL_WEI][0], aclMemoryShapes[ACLArgs::ACL_WEI][1]);
+//    }
+//
+//    if (!fullyConnectedLayerInfo.transpose_weights) {
+//        std::swap(aclMemoryShapes[ACLArgs::ACL_WEI][0], aclMemoryShapes[ACLArgs::ACL_WEI][1]);
+//    }
 
-    if (one_of(aclMemoryShapes[ACLArgs::ACL_SRC_0].num_dimensions(), 3U, 4U)) {
-        aclMemoryShapes[ACLArgs::ACL_SRC_0] = arm_compute::TensorShape({
-            aclMemoryShapes[ACLArgs::ACL_WEI][0],
-            aclMemoryShapes[ACLArgs::ACL_SRC_0].total_size() / aclMemoryShapes[ACLArgs::ACL_WEI][0]});
-    }
+    auto& src0 = aclMemoryShapes[ACLArgs::ACL_SRC_0];
+//    if (one_of(src0.num_dimensions(), 3U, 4U)) {
+//        src0 = arm_compute::TensorShape({src0[1], src0[0]});
+//    }
+//
+    auto& weights = aclMemoryShapes[ACLArgs::ACL_WEI];
+//    if (one_of(weights.num_dimensions(), 3U, 4U)) {
+//        weights = arm_compute::TensorShape({weights[1], weights[0]});
+//    }
 
-    if (one_of(aclMemoryShapes[ACLArgs::ACL_DST].num_dimensions(), 3U, 4U)) {
-        aclMemoryShapes[ACLArgs::ACL_DST] = arm_compute::TensorShape({
-            aclMemoryShapes[ACLArgs::ACL_WEI][1],
-            aclMemoryShapes[ACLArgs::ACL_SRC_0][1]});
-    }
-
-    // TODO: why we need it???
-    if (!fullyConnectedLayerInfo.transpose_weights) {
-        std::swap(aclMemoryShapes[ACLArgs::ACL_WEI][0], aclMemoryShapes[ACLArgs::ACL_WEI][1]);
-    }
+    auto& dst = aclMemoryShapes[ACLArgs::ACL_DST];
+//    if (one_of(aclMemoryShapes[ACLArgs::ACL_DST].num_dimensions(), 3U, 4U)) {
+//        aclMemoryShapes[ACLArgs::ACL_DST] = arm_compute::TensorShape({
+//             aclMemoryShapes[ACLArgs::ACL_WEI][1],
+//             aclMemoryShapes[ACLArgs::ACL_SRC_0][1]});
+//    }
 }
 
 arm_compute::Status ACLFullyConnectedExecutor::validateTensorsInfo(const ACLMemoryInfo & aclMemoryInfos) {
@@ -105,6 +126,8 @@ arm_compute::Status ACLFullyConnectedExecutor::validateTensorsInfo(const ACLMemo
     const auto& shape1 = src1->tensor_shape();
     const auto& src2 = aclMemoryInfos[ACLArgs::ACL_WEI].get();
     const auto& shape2 = src2->tensor_shape();
+
+    const auto& memory = aclMemoryInfos[ACLArgs::ACL_BIAS].get();
 
     const auto matMulValid = arm_compute::NEGEMMLowpMatrixMultiplyCore::validate(
             aclMemoryInfos[ACLArgs::ACL_SRC_0].get(),
@@ -131,13 +154,14 @@ ACLFunction ACLFullyConnectedExecutor::configureFunction(const ACLMemoryTensors 
 //            weightsInfo);
 //    return neFC;
 
+    //const auto& biases = aclMemoryTensors[ACLArgs::ACL_BIAS].get();
+
     auto matMull = std::make_unique<arm_compute::NEGEMMLowpMatrixMultiplyCore>();
     matMull->configure(
             aclMemoryTensors[ACLArgs::ACL_SRC_0].get(),
             aclMemoryTensors[ACLArgs::ACL_WEI].get(),
-            aclMemoryTensors[ACLArgs::ACL_BIAS].get(),
-            aclMemoryTensors.at(ACLArgs::ACL_DST).get(),
-            gemmInfo);
+            nullptr, //aclMemoryTensors[ACLArgs::ACL_BIAS].get(),
+            aclMemoryTensors.at(ACLArgs::ACL_DST).get());
     return matMull;
 }
 

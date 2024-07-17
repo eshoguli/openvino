@@ -27,9 +27,9 @@ std::string MatMulTransformation::getTestCaseName(const testing::TestParamInfo<M
     result <<
         precision << "_" <<
         targetDevice << "_" <<
-        testValues.inputShape1 << "_" <<
+        "IN1=" << testValues.inputShape1 << "_" <<
         testValues.fqOnData1 << "_" <<
-        testValues.inputShape2 << "_" <<
+        "IN2=" << testValues.inputShape2 << "_" <<
         testValues.fqOnData2 << "_" <<
         testValues.requantization;
 
