@@ -513,7 +513,7 @@ void MatMul::initSupportedPrimitiveDescriptors() {
     };
 
     auto executionContext = std::make_shared<ExecutorContext>(context, getImplPriority(), privateWeightCache);
-    factory = std::make_shared<ExecutorFactory<FCAttrs, node::MatMul>>(attrs, postOps, executionContext, memoryDescs);
+    factory = std::make_shared<ExecutorFactory<GEMMAttrs, node::MatMul>>(attrs, postOps, executionContext, memoryDescs);
     const auto nodeDescriptors = factory->getProperMemoryDescriptors(memoryDescs);
 
     NodeConfig nodeConfig;

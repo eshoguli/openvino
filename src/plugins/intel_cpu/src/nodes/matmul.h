@@ -88,10 +88,10 @@ private:
 
     ExecutorPtr createExecutor();
 
-    FCAttrs attrs;
+    GEMMAttrs attrs;
     PostOps postOps;
     MemoryArgs memory;
-    ExecutorFactoryPtr<FCAttrs, node::MatMul> factory;
+    ExecutorFactoryPtr<GEMMAttrs, node::MatMul> factory;
     ExecutorPtr executor;
 #endif
 };
