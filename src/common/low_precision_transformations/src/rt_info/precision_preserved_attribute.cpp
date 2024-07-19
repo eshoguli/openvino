@@ -20,3 +20,11 @@ std::string PrecisionPreservedAttribute::to_string() const {
     ss << "value: " << (value() ? "true" : "false");
     return ss.str();
 }
+
+bool PrecisionPreservedAttribute::is_copyable() const {
+    return false;
+}
+
+bool PrecisionPreservedAttribute::is_copyable(const std::shared_ptr<Node>& to) const {
+    return false;
+}

@@ -46,25 +46,10 @@ RecurrentCellTransformation::RecurrentCellTransformation(const Params& params) :
     const auto dequantization_without_subtract_W = wrap_dequantization(ov::pass::pattern::any_input(), false);
     const auto dequantization_without_subtract_R = wrap_dequantization(ov::pass::pattern::any_input(), false);
 
-    auto X_in = std::make_shared<ov::pass::pattern::op::Or>(
-        OutputVector{
-            fq_X, dequantization_X, dequantization_without_subtract_X
-        });
-
-    auto H_in = std::make_shared<ov::pass::pattern::op::Or>(
-        OutputVector{
-            H_as_const, fq_H, dequantization_H, dequantization_without_subtract_H
-        });
-
-    auto W_in = std::make_shared<ov::pass::pattern::op::Or>(
-        OutputVector{
-            fq_W, dequantization_W, dequantization_without_subtract_W
-        });
-
-    auto R_in = std::make_shared<ov::pass::pattern::op::Or>(
-        OutputVector{
-            fq_R, dequantization_R, dequantization_without_subtract_R
-        });
+    auto X_in = ov::pass::pattern::any_input();
+    auto H_in = ov::pass::pattern::any_input();
+    auto W_in = ov::pass::pattern::any_input();
+    auto R_in = ov::pass::pattern::any_input();
 
     const auto lstm_seq = ov::pass::pattern::wrap_type<ov::opset5::LSTMSequence>(
         {X_in, H_in, C, S, W_in, R_in, B});
@@ -91,8 +76,92 @@ RecurrentCellTransformation::RecurrentCellTransformation(const Params& params) :
     this->register_matcher(m, callback);
 }
 
+namespace {
+
+std::shared_ptr<ov::opset1::FakeQuantize> find_fake_quantize_upper(const std::shared_ptr<Node>& parent) {
+    if (is_type<ov::opset1::FakeQuantize>(parent)) {
+        return as_type_ptr<ov::opset1::FakeQuantize>(parent);
+    }
+
+    if (!NetworkHelper::isPrecisionPreserved(parent)) {
+        return nullptr;
+    }
+
+    return find_fake_quantize_upper(parent->get_input_node_shared_ptr(0));
+}
+
+} // namespace
+
+void RecurrentCellTransformation::propagate(TransformationContext& context, const std::shared_ptr<ov::Node> node) {
+    if (!NetworkHelper::isPrecisionPreserved(node)) {
+        return;
+    }
+
+    const auto& normalized_node = NetworkHelper::separateInStandaloneBranch(node, defaultPrecisions);
+    auto dequantization = NetworkHelper::getDequantization(node, defaultPrecisions);
+    if (dequantization.empty()) {
+        return;
+    }
+    const auto& new_node = moveDequantizationAfter(context, normalized_node, dequantization);
+
+    const auto& new_dequantization = NetworkHelper::getDequantizationBelow(new_node);
+    if (new_dequantization.empty()) {
+        return;
+    }
+
+    for (auto output : new_dequantization.multiply->outputs()) {
+        for (auto input : output.get_target_inputs()) {
+            auto child = input.get_node()->shared_from_this();
+            propagate(context, child);
+        }
+    }
+}
+
 bool RecurrentCellTransformation::transform(TransformationContext& context, ov::pass::pattern::Matcher& m) {
     const auto lstm = m.get_match_root();
+
+    const auto inputs = is_type<ov::opset5::LSTMSequence>(lstm) ? std::vector<size_t>{0, 1, 4, 5} : std::vector<size_t>{0, 1, 3, 4};
+    for (const auto input : inputs) {
+        const auto& parent = lstm->get_input_node_shared_ptr(input);
+        if (!NetworkHelper::isPrecisionPreserved(parent)) {
+            continue;
+        }
+
+        const auto& fq = find_fake_quantize_upper(parent);
+        if (fq != nullptr) {
+            const auto& quantizationDetails = QuantizationDetails::getDetails(fq);
+            if ((quantizationDetails.inputLowValues.size() != 1) || (quantizationDetails.inputHighValues.size() != 1) ||
+                (quantizationDetails.outputLowValues.size() != 1) || (quantizationDetails.outputHighValues.size() != 1)) {
+                continue;
+            }
+
+            const auto& precisionsAttribute = getAttributeFromOutput<PrecisionsAttribute>(fq);
+            const auto& precisions = precisionsAttribute.empty() ?
+                defaultPrecisions :
+                precisionsAttribute.as<PrecisionsAttribute>().value();
+            const auto& dataPrecision = getDataPrecision(fq, quantizationDetails, precisions);
+            if (dataPrecision.empty()) {
+                continue;
+            }
+
+            auto result = NetworkHelper::decomposeFakeQuantize(
+                fq,
+                dataPrecision.precision,
+                dataPrecision.min,
+                dataPrecision.max,
+                dataPrecision.hasZeroPoint,
+                updatePrecisions);
+            auto multiply = std::get<1>(result);
+
+            for (const auto& output : multiply->outputs()) {
+                for (const auto& input : output.get_target_inputs()) {
+                    const auto input_node = input.get_node();
+                    propagate(context, input_node->shared_from_this());
+                }
+            }
+        }
+    }
+
     if (!canBeTransformed(context, lstm)) {
         return false;
     }
