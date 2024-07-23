@@ -26,10 +26,10 @@ public:
 
     PrecisionPreservedAttribute() = default;
     PrecisionPreservedAttribute(const bool value);
-    bool is_copyable() const override;
-    bool is_copyable(const std::shared_ptr<Node>& to) const override;
 
     std::string to_string() const override;
+
+    static bool isPrecisionPreserved(const std::shared_ptr<Node>& node);
 };
 
 } // namespace ov

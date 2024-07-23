@@ -71,7 +71,6 @@ public:
     bool run_on_model(const std::shared_ptr<ov::Model>& m) override;
 
 private:
-    static bool isPrecisionPreserved(const std::shared_ptr<Node>& node);
     static bool isSupported(const std::shared_ptr<Node>& node);
     std::unordered_map<std::string, Restriction> restrictionsByOperation;
     std::vector<ov::element::Type> defaultPrecisions;

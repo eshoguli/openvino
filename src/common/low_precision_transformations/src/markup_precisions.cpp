@@ -99,7 +99,7 @@ bool ov::pass::low_precision::MarkupPrecisions::run_on_model(const std::shared_p
             continue;
         }
 
-        const bool precisionPreserved = isPrecisionPreserved(node);
+        const bool precisionPreserved = PrecisionPreservedAttribute::isPrecisionPreserved(node);
         if (precisionPreserved) {
             auto& rt = node->get_rt_info();
             rt.emplace(
@@ -133,59 +133,6 @@ bool ov::pass::low_precision::MarkupPrecisions::run_on_model(const std::shared_p
 template <class Operation>
 std::string name() {
     return Operation::get_type_info_static().name;
-}
-
-bool ov::pass::low_precision::MarkupPrecisions::isPrecisionPreserved(const std::shared_ptr<Node>& node) {
-    if (isDisabled(node)) {
-        return false;
-    }
-
-    // TODO: think how to handle conditions <= not mandatory for PoC
-    // TODO: operation set version is not affected <= not mandatory for PoC
-    static std::unordered_set<std::string> precisionPreservedOps = {
-        { name<opset1::Concat>() },
-        { name<opset1::DepthToSpace>() },
-        { name<opset1::Interpolate>() },
-        { name<opset1::MaxPool>() },
-        { name<opset1::ReduceMax>() },
-        { name<opset1::ReduceMin>() },
-        { name<opset1::Relu>() },
-        // TODO: there are conditions
-        { name<opset2::BatchToSpace>() },
-        { name<opset1::Broadcast>() },
-        { name<opset1::Pad>() },
-        { name<ov::opset12::Pad>() },
-        { name<opset1::Reshape>() },
-        { name<opset1::Squeeze>() },
-        { name<opset2::SpaceToBatch>() },
-        { name<opset1::Split>() },
-        { name<opset1::StridedSlice>() },
-        { name<opset1::ShuffleChannels>() },
-        { name<opset1::Transpose>() },
-        { name<opset1::Unsqueeze>() },
-        { name<opset1::VariadicSplit>() }
-    };
-
-    const bool precisionPreserved = precisionPreservedOps.find(node->get_type_name()) != precisionPreservedOps.end();
-    if (precisionPreserved) {
-        return precisionPreserved;
-    }
-
-    if (ov::is_type<opset1::Interpolate>(node)) {
-        std::shared_ptr<opset1::Interpolate> interpolate1 = ov::as_type_ptr<opset1::Interpolate>(node);
-        if (interpolate1) {
-            const auto attrs = interpolate1->get_attrs();
-            return attrs.mode == "nearest";
-        }
-
-        std::shared_ptr<opset4::Interpolate> interpolate4 = ov::as_type_ptr<opset4::Interpolate>(node);
-        if (interpolate4) {
-            const auto attrs = interpolate4->get_attrs();
-            return attrs.mode == op::v4::Interpolate::InterpolateMode::NEAREST;
-        }
-    }
-
-    return false;
 }
 
 bool ov::pass::low_precision::MarkupPrecisions::isSupported(const std::shared_ptr<Node>& node) {

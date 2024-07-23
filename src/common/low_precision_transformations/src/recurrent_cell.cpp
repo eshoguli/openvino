@@ -15,6 +15,7 @@
 
 #include "low_precision/network_helper.hpp"
 #include "low_precision/rt_info/disable_cleanup_attribute.hpp"
+#include "low_precision/rt_info/precision_preserved_attribute.hpp"
 
 namespace ov {
 namespace pass {
@@ -83,7 +84,7 @@ std::shared_ptr<ov::opset1::FakeQuantize> find_fake_quantize_upper(const std::sh
         return as_type_ptr<ov::opset1::FakeQuantize>(parent);
     }
 
-    if (!NetworkHelper::isPrecisionPreserved(parent)) {
+    if (!PrecisionPreservedAttribute::isPrecisionPreserved(parent)) {
         return nullptr;
     }
 
@@ -123,7 +124,7 @@ bool RecurrentCellTransformation::transform(TransformationContext& context, ov::
     const auto inputs = is_type<ov::opset5::LSTMSequence>(lstm) ? std::vector<size_t>{0, 1, 4, 5} : std::vector<size_t>{0, 1, 3, 4};
     for (const auto input : inputs) {
         const auto& parent = lstm->get_input_node_shared_ptr(input);
-        if (!NetworkHelper::isPrecisionPreserved(parent)) {
+        if (!PrecisionPreservedAttribute::isPrecisionPreserved(parent)) {
             continue;
         }
 

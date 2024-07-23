@@ -17,6 +17,7 @@
 #include "low_precision/common/ie_lpt_exception.hpp"
 #include "low_precision/layer_transformation.hpp"
 #include "low_precision/network_helper.hpp"
+#include "low_precision/rt_info/avg_pool_precision_preserved_attribute.hpp"
 #include "low_precision/rt_info/intervals_alignment_attribute.hpp"
 #include "low_precision/rt_info/precision_preserved_attribute.hpp"
 #include "low_precision/rt_info/quantization_alignment_attribute.hpp"
@@ -1539,6 +1540,30 @@ NetworkHelper::InsertDequantizationResult NetworkHelper::moveDequantizationAfter
         // NetworkHelper::optimizeElementwise(dequantization.subtract);
     }
 
+    //if (NetworkHelper::isPrecisionPreserved(operation)) {
+    //    auto& rt = newOperation->get_rt_info();
+    //    rt.emplace(
+    //        PrecisionPreservedAttribute::get_type_info_static(),
+    //        PrecisionPreservedAttribute(true));
+    //}
+
+    ////const auto isAvgPoolPrecisionPreserved = [](const std::shared_ptr<ov::Node>& node) -> bool {
+    ////    auto& rt = node->get_rt_info();
+    ////    auto it = rt.find(AvgPoolPrecisionPreservedAttribute::get_type_info_static());
+    ////    if (it == rt.end()) {
+    ////        return false;
+    ////    }
+    ////    auto attribute = it->second;
+    ////    return attribute.as<AvgPoolPrecisionPreservedAttribute>().value();
+    ////};
+
+    ////if (isAvgPoolPrecisionPreserved(operation)) {
+    ////    auto& rt = newOperation->get_rt_info();
+    ////    rt.emplace(
+    ////        AvgPoolPrecisionPreservedAttribute::get_type_info_static(),
+    ////        AvgPoolPrecisionPreservedAttribute());
+    ////}
+
     return InsertDequantizationResult(newOperation, parent);
 }
 
@@ -1827,20 +1852,6 @@ std::vector<element::Type> NetworkHelper::precisionIntersection(
     }
 
     return v3;
-}
-
-bool isDisabled(const std::shared_ptr<Node>& node) {
-    for (const auto& input : node->inputs()) {
-        auto precisionAttribute = getAttribute<PrecisionsAttribute>(input);
-        if (precisionAttribute.empty()) {
-            continue;
-        }
-        const auto& precisionRestrictions = precisionAttribute.as<PrecisionsAttribute>().value();
-        if (precisionRestrictions.empty()) {
-            return true;
-        }
-    }
-    return false;
 }
 
 void NetworkHelper::insertDequantizationAfter(
