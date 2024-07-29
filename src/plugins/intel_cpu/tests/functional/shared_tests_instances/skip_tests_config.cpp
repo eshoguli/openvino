@@ -384,6 +384,8 @@ std::vector<std::string> disabledTestPatterns() {
     retVector.emplace_back(R"(.*smoke_CompareWithRefs_static/EltwiseLayerTest.*_eltwise_op_type=Div_.*_model_type=i32_.*)");
 
     retVector.emplace_back(R"(.*smoke_RoPETest.*)");
+    // Issue: CVS-148130 (NECast problem for FC)
+    retVector.emplace_back(R"(.*smoke_FC.*MatMulDecompressConvertTest.*weiLemType=f16.*)");
 #endif
 
 #if defined(OPENVINO_ARCH_RISCV64)
