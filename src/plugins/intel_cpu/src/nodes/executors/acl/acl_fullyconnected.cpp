@@ -256,19 +256,31 @@ ACLFunction acl_fc_executor::ACLWeightFormatGenerator::configureFunction(const A
 }
 
 arm_compute::Status acl_fc_executor::ACLWeightsReorder::validateTensorsInfo(const ACLMemoryInfo &aclMemoryInfos) {
+#if defined(OPENVINO_ARCH_ARM64)
     return arm_compute::NEReorderLayer::validate(aclMemoryInfos[ACLArgs::ACL_SRC_0].get(),
                                                  aclMemoryInfos[ACLArgs::ACL_DST].get(),
                                                  inWeightFormat,
                                                  outWeightFormat);
+#else
+    return arm_compute::NECopy::validate(aclMemoryInfos[ACLArgs::ACL_SRC_0].get(),
+                                         aclMemoryInfos[ACLArgs::ACL_DST].get());
+#endif
 }
 
 ACLFunction acl_fc_executor::ACLWeightsReorder::configureFunction(const ACLMemoryTensors &aclMemoryTensors) {
+#if defined(OPENVINO_ARCH_ARM64)
     auto neReorderLayer = std::make_unique<arm_compute::NEReorderLayer>();
     neReorderLayer->configure(aclMemoryTensors[ACLArgs::ACL_SRC_0].get(),
                               aclMemoryTensors[ACLArgs::ACL_DST].get(),
                               inWeightFormat,
                               outWeightFormat);
     return neReorderLayer;
+#else
+    auto neCopy = std::make_unique<arm_compute::NECopy>();
+    neCopy->configure(aclMemoryTensors[ACLArgs::ACL_SRC_0].get(),
+                              aclMemoryTensors[ACLArgs::ACL_DST].get());
+    return neCopy;
+#endif
 }
 
 }   // namespace intel_cpu
