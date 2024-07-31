@@ -5,19 +5,20 @@
 #pragma once
 
 #include "acl_common_executor.hpp"
-#include "nodes/executors/gemm_config.hpp"
+#include "nodes/executors/fullyconnected_config.hpp"
+#include "acl_weights.hpp"
 
 namespace ov {
 namespace intel_cpu {
 
-class ACLGEMMExecutor : public ACLCommonExecutor {
+class ACLLowpFullyConnectedExecutor : public ACLCommonExecutor {
 public:
-    ACLGEMMExecutor(const GEMMAttrs& attrs,
-                      const PostOps& postOps,
-                      const MemoryArgs& memory,
-                      const ExecutorContext::CPtr context);
+    ACLLowpFullyConnectedExecutor(const FCAttrs& attrs,
+                                  const PostOps& postOps,
+                                  const MemoryArgs& memory,
+                                  const ExecutorContext::CPtr context);
 
-    static bool supports(const GEMMConfig& config);
+    static bool supports(const FCConfig& config);
 
     void updateTensorsShapes(ACLMemoryShapes& aclMemoryShapes) override;
 
@@ -35,12 +36,14 @@ protected:
                            const arm_compute::DataLayout& dataLayout) override;
 
 private:
-    arm_compute::FullyConnectedLayerInfo fullyConnectedLayerInfo;
     arm_compute::GEMMInfo gemmInfo;
     arm_compute::WeightsInfo weightsInfo;
+
+    MemoryCPtr packedWeights;
+    ACLFCAttrs aclfcAttrs;
 };
 
-using ACLGEMMExecutorPtr = std::shared_ptr<ACLGEMMExecutor>;
+using ACLLowpFullyConnectedExecutorPtr = std::shared_ptr<ACLLowpFullyConnectedExecutor>;
 
 }  // namespace intel_cpu
 }  // namespace ov

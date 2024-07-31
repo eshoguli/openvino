@@ -75,6 +75,7 @@ ACLFunction ACLGEMMExecutor::configureFunction(const ACLMemoryTensors & aclMemor
     return gemm;
 }
 
+// TODO: move to ACLLowpExecutor
 ACLInfo ACLGEMMExecutor::initTensorInfo(const arm_compute::TensorShape& tensorShape,
                                         const arm_compute::DataType& dataType,
                                         const arm_compute::DataLayout& dataLayout) {
