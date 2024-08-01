@@ -19,6 +19,11 @@ ov::intel_cpu::MatMulDecomposition::MatMulDecomposition() {
         }
 
         // TODO: is it possible to move to matcher?
+        const auto out_type = matMul->get_output_element_type(0);
+        if (out_type == element::i32) {
+            return false;
+        }
+
         const auto in_type1 = matMul->get_input_element_type(0);
         const auto in_type2 = matMul->get_input_element_type(1);
         if ((in_type1 != element::i8) && (in_type1 != element::u8) && (in_type2 != element::u8) && (in_type2 != element::u8)) {
@@ -26,7 +31,6 @@ ov::intel_cpu::MatMulDecomposition::MatMulDecomposition() {
         }
 
         const auto newMatMul = matMul->clone_with_new_inputs({matMul->get_input_source_output(0), matMul->get_input_source_output(1)});
-        // TODO: output type is hardcoded
         newMatMul->set_output_type(0, element::i32, matMul->get_output_partial_shape(0));
         const auto convert = std::make_shared<ov::opset1::Convert>(newMatMul, element::f32);
         replace_node(matMul, convert);

@@ -250,7 +250,7 @@ public:
             const bool updatePrecisions = true,
             element::Type deqPrecision = element::f32,
             const std::vector<ov::element::Type> defaultPrecisions =
-            { ov::element::u8,  ov::element::i8 },
+            { ov::element::u8,  ov::element::i8, ov::element::i32 },
             const bool reshapeIgnorePerTensorQuantizationCheck = false) :
             updatePrecisions(updatePrecisions),
             deqPrecision(deqPrecision),

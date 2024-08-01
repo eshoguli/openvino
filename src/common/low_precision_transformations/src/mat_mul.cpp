@@ -82,11 +82,12 @@ bool MatMulTransformation::transform(TransformationContext &context, ov::pass::p
     }
 
     const std::shared_ptr<ov::opset1::MatMul> newMatMul = std::make_shared<ov::op::TypeRelaxed<ov::opset1::MatMul>>(
-        std::vector<element::Type>({ deqPrecision, deqPrecision }), std::vector<element::Type>({ deqPrecision }),
+        std::vector<element::Type>({ deqPrecision, deqPrecision }), std::vector<element::Type>({ element::i32 }),
         ov::op::TemporaryReplaceOutputType(dequantization1.data, deqPrecision).get(),
         ov::op::TemporaryReplaceOutputType(dequantization2.data, deqPrecision).get(),
         matMul->get_transpose_a(),
         matMul->get_transpose_b());
+    //newMatMul->set_output_type(0, element::i32, matMul->get_output_partial_shape(0));
     NetworkHelper::copyInfo(matMul, newMatMul);
 
     std::shared_ptr<Node> parent = newMatMul;
@@ -166,7 +167,9 @@ bool MatMulTransformation::transform(TransformationContext &context, ov::pass::p
     const auto newMultiply = std::make_shared<ov::op::TypeRelaxed<ov::opset1::Multiply>>(
         std::vector<element::Type>{ deqPrecision, deqPrecision },
         std::vector<element::Type>{ dequantization1.multiply->get_output_element_type(0) },
-        ov::op::TemporaryReplaceOutputType(parent, deqPrecision).get(),
+        ov::op::TemporaryReplaceOutputType(
+                std::make_shared<ov::opset1::Convert>(parent, deqPrecision),
+                deqPrecision).get(),
         ov::op::TemporaryReplaceOutputType(newMulConst, deqPrecision).get());
 
     newMultiply->set_friendly_name(newMatMul->get_friendly_name() + "/DequantizationMultiply");
