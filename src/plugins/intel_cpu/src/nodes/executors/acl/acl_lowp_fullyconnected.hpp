@@ -41,6 +41,7 @@ private:
 
     MemoryCPtr packedWeights;
     ACLFCAttrs aclfcAttrs;
+    std::vector<float> dequantizationScales;
 };
 
 using ACLLowpFullyConnectedExecutorPtr = std::shared_ptr<ACLLowpFullyConnectedExecutor>;

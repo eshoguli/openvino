@@ -49,23 +49,21 @@ static void initFCAttrs(const FCAttrs &attrs,
 ACLLowpFullyConnectedExecutor::ACLLowpFullyConnectedExecutor(const FCAttrs &attrs,
                                                              const PostOps &postOps,
                                                              const MemoryArgs &memory,
-                                                             const ExecutorContext::CPtr context) {
+                                                             const ExecutorContext::CPtr context) : dequantizationScales(attrs.dequantizationScales) {
     initFCAttrs(attrs, aclTensorAttrs, aclfcAttrs, memory, gemmInfo, postOps);
     packedWeights = acl_fc_executor::prepareWeightMemory(memory, context, attrs, aclTensorAttrs, aclfcAttrs, postOps);
 }
 
 bool ACLLowpFullyConnectedExecutor::supports(const FCConfig &config) {
     // TODO: check weights layout
-    const auto attrs = static_cast<FCAttrs>(config.attrs);
-    if (std::any_of(
-            attrs.dequantizationScales.begin(),
-            attrs.dequantizationScales.end(),
-            [](float value) { return value != 1.f;})) {
-        return false;
-    }
+//    const auto attrs = static_cast<FCAttrs>(config.attrs);
 
-    const auto precision = srcType(config);
-    VERIFY(one_of(precision, ov::element::i8, ov::element::u8), UNSUPPORTED_SRC_PRECISIONS);
+
+    const auto src0 = srcType(config);
+//    const auto src1 = weiType(config);
+//    const auto dst = dstType(config);
+    // TODO: check precisions
+    VERIFY(one_of(src0, ov::element::i8, ov::element::u8), UNSUPPORTED_SRC_PRECISIONS);
     //VERIFY(postOpsNumbers(config) == 0, UNSUPPORTED_NUMBER_OF_POSTOPS);
     VERIFY(one_of(srcRank(config), 2U, 3U, 4U), UNSUPPORTED_SRC_RANK);
     VERIFY(one_of(weiRank(config), 2U, 3U, 4U), UNSUPPORTED_WEI_RANK);
@@ -78,6 +76,23 @@ void ACLLowpFullyConnectedExecutor::updateTensorsShapes(ACLMemoryShapes& aclMemo
 }
 
 arm_compute::Status ACLLowpFullyConnectedExecutor::validateTensorsInfo(const ACLMemoryInfo & aclMemoryInfos) {
+    const auto src0 = aclMemoryInfos[ACLArgs::ACL_SRC_0].get();
+    const auto src1 = aclMemoryInfos[ACLArgs::ACL_WEI].get();
+    const auto dst = aclMemoryInfos[ACLArgs::ACL_DST].get();
+
+    // TODO: debug only
+    if (!dequantizationScales.empty()) {
+        auto tensor_info = aclMemoryInfos[ACLArgs::ACL_SRC_0];
+        tensor_info->set_quantization_info(arm_compute::QuantizationInfo(dequantizationScales[0]));
+
+        auto tensor_info_weights = aclMemoryInfos[ACLArgs::ACL_WEI];
+        tensor_info_weights->set_quantization_info(arm_compute::QuantizationInfo(1.f));
+
+//        auto tensor = aclMemoryTensors[ACLArgs::ACL_SRC_0];
+//        auto tensor_info = tensor->info();
+//        tensor_info->set_quantization_info(arm_compute::QuantizationInfo(dequantizationScales[0]));
+    }
+
     const auto matMulValid = arm_compute::NEGEMMLowpMatrixMultiplyCore::validate(
             aclMemoryInfos[ACLArgs::ACL_SRC_0].get(),
             aclMemoryInfos[ACLArgs::ACL_WEI].get(),
