@@ -49,14 +49,38 @@ std::shared_ptr<ov::Model> MatMulFunction::getOriginal(
     return function;
 }
 
+namespace {
+template <typename T>
+std::vector<T> generate_values(const ov::Shape& shape) {
+    std::vector<T> values(ov::shape_size(shape));
+    for (size_t i = 0; i < values.size(); ++i) {
+        values[i] = static_cast<T>(static_cast<T>(i) / 10.0);
+    }
+    return values;
+}
+
+std::vector<float> generate_dequantization_values(
+        const ov::Shape& shape,
+        const size_t levels,
+        const bool low) {
+    const auto shape_size = ov::shape_size(shape);
+    std::vector<float> values(shape_size);
+    for (size_t i = 0; i < shape_size; ++i) {
+        values[i] = low ? -128.f / (static_cast<float>(i) + 1.f) : 127.f / (static_cast<float>(i) + 1.f);
+    }
+    return values;
+}
+} // namespace
+
 std::shared_ptr<ov::Model> MatMulFunction::getOriginal(
-    const ov::element::Type precision,
-    const ov::PartialShape inputShape1,
-    const ov::PartialShape inputShape2,
-    const bool transpose1,
-    const bool transpose2,
-    const bool signedOnWeights,
-    const bool relu) {
+        const ov::element::Type precision,
+        const ov::PartialShape& inputShape1,
+        const ov::PartialShape& inputShape2,
+        const bool transpose1,
+        const bool transpose2,
+        const bool signedOnWeights,
+        const bool perChannelWeights,
+        const bool relu) {
     const auto paramNode = std::make_shared<ov::opset1::Parameter>(precision, inputShape1);
     const std::vector<size_t> constShapes(inputShape1.rank().get_length(), 1ul);
     const auto fakeQuantizeOnAcitvations = signedOnWeights ?
@@ -68,13 +92,23 @@ std::shared_ptr<ov::Model> MatMulFunction::getOriginal(
                 { 0.f }, { 255.f / 4.f }, { 0.f }, { 255.f / 4.f });
     fakeQuantizeOnAcitvations->set_friendly_name("fakeQuantizeOnAcitvations");
 
+    const size_t channel = inputShape2[inputShape2.size() - 2].get_length();
     auto weightsConst = std::make_shared<ov::op::v0::Constant>(
-        precision,
-        inputShape2.to_shape(),
-        std::vector<float>({ 1.f }));
-    const auto fakeQuantizeOnWeights = ov::test::utils::make_fake_quantize(
-        weightsConst, precision, 256ul, { 1ul, 1ul },
-        { -128.f / 8.f }, { 127.f / 8.f }, { -128.f / 8.f }, { 127.f / 8.f });
+            precision,
+            inputShape2.to_shape(),
+            generate_values<float>(inputShape2.to_shape()));
+
+    const auto fakeQuantizeOnWeights = perChannelWeights ?
+       ov::test::utils::make_fake_quantize(
+           weightsConst, precision, 256ul,
+           Shape{ channel, 1 },
+           generate_dequantization_values(Shape{ channel, 1 }, 256ul, true),
+           generate_dequantization_values(Shape{ channel, 1 }, 256ul, false),
+           generate_dequantization_values(Shape{ channel, 1 }, 256ul, true),
+           generate_dequantization_values(Shape{ channel, 1 }, 256ul, false)) :
+        ov::test::utils::make_fake_quantize(
+            weightsConst, precision, 256ul, { 1ul, 1ul },
+            { -128.f / 8.f }, { 127.f / 8.f }, { -128.f / 8.f }, { 127.f / 8.f });
     fakeQuantizeOnWeights->set_friendly_name("fakeQuantizeOnWeights");
 
     std::shared_ptr<Node> parent = std::make_shared<ov::opset1::MatMul>(

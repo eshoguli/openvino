@@ -16,9 +16,10 @@ public:
     bool transposeB;
 };
 
-class Activation {
+class FullyConnectedParams {
 public:
-    bool exist;
+    bool activation;
+    bool perChannelWeights;
     std::string originalLayersNames;
 };
 
@@ -28,7 +29,7 @@ typedef std::tuple<
     std::string,
     ov::pass::low_precision::LayerTransformation::Params,
     ov::element::Type,
-    Activation,
+    FullyConnectedParams,
     std::string> FullyConnectedTransformationParams;
 
 namespace LayerTestsDefinitions {

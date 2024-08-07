@@ -24,11 +24,12 @@ public:
 
     static std::shared_ptr<ov::Model> getOriginal(
         const ov::element::Type precision,
-        const ov::PartialShape inputShape1,
-        const ov::PartialShape inputShape2,
+        const ov::PartialShape& inputShape1,
+        const ov::PartialShape& inputShape2,
         const bool transpose1,
         const bool transpose2,
-        const bool signedOnWeights,
+        const bool signedWeights,
+        const bool perChannelWeights,
         const bool relu);
 
     static std::shared_ptr<ov::Model> getOriginal(

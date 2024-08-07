@@ -22,7 +22,7 @@ std::string FullyConnectedTransformation::getTestCaseName(const testing::TestPar
     std::string targetDevice;
     ov::pass::low_precision::LayerTransformation::Params params;
     ov::element::Type weightsType;
-    Activation activation;
+    FullyConnectedParams activation;
     std::string expectedPrimitiveType;
     std::tie(precision, shapes, targetDevice, params, weightsType, activation, expectedPrimitiveType) = obj.param;
 
@@ -33,7 +33,8 @@ std::string FullyConnectedTransformation::getTestCaseName(const testing::TestPar
         shapes.transposeA << "_" <<
         shapes.transposeB << "_" <<
         weightsType << "_" <<
-        activation.exist << "_" <<
+        "Activation=" << activation.activation << "_" <<
+        "perChannelWeights=" << activation.perChannelWeights << "_" <<
         activation.originalLayersNames << "_" <<
         expectedPrimitiveType;
 
@@ -45,7 +46,7 @@ void FullyConnectedTransformation::SetUp() {
     MatMulShapes shapes;
     ov::pass::low_precision::LayerTransformation::Params params;
     ov::element::Type weightsType;
-    Activation activation;
+    FullyConnectedParams activation;
     std::string expectedPrimitiveType;
     std::tie(precision, shapes, targetDevice, params, weightsType, activation, expectedPrimitiveType) = this->GetParam();
 
@@ -58,7 +59,8 @@ void FullyConnectedTransformation::SetUp() {
         shapes.transposeA,
         shapes.transposeB,
         weightsType == ov::element::i8,
-        activation.exist);
+        activation.perChannelWeights,
+        activation.activation);
 
     ov::pass::Serialize(
             "/Users/eshoguli/projects/openvino_matmul/test.original.xml",

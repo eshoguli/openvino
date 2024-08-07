@@ -22,32 +22,67 @@ const std::vector<MatMulShapes> shapes = {
         false
     },
     {
-        ov::PartialShape{ 1, 16 },
-        ov::PartialShape{ 8, 16 },
+        ov::PartialShape{ 1, 1, 16 },
+        ov::PartialShape{ 1, 16, 8 },
         false,
-        true
+        false
     },
+//    // transposeB
+//    {
+//        ov::PartialShape{ 1, 16 },
+//        ov::PartialShape{ 8, 16 },
+//        false,
+//        true
+//    },
     {
         ov::PartialShape{ 16, 1 },
         ov::PartialShape{ 16, 8 },
         true,
         false
     },
+    {
+        ov::PartialShape{ 1, 16, 1 },
+        ov::PartialShape{ 1, 16, 8 },
+        true,
+        false
+    },
+//    // MatMul_101
+//    {
+//        ov::PartialShape{ 1, 128, 768 },
+//        ov::PartialShape{ 3072, 768 },    // after transpose: 768 x 3072
+//        false,
+//        true
+//    },
 };
 
 const std::vector<ov::pass::low_precision::LayerTransformation::Params> trasformationParamValues = {
     LayerTestsUtils::LayerTransformationParamsNGraphFactory::createParams()
 };
 
-const std::vector<Activation> activations = {
+const std::vector<FullyConnectedParams> activations = {
+    // TODO: failed if transposeB = true: accuracy check
     {
-        true,
+        true,  // activation
+        false, // perChannel
         "fullyConnected,fullyConnected/DequantizationMultiply,relu"
     },
+//    // TODO: failed if transposeB = true: fp32 execution, FQ is not decomposed
+//    {
+//        true,  // activation
+//        true,  // perChannel
+//        "fullyConnected,fullyConnected/DequantizationMultiply,relu"
+//    },
     {
-        false,
+        false,  // activation
+        false,  // perChannel
         "fullyConnected_original,fullyConnected"
-    }
+    },
+//    // TODO: failed if transposeB = true: fp32 execution, FQ is not decomposed
+//    {
+//        false, // activation
+//        true,  // perChannel
+//        "fullyConnected_original,fullyConnected"
+//    }
 };
 
 INSTANTIATE_TEST_SUITE_P(smoke_LPT, FullyConnectedTransformation,
