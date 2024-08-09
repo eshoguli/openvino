@@ -385,11 +385,7 @@ void Transformations::PreLpt(const std::vector<ov::element::Type>& defaultPrecis
     const auto precisions = get_convert_precisions();
     if (inferencePrecision == ov::element::f16) {
         precisions_map fp_convert_precision_map = {{ov::element::f32, ov::element::f16}};
-#if defined(OPENVINO_ARCH_ARM) || defined(OPENVINO_ARCH_ARM64)
-        type_to_fuse_map fuse_map = {{ov::opset1::FakeQuantize::get_type_info_static(), fuse_type_to_fq}};
-#else
         type_to_fuse_map fuse_map = {};
-#endif
         const bool keep_precision_sensitive_in_fp32 = true;
         CPU_REGISTER_PASS_COMMON(manager,
                                  ov::pass::ConvertPrecision,
@@ -755,9 +751,11 @@ void Transformations::Lpt(const std::vector<ov::element::Type>& defaultPrecision
         return LayerTransformation::isAsymmetricQuantization(node, defaultPrecisions) ||
                WeightableLayerTransformation::isAsymmetricOnWeights(node, defaultPrecisions);
     }, ConvolutionBackpropDataTransformation);
+#if !defined(OPENVINO_ARCH_ARM64)
     CPU_SET_CALLBACK_COMMON(lptManager, [](const_node_ptr& node) -> bool {
         return ov::marked_as_bias(node);
     }, AddTransformation);
+#endif
 
     CPU_SET_CALLBACK_X64(lptManager, [&](const_node_ptr& node) -> bool {
         const auto& consumers = node->get_output_target_inputs(0);
@@ -1161,7 +1159,7 @@ void Transformations::PostSnippets(void) {
     ov::pass::Manager postSnippetsManager("CPU:PostSnippets");
     postSnippetsManager.set_per_pass_validation(false);
     CPU_REGISTER_PASS_COMMON(postSnippetsManager, ov::pass::FakeQuantizeDecomposition);
-    CPU_SET_CALLBACK_COMMON(postSnippetsManager,
+    CPU_SET_CALLBACK_X64(postSnippetsManager,
         [](const_node_ptr& node) -> bool {
             std::string errMsg;
             return node::FakeQuantize::isSupportedOperation(node, errMsg);

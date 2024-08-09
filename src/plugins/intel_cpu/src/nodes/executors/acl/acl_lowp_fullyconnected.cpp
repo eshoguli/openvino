@@ -79,7 +79,10 @@ bool ACLLowpFullyConnectedExecutor::supports(const FCConfig &config) {
     //VERIFY(postOpsNumbers(config) == 0, UNSUPPORTED_NUMBER_OF_POSTOPS);
     VERIFY(one_of(srcRank(config), 2U, 3U, 4U), UNSUPPORTED_SRC_RANK);
     VERIFY(one_of(weiRank(config), 2U, 3U, 4U), UNSUPPORTED_WEI_RANK);
-    VERIFY(static_cast<FCAttrs>(config.attrs).dequantizationScales.size() <= 1, UNSUPPORTED_PER_CHANNEL_QUANTIZATION);
+
+    const auto attrs = static_cast<FCAttrs>(config.attrs);
+    VERIFY(attrs.dequantizationScales.size() <= 1, UNSUPPORTED_PER_CHANNEL_QUANTIZATION);
+
     return true;
 }
 
@@ -106,7 +109,7 @@ arm_compute::Status ACLLowpFullyConnectedExecutor::validateTensorsInfo(const ACL
     const auto matMulValid = arm_compute::NEGEMMLowpMatrixMultiplyCore::validate(
             aclMemoryInfos[ACLArgs::ACL_SRC_0].get(),
             aclMemoryInfos[ACLArgs::ACL_WEI].get(),
-            nullptr, //aclMemoryInfos[ACLArgs::ACL_BIAS].get(),
+            aclMemoryInfos[ACLArgs::ACL_BIAS].get(),
             aclMemoryInfos[ACLArgs::ACL_DST].get(),
             gemmInfo);
     return matMulValid;

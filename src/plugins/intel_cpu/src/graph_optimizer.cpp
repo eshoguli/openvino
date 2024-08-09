@@ -5,6 +5,7 @@
 #include "graph_optimizer.h"
 
 #include "dnnl_extension_utils.h"
+#include "low_precision/rt_info/bias_attribute.hpp"
 #include "nodes/bin_conv.h"
 #include "nodes/common/cpu_convert.h"
 #include "nodes/conv.h"
@@ -277,6 +278,11 @@ void GraphOptimizer::FuseConvMatmulFCDeconvAndDQScales(Graph &graph) {
         auto node = mul->getParentEdgeAt(0)->getParent();
         auto scales = mul->getParentEdgeAt(1)->getParent();
         if (!scaleDimsCheck(node, scales)) continue;
+
+        // TODO: debug only: how to check if attribute exists for CPU node (ov::marked_as_bias(mul))
+        if ((node->getType() == Type::FullyConnected) || (node->getType() == Type::MatMul)) {
+            continue;
+        }
 
         if (initializeDeQuantizedScales(node, scales)) {
             DEBUG_LOG("GraphOptimizer##FusingDQ: Node ##", mul->getName(), " optimized as DQ scales of Node ##", node->getName());
