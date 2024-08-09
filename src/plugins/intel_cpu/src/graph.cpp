@@ -26,6 +26,7 @@
 #include "nodes/common/cpu_convert.h"
 #include "nodes/common/cpu_memcpy.h"
 #include "nodes/convert.h"
+#include "nodes/eltwise.h"
 #include "nodes/input.h"
 #include "nodes/reorder.h"
 #include "nodes/memory.hpp"
@@ -573,6 +574,15 @@ void Graph::ResolveEdgeConflicts() {
 
     for (ptrdiff_t i = 0; i < numberOfEdges; i++) {
         auto edge = graphEdges[i];
+
+        // TODO: debug only
+        if (edge->getChild()->getType() == Type::Eltwise) {
+            const auto eltwise = std::dynamic_pointer_cast<node::Eltwise>(edge->getChild());
+            if ((eltwise != nullptr) && (eltwise->getAlgorithm() == Algorithm::EltwiseConvert)) {
+                continue;
+            }
+        }
+
         auto reorderStatus = graphEdges[i]->needReorder();
         DEBUG_LOG(graphEdges[i]->name(), " reorderStatus = ", reorderStatus);
         if (reorderStatus == Edge::ReorderStatus::Regular) {

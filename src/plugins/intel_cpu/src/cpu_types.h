@@ -155,6 +155,7 @@ enum class Algorithm {
     EltwiseIsNaN,
     EltwiseMultiply,
     EltwiseSubtract,
+    EltwiseConvert,
     EltwiseDivide,
     EltwiseFloor,
     EltwiseFloorMod,

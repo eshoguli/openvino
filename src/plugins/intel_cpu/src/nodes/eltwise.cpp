@@ -1068,6 +1068,9 @@ const std::map<const ov::DiscreteTypeInfo, Eltwise::Initializer>& Eltwise::getIn
             node.algorithm = Algorithm::EltwiseMultiply;
             node.broadcastingPolicy = determineBroadcastingPolicy(op);
         }},
+        {ov::op::v0::Convert::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Eltwise& node) {
+            node.algorithm = Algorithm::EltwiseConvert;
+        }},
         {ov::op::v1::Divide::get_type_info_static(), [](const std::shared_ptr<ov::Node>& op, Eltwise& node) {
             node.algorithm = Algorithm::EltwiseDivide;
             node.broadcastingPolicy = determineBroadcastingPolicy(op);
@@ -2063,6 +2066,10 @@ bool Eltwise::isSupportedOperation(const std::shared_ptr<const ov::Node>& op, st
 
 Eltwise::Eltwise(const std::shared_ptr<ov::Node>& op, const GraphContext::CPtr context) :
     Node(op, context, EltwiseShapeInferFactory()), broadcastingPolicy(Undefined) {
+    if (as_type_ptr<opset1::Convert>(op)) {
+        std::cout << "Eltwise::Eltwise" << std::endl;
+    }
+
     std::string errorMessage;
     if (!isSupportedOperation(op, errorMessage)) {
         OPENVINO_THROW_NOT_IMPLEMENTED(errorMessage);
@@ -2072,6 +2079,7 @@ Eltwise::Eltwise(const std::shared_ptr<ov::Node>& op, const GraphContext::CPtr c
 
 size_t Eltwise::getOpInputsNum() const {
     switch (getAlgorithm()) {
+        case Algorithm::EltwiseConvert:
         case Algorithm::EltwiseIsFinite:
         case Algorithm::EltwiseIsInf:
         case Algorithm::EltwiseIsNaN:
@@ -2153,6 +2161,10 @@ void Eltwise::getSupportedDescriptors() {
 }
 
 void Eltwise::initSupportedPrimitiveDescriptors() {
+    if (getAlgorithm() == Algorithm::EltwiseConvert) {
+        std::cout << "Eltwise::initSupportedPrimitiveDescriptors" << std::endl;
+    }
+
     const auto isBitwise = [](const Algorithm& algorithm) {
         return one_of(
             algorithm,
@@ -2547,6 +2559,10 @@ void Eltwise::initSupportedPrimitiveDescriptors() {
 }
 
 void Eltwise::createPrimitive() {
+    if (getAlgorithm() == Algorithm::EltwiseConvert) {
+        std::cout << "Eltwise::createPrimitive" << std::endl;
+    }
+
     if (memPtrs.empty()) {
         for (size_t i = 0; i < inputNum; i++)
             memPtrs.push_back(getSrcMemoryAtPort(i));
@@ -2570,6 +2586,10 @@ void Eltwise::createPrimitive() {
 }
 
 void Eltwise::prepareParams() {
+    if (getAlgorithm() == Algorithm::EltwiseConvert) {
+        std::cout << "Eltwise::prepareParams" << std::endl;
+    }
+
     if (canUseAclExecutor) {
         std::vector<MemoryDescPtr> srcMemoryDescs;
         for (size_t i = 0; i < getParentEdges().size(); i++) {
@@ -3029,6 +3049,9 @@ bool Eltwise::canFuseParent(const NodePtr& parentNode) const {
 }
 
 bool Eltwise::canFuse(const NodePtr& node) const {
+    if (getAlgorithm() == Algorithm::EltwiseConvert) {
+        std::cout << "Eltwise::canFuse" << std::endl;
+    }
     auto isIntegerComputeSupported = [](const Node* node) {
         if (!one_of(node->getAlgorithm(), Algorithm::EltwiseAdd,
                                           Algorithm::EltwiseMultiply,

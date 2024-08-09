@@ -137,7 +137,11 @@ static const TypeToNameMap& get_type_to_name_tbl() {
         {"Loop", Type::TensorIterator},
         {"ReadValue", Type::MemoryInput},  // for construction from name ctor, arbitrary name is used
         {"Assign", Type::MemoryOutput},    // for construction from layer ctor
+#ifdef OPENVINO_ARCH_ARM64
+        {"Convert", Type::Eltwise},
+#else
         {"Convert", Type::Convert},
+#endif
         {"NV12toRGB", Type::ColorConvert},
         {"NV12toBGR", Type::ColorConvert},
         {"I420toRGB", Type::ColorConvert},
