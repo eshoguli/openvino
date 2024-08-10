@@ -52,9 +52,8 @@ struct Require {
 
 static const TypeMapping aclMatMulTypeMapping {
     // {src, wei, bia, dst}              pt<src, wei, bias, dst>
-    {{_i8, _i8, _any, _any},          pt(just<i8>(), just<i8>(), just<i32>(), just<i32>())},
-    {{_u8, _u8, _any, _any},          pt(just<u8>(), just<u8>(), just<i32>(), just<i32>())},
-    {{_any, _any, _any, _any},        pt(just<f32>(), just<f32>(), just<f32>(), just<f32>())}
+    {{_i8, _i8, _any, _any},          pt(just<i8>(), just<i8>(), just<f32>(), just<f32>())},
+    {{_u8, _u8, _any, _any},          pt(just<u8>(), just<u8>(), just<i32>(), just<f32>())}
 };
 
 static const MappingNotation aclMatMulMappingNotation {

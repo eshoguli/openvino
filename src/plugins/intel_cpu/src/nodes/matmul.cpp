@@ -517,18 +517,28 @@ void MatMul::initSupportedPrimitiveDescriptors() {
 
     auto executionContext = std::make_shared<ExecutorContext>(context, getImplPriority(), privateWeightCache);
     factory = std::make_shared<ExecutorFactory<GEMMAttrs, node::MatMul>>(attrs, postOps, executionContext, memoryDescs);
-    const auto memoryDescriptors = factory->getProperMemoryDescriptors(memoryDescs);
+    if (!factory->empty()) {
+        std::cout << "MatMul::initSupportedPrimitiveDescriptors: int8 is supported " << this->getName() << std::endl;
+        const auto memoryDescriptors = factory->getProperMemoryDescriptors(memoryDescs);
 
-    NodeConfig nodeConfig;
-    nodeConfig.inConfs.emplace_back(memoryDescriptors.at(ARG_SRC));
-    nodeConfig.inConfs.emplace_back(memoryDescriptors.at(ARG_WEI));
-    if (attrs.withBias) nodeConfig.inConfs.emplace_back(memoryDescriptors.at(ARG_BIAS));
+        NodeConfig nodeConfig;
+        nodeConfig.inConfs.emplace_back(memoryDescriptors.at(ARG_SRC));
+        nodeConfig.inConfs.emplace_back(memoryDescriptors.at(ARG_WEI));
+        if (attrs.withBias) nodeConfig.inConfs.emplace_back(memoryDescriptors.at(ARG_BIAS));
 
-    const int inPlace = canBeInPlace() ? 0 : -1;
-    nodeConfig.outConfs.emplace_back(memoryDescriptors.at(ARG_DST), BlockedMemoryDesc::FULL_MASK, inPlace);
+        const int inPlace = canBeInPlace() ? 0 : -1;
+        nodeConfig.outConfs.emplace_back(memoryDescriptors.at(ARG_DST), BlockedMemoryDesc::FULL_MASK, inPlace);
 
-    supportedPrimitiveDescriptors.emplace_back(nodeConfig, impl_desc_type::undef);
-#else
+        supportedPrimitiveDescriptors.emplace_back(nodeConfig, impl_desc_type::undef);
+        if (!supportedPrimitiveDescriptors.empty()) {
+            executorSupportsPrimitiveDescriptors = true;
+            return;
+        }
+    } else {
+        std::cout << "MatMul::initSupportedPrimitiveDescriptors: int8 is not supported " << this->getName() << std::endl;
+    }
+#endif
+
     auto addSupportedPrimitiveDescriptor = [&](const dnnl::primitive_desc& prim_desc) {
         std::vector<PortConfig> inConfs, outConfs;
         const int inPlaceOutPort = canBeInPlace() ? 0 : -1;
@@ -568,18 +578,19 @@ void MatMul::initSupportedPrimitiveDescriptors() {
         if (supportedPrimitiveDescriptors.empty())
             addSupportedPrimitiveDescriptor(first_desc);
    }
-#endif
 }
 
 #if defined(OPENVINO_ARCH_ARM64) and !defined(OPENVINO_MAT_MUL_REFERENCE)
 void MatMul::createPrimitive() {
-    memory[ARG_SRC] = getSrcMemoryAtPort(DATA_ID);
-    memory[ARG_WEI] = getSrcMemoryAtPort(WEIGHTS_ID);
-    memory[ARG_BIAS] = attrs.withBias ? getSrcMemoryAtPort(BIAS_ID) : MemoryDescUtils::makeEmptyMemory(context);
-    memory[ARG_DST] = getDstMemoryAtPort(0);
-    // @todo should we preconfigure only for dynamic shapes?
-    // Since for static shapes primitive is created in scope of compile_model() anyway
-    factory->preconfigure(memory);
+    if (executorSupportsPrimitiveDescriptors) {
+        memory[ARG_SRC] = getSrcMemoryAtPort(DATA_ID);
+        memory[ARG_WEI] = getSrcMemoryAtPort(WEIGHTS_ID);
+        memory[ARG_BIAS] = attrs.withBias ? getSrcMemoryAtPort(BIAS_ID) : MemoryDescUtils::makeEmptyMemory(context);
+        memory[ARG_DST] = getDstMemoryAtPort(0);
+        // @todo should we preconfigure only for dynamic shapes?
+        // Since for static shapes primitive is created in scope of compile_model() anyway
+        factory->preconfigure(memory);
+    }
 
     Node::createPrimitive();
 }
@@ -605,9 +616,16 @@ ov::element::Type MatMul::getRuntimePrecision() const {
 }
 
 void MatMul::prepareParams() {
+    if (this->getName() == "MatMul_75") {
+        std::cout << "MatMul::prepareParams" << std::endl;
+    }
 #if defined(OPENVINO_ARCH_ARM64) and !defined(OPENVINO_MAT_MUL_REFERENCE)
-    executor = createExecutor();
-#else
+    if (executorSupportsPrimitiveDescriptors) {
+        executor = createExecutor();
+        return;
+    }
+#endif
+
     auto dstMemPtr = getDstMemoryAtPort(0);
     auto src0MemPtr = getSrcMemoryAtPort(0);
     auto src1MemPtr = getSrcMemoryAtPort(1);
@@ -714,19 +732,20 @@ void MatMul::prepareParams() {
     auto pd = execPtr->getPrimitiveDesc();
     DEBUG_LOG("verbose##", getName(), "##", DnnlExtensionUtils::query_pd_info(pd), "\n");
 #endif
-#endif
 }
 
 void MatMul::execute(dnnl::stream strm) {
 #if defined(OPENVINO_ARCH_ARM64) and !defined(OPENVINO_MAT_MUL_REFERENCE)
-    executor->execute(memory);
-#else
+    if (executorSupportsPrimitiveDescriptors) {
+        executor->execute(memory);
+        return;
+    }
+#endif
     if (execPtr) {
         execPtr->exec(primArgs, strm);
     } else {
         OPENVINO_THROW(errorPrefix, " doesn't have an initialized executor");
     }
-#endif
 }
 
 void MatMul::executeDynamicImpl(dnnl::stream strm) {

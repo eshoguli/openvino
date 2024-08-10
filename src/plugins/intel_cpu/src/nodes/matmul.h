@@ -82,6 +82,8 @@ private:
     DnnlBlockedMemoryDescPtr outDataDesc;
 
 #if defined(OPENVINO_ARCH_ARM64) and !defined(OPENVINO_MAT_MUL_REFERENCE)
+    // TODO: debug only: for performance measurement only
+    bool executorSupportsPrimitiveDescriptors = false;
     static const size_t DATA_ID = 0;
     static const size_t WEIGHTS_ID = 1;
     static const size_t BIAS_ID = 2;

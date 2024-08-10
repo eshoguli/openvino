@@ -39,8 +39,11 @@ bool ACLGEMMExecutor::supports(const GEMMConfig &config) {
     const auto src1_dims = std::dynamic_pointer_cast<BlockedMemoryDesc>(config.descs.at(ARG_SRC))->getBlockDims();
     const auto src2_dims = std::dynamic_pointer_cast<BlockedMemoryDesc>(config.descs.at(ARG_WEI))->getBlockDims();
 
-    const auto precision = srcType(config);
-    VERIFY(one_of(precision, ov::element::i8, ov::element::u8), UNSUPPORTED_SRC_PRECISIONS);
+    // TODO: debug only: do I really need it here?
+    const auto src0 = srcType(config);
+    const auto src1 = weiType(config);
+    VERIFY(one_of(src0, ov::element::i8, ov::element::u8), UNSUPPORTED_SRC_PRECISIONS);
+    VERIFY(one_of(src1, ov::element::i8, ov::element::u8), UNSUPPORTED_SRC_PRECISIONS);
     VERIFY(postOpsNumbers(config) == 0, UNSUPPORTED_NUMBER_OF_POSTOPS);
     VERIFY(one_of(srcRank(config), 2U, 3U, 4U), UNSUPPORTED_SRC_RANK);
     VERIFY(one_of(weiRank(config), 2U, 3U, 4U), UNSUPPORTED_WEI_RANK);
