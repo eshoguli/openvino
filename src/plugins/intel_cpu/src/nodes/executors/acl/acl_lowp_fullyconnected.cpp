@@ -71,8 +71,12 @@ ACLLowpFullyConnectedExecutor::ACLLowpFullyConnectedExecutor(const FCAttrs &attr
 
 bool ACLLowpFullyConnectedExecutor::supports(const FCConfig &config) {
     const auto src0 = srcType(config);
-    //const auto src1 = weiType(config);
+    const auto src1 = weiType(config);
     //const auto dst = dstType(config);
+
+    if ((src0 == element::f16) || (src1 == element::f16)) {
+        std::cout << "ACLLowpFullyConnectedExecutor::supports" << std::endl;
+    }
 
     // TODO: check precisions
     VERIFY(one_of(src0, ov::element::i8, ov::element::u8), UNSUPPORTED_SRC_PRECISIONS);
