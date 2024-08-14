@@ -16,11 +16,21 @@ public:
     bool transposeB;
 };
 
+class FullyConnectedParams {
+public:
+    bool activation;
+    bool perChannelWeights;
+    std::string originalLayersNames;
+};
+
 typedef std::tuple<
     ov::element::Type,
     MatMulShapes,
     std::string,
-    ov::pass::low_precision::LayerTransformation::Params> FullyConnectedTransformationParams;
+    ov::pass::low_precision::LayerTransformation::Params,
+    ov::element::Type,
+    FullyConnectedParams,
+    std::string> FullyConnectedTransformationParams;
 
 namespace LayerTestsDefinitions {
 
